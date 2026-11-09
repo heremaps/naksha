@@ -35,31 +35,51 @@ class StreamV2(private val v2Session: StreamReadSessionV2, request: StreamReques
             val day = (date % 100).toInt()
             return Version.auto(year, month, day, seq, Action.VERSION)
         }
+
+        /** Inverse of [legacyTxnToV3Version]. */
+        fun v3VersionToLegacyTxn(version: Version): Long =
+            (version.year * 10_000L + version.month * 100L + version.day) * LEGACY_DATUM_FACTOR + version.seq
+
+        /** Accepts either a legacy txn (> 2^53) or a dated V3 version; returns the legacy txn. */
+        private fun toLegacyTxn(v: Long): Long {
+            if (v <= 0L || v > Version.MAX_SAFE_INTEGER) return v
+            val version = Version(v)
+            require(version.isDated()) { "minVersion $v is neither a legacy txn nor a dated version" }
+            return v3VersionToLegacyTxn(version)
+        }
     }
 
     override val minVersion: Version
-        get() = Version(_minVersion)
+        get() = synchronized(this) {
+            val v = _minVersion
+            if (request.ignoreTransactions || v <= 0L) Version(v) else legacyTxnToV3Version(v)
+        }
     override val unacknowledgedChunks: Array<StreamChunk>
-        get() = _chunks.subList(minAckChunkIndex + 1, _chunks.size)
-                .filterNot { it in _acknowledgedChunksList }.toTypedArray()
+        get() = synchronized(this) { _pending.filterNot { it in _acknowledgedChunksList }.toTypedArray() }
 
     override val acknowledgedChunks: Array<StreamChunk>
-        get() = _acknowledgedChunksList.toTypedArray()
+        get() = synchronized(this) { _acknowledgedChunksList.toTypedArray() }
     override val estimatedChunks: Long = -1
     override val estimatedTuples: Long = -1
     override val acknowledgedTuples: Long = 0
     override val unacknowledgedTuples: Long = 0
     override val isRecoverable: Boolean = false
 
-    private var _minVersion = request.minVersion
-    private val _chunks = ArrayList<StreamChunk>()
+    private var _minVersion = if (request.ignoreTransactions) request.minVersion else toLegacyTxn(request.minVersion)
+    private val _pending = ArrayDeque<StreamChunk>()          // in-flight chunks, oldest first
     private val _acknowledgedChunksList = ArrayList<StreamChunk>()
-    private var minAckChunkIndex = -1
-    private var nextVersionToRead = request.minVersion
+    private var nextVersionToRead = _minVersion
+    private var hasNext : Boolean = true
+
+    /** Position to resume from after [chunk]; `null` if the chunk is empty (position unchanged). */
+    private fun resumePointOf(chunk: StreamChunk): Long? =
+        if (request.ignoreTransactions)
+            chunk.tuples.lastOrNull()?.let { ((it.version ushr 2) and SEQ_30_MAX) + 1 }
+        else
+            (chunk as StreamTransaction).version.takeIf { it > 0 }?.let { v3VersionToLegacyTxn(Version(it)) }
 
     override fun hasNext(): Boolean {
-        return true
-//        return (request.ignoreTransactions) && (minVersionToRead <= request.version) TODO
+        return hasNext
     }
 
     override fun isAcknowledged(timeoutMillis: Long): Boolean {
@@ -238,15 +258,14 @@ SELECT jsondata, ST_AsEWKB(geo) AS geo FROM schema.col_hst hst, min_txn n
                 version = txnVersion,
                 features = tuples.toTypedArray(),
                 transaction = null)
-        _chunks.add(chunk)
+        if (request.ignoreTransactions && chunk.tuples.size < request.chunkSize) hasNext = false
+        if (!request.ignoreTransactions && (txn == Long.MIN_VALUE || txn == Version.HEAD.number)) hasNext = false
         nextVersionToRead =
             if (request.ignoreTransactions)
-                if (lastSeq >= 0)
-                    lastSeq + 1
-                else
-                    nextVersionToRead
+                if (lastSeq >= 0) lastSeq + 1 else nextVersionToRead
             else
-                if (txn == Long.MIN_VALUE) throw IllegalStateException("Transaction ID not found") else txn
+                if (txn == Long.MIN_VALUE) nextVersionToRead else txn
+        synchronized(this) { _pending.addLast(chunk) }
         return chunk
     }
 
@@ -255,19 +274,12 @@ SELECT jsondata, ST_AsEWKB(geo) AS geo FROM schema.col_hst hst, min_txn n
     }
 
     override fun acknowledge(chunk: StreamChunk): Unit = synchronized(this) {
-        val index = _chunks.indexOf(chunk)
-        require(index >= 0) { "Chunk not found in stream" }
-        // Already acknowledged: ignore, as the contract requires
-        if (index <= minAckChunkIndex || _acknowledgedChunksList.contains(chunk)) return
+        require(chunk.stream === this) { "Chunk not from this stream" }
+        // Already trimmed (fully acknowledged) or already acknowledged: ignore, as the contract requires
+        if (chunk !in _pending || chunk in _acknowledgedChunksList) return
         _acknowledgedChunksList.add(chunk)
-
-        // Move the recovery point forward over the contiguous acknowledged prefix
-        while (minAckChunkIndex + 1 < _chunks.size) {
-            val head = _chunks[minAckChunkIndex + 1]
-            if (!_acknowledgedChunksList.remove(head)) break
-            minAckChunkIndex++
-            val maxVersion = head.tuples.maxOfOrNull { it.version } ?: continue
-            if (maxVersion >= 0) _minVersion = maxVersion + 1 //This works only for V2 and compatible storages, not V3, because V3 versions contain Action bits
+        while (_pending.isNotEmpty() && _acknowledgedChunksList.remove(_pending.first())) {
+            resumePointOf(_pending.removeFirst())?.let { _minVersion = it }
         }
     }
 
