@@ -4,6 +4,8 @@ import naksha.base.Action
 import naksha.base.Id
 import naksha.base.JvmMap
 import naksha.base.NakshaError
+import naksha.base.NakshaError.NakshaErrorCompanion.CLOSED
+import naksha.base.NakshaException
 import naksha.base.Version
 import naksha.geo.GeoUtil
 import naksha.model.objects.NakshaFeature
@@ -14,6 +16,7 @@ import naksha.model.streaming.StreamTransaction
 import naksha.model.streaming.StreamTuple
 import naksha.psql.PgPlan
 import java.lang.Long.parseLong
+import kotlin.concurrent.withLock
 
 class StreamV2(private val v2Session: StreamReadSessionV2, request: StreamRequest) : Stream(v2Session, request) {
 
@@ -61,15 +64,24 @@ class StreamV2(private val v2Session: StreamReadSessionV2, request: StreamReques
         get() = synchronized(this) { _acknowledgedChunksList.toTypedArray() }
     override val estimatedChunks: Long = -1
     override val estimatedTuples: Long = -1
-    override val acknowledgedTuples: Long = 0
-    override val unacknowledgedTuples: Long = 0
-    override val isRecoverable: Boolean = false
+    override val acknowledgedTuples: Long
+        get() = synchronized(this) { _acknowledgedTuples }
+    override val unacknowledgedTuples: Long
+        get() = synchronized(this) { _readTuples - _acknowledgedTuples }
+    override val isRecoverable: Boolean = true
 
     private var _minVersion = if (request.ignoreTransactions) request.minVersion else toLegacyTxn(request.minVersion)
     private val _pending = ArrayDeque<StreamChunk>()          // in-flight chunks, oldest first
     private val _acknowledgedChunksList = ArrayList<StreamChunk>()
+    private var _readTuples = 0L
+    private var _acknowledgedTuples = 0L
     private var nextVersionToRead = _minVersion
     private var hasNext : Boolean = true
+    private var _recoveryPosition = Long.MIN_VALUE
+    private var _recoveryRequest: StreamRequest? = null
+    @Volatile
+    private var _closed = false
+    private val readLock = java.util.concurrent.locks.ReentrantLock()
 
     /** Position to resume from after [chunk]; `null` if the chunk is empty (position unchanged). */
     private fun resumePointOf(chunk: StreamChunk): Long? =
@@ -78,9 +90,7 @@ class StreamV2(private val v2Session: StreamReadSessionV2, request: StreamReques
         else
             (chunk as StreamTransaction).version.takeIf { it > 0 }?.let { v3VersionToLegacyTxn(Version(it)) }
 
-    override fun hasNext(): Boolean {
-        return hasNext
-    }
+    override fun hasNext(): Boolean = hasNext && !_closed
 
     override fun isAcknowledged(timeoutMillis: Long): Boolean {
         TODO("Not yet implemented")
@@ -208,10 +218,9 @@ SELECT jsondata, ST_AsEWKB(geo) AS geo FROM schema.col_hst hst, min_txn n
         return this
     }
 
-    override fun next(): StreamChunk {
-        if (!hasNext()) {
-            throw NoSuchElementException("No more chunks available")
-        }
+    override fun next(): StreamChunk = readLock.withLock {
+        if (_closed) throw NakshaException(CLOSED, "Stream closed")
+        if (!hasNext) throw NoSuchElementException("No more chunks available")
         val cursor = if (request.ignoreTransactions)
             headPlan().execute(arrayOf(nextVersionToRead))
         else
@@ -265,7 +274,10 @@ SELECT jsondata, ST_AsEWKB(geo) AS geo FROM schema.col_hst hst, min_txn n
                 if (lastSeq >= 0) lastSeq + 1 else nextVersionToRead
             else
                 if (txn == Long.MIN_VALUE) nextVersionToRead else txn
-        synchronized(this) { _pending.addLast(chunk) }
+        synchronized(this) {
+            _pending.addLast(chunk)
+            _readTuples += chunk.tuples.size
+        }
         return chunk
     }
 
@@ -278,6 +290,8 @@ SELECT jsondata, ST_AsEWKB(geo) AS geo FROM schema.col_hst hst, min_txn n
         // Already trimmed (fully acknowledged) or already acknowledged: ignore, as the contract requires
         if (chunk !in _pending || chunk in _acknowledgedChunksList) return
         _acknowledgedChunksList.add(chunk)
+        _acknowledgedTuples += chunk.tuples.size
+        // TODO what if 1 writer fails and cause _acknowledgedChunksList list to grow too much?
         while (_pending.isNotEmpty() && _acknowledgedChunksList.remove(_pending.first())) {
             resumePointOf(_pending.removeFirst())?.let { _minVersion = it }
         }
@@ -287,20 +301,41 @@ SELECT jsondata, ST_AsEWKB(geo) AS geo FROM schema.col_hst hst, min_txn n
         TODO("Not yet implemented")
     }
 
-    override fun isClosed(): Boolean {
-        TODO("Not yet implemented")
-    }
+    override fun isClosed(): Boolean = _closed
 
     override fun close() {
-        _txnPlan?.close()
-        _headPlan?.close()
+        synchronized(this) {
+            if (_closed) return
+            _closed = true
+        }
+        readLock.withLock {          // waits only for an in-flight next(), not for acks
+            _txnPlan?.close(); _txnPlan = null
+            _headPlan?.close(); _headPlan = null
+        }
     }
 
     override fun closeForRecovery(): StreamRequest {
         TODO("Not yet implemented")
     }
 
-    override fun getRecoveryRequest(): StreamRequest {
-        TODO("Not yet implemented")
+    override fun getRecoveryRequest(): StreamRequest = synchronized(this) {
+        val position = _minVersion
+        val cached = _recoveryRequest
+        if (cached != null && position == _recoveryPosition) cached
+        else StreamRequest(
+            databaseId = request.databaseId,
+            catalogId = request.catalogId,
+            collectionId = request.collectionId,
+            version = request.version,
+            queryDeleted = request.queryDeleted,
+            queryHistory = request.queryHistory,
+            sequential = request.sequential,
+            minVersion = position,
+            ignoreTransactions = request.ignoreTransactions,
+            chunkSize = request.chunkSize
+        ).also {
+            _recoveryPosition = position
+            _recoveryRequest = it
+        }
     }
 }
