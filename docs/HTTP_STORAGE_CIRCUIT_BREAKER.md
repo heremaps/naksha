@@ -42,7 +42,7 @@ For detailed configuration properties and their validation rules, refer to:
     "headers": {
       "Authorization": "Bearer token123"
     },
-    "circuitBreaker": {
+    "circuitBreakerConfig": {
       "slidingWindowSize": 20,
       "minimumNumberOfCalls": 10,
       "slowCallDurationThresholdMs": 29000,
