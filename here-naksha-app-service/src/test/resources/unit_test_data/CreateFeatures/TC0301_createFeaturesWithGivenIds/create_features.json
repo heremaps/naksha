@@ -5,6 +5,11 @@
       "id": "my-custom-id-301-1",
       "type": "Feature",
       "properties": {
+        "@ns:com:here:xyz": {
+          "tags": [
+            "UPPERCASE_tag_expected_to_be_lowercase"
+          ]
+        },
         "speedLimit": "60"
       },
       "geometry": {
