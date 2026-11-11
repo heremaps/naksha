@@ -58,21 +58,21 @@ class StreamV2(private val v2Session: StreamReadSessionV2, request: StreamReques
     }
 
     override val minVersion: Version
-        get() = stateLock.withLock {
+        get() = _stateLock.withLock {
             val v = _minVersion
             if (request.ignoreTransactions || v <= 0L) Version(v) else legacyTxnToV3Version(v)
         }
     override val unacknowledgedChunks: Array<StreamChunk>
-        get() = stateLock.withLock { _pending.filterNot { it in _acknowledgedChunksList }.toTypedArray() }
+        get() = _stateLock.withLock { _pending.filterNot { it in _acknowledgedChunksList }.toTypedArray() }
 
     override val acknowledgedChunks: Array<StreamChunk>
-        get() = stateLock.withLock { _acknowledgedChunksList.toTypedArray() }
+        get() = _stateLock.withLock { _acknowledgedChunksList.toTypedArray() }
     override val estimatedChunks: Long = -1
     override val estimatedTuples: Long = -1
     override val acknowledgedTuples: Long
-        get() = stateLock.withLock { _acknowledgedTuples }
+        get() = _stateLock.withLock { _acknowledgedTuples }
     override val unacknowledgedTuples: Long
-        get() = stateLock.withLock { _readTuples - _acknowledgedTuples }
+        get() = _stateLock.withLock { _readTuples - _acknowledgedTuples }
     override val isRecoverable: Boolean = true
 
     private var _minVersion = if (request.ignoreTransactions) request.minVersion else toLegacyTxn(request.minVersion)
@@ -80,18 +80,18 @@ class StreamV2(private val v2Session: StreamReadSessionV2, request: StreamReques
     private val _acknowledgedChunksList = ArrayList<StreamChunk>()
     private var _readTuples = 0L
     private var _acknowledgedTuples = 0L
-    private var nextVersionToRead = _minVersion
-    private var hasNext : Boolean = true
+    private var _nextVersionToRead = _minVersion
+    private var _hasNext : Boolean = true
     private var _recoveryRequest: StreamRequest? = null
     @Volatile
     private var _closed = false
-    private val readLock = ReentrantLock()
+    private val _readLock = ReentrantLock()
 
-    private val stateLock = ReentrantLock()
-    private val stateChanged = stateLock.newCondition()
-    private val closeLock = ReentrantLock()
-    private var closeComplete = false
-    private var failure: NakshaError? = null
+    private val _stateLock = ReentrantLock()
+    private val _stateChanged = _stateLock.newCondition()
+    private val _closeLock = ReentrantLock()
+    private var _closeComplete = false
+    private var _failure: NakshaError? = null
 
     /** Position to resume from after [chunk]; `null` if the chunk is empty (position unchanged). */
     private fun resumePointOf(chunk: StreamChunk): Long? =
@@ -100,7 +100,7 @@ class StreamV2(private val v2Session: StreamReadSessionV2, request: StreamReques
         else
             (chunk as StreamTransaction).version.takeIf { it > 0 }?.let { v3VersionToLegacyTxn(Version(it)) }
 
-    override fun hasNext(): Boolean = hasNext && !_closed
+    override fun hasNext(): Boolean = _hasNext && !_closed
 
     private fun StringBuilder.appendNotDeleted(alias: String?): StringBuilder {
         append(" AND (")
@@ -227,14 +227,14 @@ SELECT jsondata, ST_AsEWKB(geo) AS geo FROM schema.col_hst hst, min_txn n
             it is java.sql.SQLTimeoutException || (it is java.sql.SQLException && it.sqlState == "57014")
         }
 
-    /** Must hold [readLock]. Returns `null` if the query was cancelled (timeout or close); state is then unchanged. */
+    /** Must hold [_readLock]. Returns `null` if the query was cancelled (timeout or close); state is then unchanged. */
     private fun readChunk(queryTimeoutSec: Int): StreamChunk? {
         val plan = if (request.ignoreTransactions) headPlan() else txnPlan()
         (plan as PsqlPlan).stmt.queryTimeout = queryTimeoutSec   // plans are reused, so set it on every call; 0 = no limit
         val cursor = try {
             throwIfFailed()
             if (_closed) return null
-            plan.execute(arrayOf(nextVersionToRead))
+            plan.execute(arrayOf(_nextVersionToRead))
         } catch (e: NakshaException) {
             if (e.isQueryCancelled()) {
                 throwIfFailed()
@@ -285,46 +285,46 @@ SELECT jsondata, ST_AsEWKB(geo) AS geo FROM schema.col_hst hst, min_txn n
                 version = txnVersion,
                 features = tuples.toTypedArray(),
                 transaction = null)
-        stateLock.withLock {
+        _stateLock.withLock {
             throwIfFailed()
             if (_closed) return null
-            if (request.ignoreTransactions && chunk.tuples.size < request.chunkSize) hasNext = false
-            if (!request.ignoreTransactions && (txn == Long.MIN_VALUE || txn == Version.HEAD.number)) hasNext = false
-            nextVersionToRead = resumePointOf(chunk) ?: nextVersionToRead
+            if (request.ignoreTransactions && chunk.tuples.size < request.chunkSize) _hasNext = false
+            if (!request.ignoreTransactions && (txn == Long.MIN_VALUE || txn == Version.HEAD.number)) _hasNext = false
+            _nextVersionToRead = resumePointOf(chunk) ?: _nextVersionToRead
             _pending.addLast(chunk)
             _readTuples += chunk.tuples.size
         }
         return chunk
     }
 
-    override fun next(): StreamChunk = readLock.withLock {
+    override fun next(): StreamChunk = _readLock.withLock {
         throwIfFailed()
         if (_closed) throw NakshaException(CLOSED, "Stream closed")
-        if (!hasNext) throw NoSuchElementException("No more chunks available")
+        if (!_hasNext) throw NoSuchElementException("No more chunks available")
         readChunk(0) ?: throw NakshaException(CLOSED, "Stream closed")   // null only if cancelled from outside
     }
 
     override fun next(timeoutMillis: Long): StreamChunk? {
         throwIfFailed()
         if (_closed) throw NakshaException(CLOSED, "Stream closed")
-        if (!hasNext) throw NoSuchElementException("No more chunks available")
+        if (!_hasNext) throw NoSuchElementException("No more chunks available")
         if (timeoutMillis <= 0L) return null   // nothing prefetched, a DB round-trip is never instant
         val deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(timeoutMillis)
-        if (!readLock.tryLock(timeoutMillis, TimeUnit.MILLISECONDS)) return null
+        if (!_readLock.tryLock(timeoutMillis, TimeUnit.MILLISECONDS)) return null
         try {
             if (_closed) return null           // close() was called while we were waiting
-            if (!hasNext) throw NoSuchElementException("No more chunks available")
+            if (!_hasNext) throw NoSuchElementException("No more chunks available")
             val remainingMs = TimeUnit.NANOSECONDS.toMillis(deadline - System.nanoTime())
             if (remainingMs <= 0L) return null
             val seconds = ((remainingMs + 999L) / 1000L).coerceIn(1L, Int.MAX_VALUE.toLong()).toInt()
             return readChunk(seconds)
         } finally {
-            readLock.unlock()
+            _readLock.unlock()
         }
     }
 
 
-    override fun acknowledge(chunk: StreamChunk): Unit = stateLock.withLock {
+    override fun acknowledge(chunk: StreamChunk): Unit = _stateLock.withLock {
         require(chunk.stream === this) { "Chunk not from this stream" }
         // Already trimmed (fully acknowledged) or already acknowledged: ignore, as the contract requires
         if (chunk !in _pending || chunk in _acknowledgedChunksList) return
@@ -334,68 +334,68 @@ SELECT jsondata, ST_AsEWKB(geo) AS geo FROM schema.col_hst hst, min_txn n
         while (_pending.isNotEmpty() && _acknowledgedChunksList.remove(_pending.first())) {
             resumePointOf(_pending.removeFirst())?.let { _minVersion = it }
         }
-        stateChanged.signalAll()
+        _stateChanged.signalAll()
     }
 
-    override fun isAcknowledged(timeoutMillis: Long): Boolean = stateLock.withLock {
+    override fun isAcknowledged(timeoutMillis: Long): Boolean = _stateLock.withLock {
         var remaining = TimeUnit.MILLISECONDS.toNanos(timeoutMillis.coerceAtLeast(0L))
-        while (_pending.isNotEmpty() && failure == null) {
+        while (_pending.isNotEmpty() && _failure == null) {
             if (remaining <= 0L) return false
-            remaining = stateChanged.awaitNanos(remaining)
+            remaining = _stateChanged.awaitNanos(remaining)
         }
-        failure == null
+        _failure == null
     }
 
-    override fun fail(chunk: StreamChunk, reason: NakshaError): Unit = stateLock.withLock {
+    override fun fail(chunk: StreamChunk, reason: NakshaError): Unit = _stateLock.withLock {
         require(chunk.stream === this) { "Chunk not from this stream" }
         if (chunk !in _pending || chunk in _acknowledgedChunksList) return
-        if (failure == null) failure = reason
+        if (_failure == null) _failure = reason
         _closed = true
-        stateChanged.signalAll()
+        _stateChanged.signalAll()
     }
 
-    private fun throwIfFailed(): Unit = stateLock.withLock {
-        failure?.let { throw StreamException(getRecoveryRequest(), this, it) }
+    private fun throwIfFailed(): Unit = _stateLock.withLock {
+        _failure?.let { throw StreamException(getRecoveryRequest(), this, it) }
     }
 
     override fun isClosed(): Boolean = _closed
 
-    override fun close(): Unit = closeLock.withLock {
-        if (closeComplete) {
+    override fun close(): Unit = _closeLock.withLock {
+        if (_closeComplete) {
             throwIfFailed()
             return
         }
-        stateLock.withLock { _closed = true }
+        _stateLock.withLock { _closed = true }
 
         try {
             try {
                 // Repeat: JDBC cancel() can do nothing just before execute() starts.
-                while (!readLock.tryLock(10L, TimeUnit.MILLISECONDS)) {
+                while (!_readLock.tryLock(10L, TimeUnit.MILLISECONDS)) {
                     _plan?.let { (it as PsqlPlan).stmt.cancel() }
                 }
             } finally {
                 // Release the plan even if cancellation or lock waiting fails.
-                if (!readLock.isHeldByCurrentThread) readLock.lock()
+                if (!_readLock.isHeldByCurrentThread) _readLock.lock()
                 try {
                     val plan = _plan
                     _plan = null
                     plan?.close()
                 } finally {
-                    readLock.unlock()
+                    _readLock.unlock()
                 }
             }
 
-            stateLock.withLock {
+            _stateLock.withLock {
                 // Same fallback as QueueStream.timeoutMillis().
                 val configuredTimeout = v2Session.options.stmtTimeout.toLong()
                 val timeoutMillis = if (configuredTimeout > 0L) configuredTimeout else 300_000L
 
-                if (!isAcknowledged(timeoutMillis) && failure == null) {
-                    failure = NakshaError(TIMEOUT, "Timeout waiting for acknowledgements")
+                if (!isAcknowledged(timeoutMillis) && _failure == null) {
+                    _failure = NakshaError(TIMEOUT, "Timeout waiting for acknowledgements")
                 }
                 throwIfFailed()
 
-                if (hasNext) {
+                if (_hasNext) {
                     throw StreamException(
                         getRecoveryRequest(),
                         this,
@@ -408,7 +408,7 @@ SELECT jsondata, ST_AsEWKB(geo) AS geo FROM schema.col_hst hst, min_txn n
             Thread.currentThread().interrupt()
             throw e
         } finally {
-            closeComplete = true
+            _closeComplete = true
         }
     }
 
@@ -434,7 +434,7 @@ SELECT jsondata, ST_AsEWKB(geo) AS geo FROM schema.col_hst hst, min_txn n
         return getRecoveryRequest()
     }
 
-    override fun getRecoveryRequest(): StreamRequest = stateLock.withLock {
+    override fun getRecoveryRequest(): StreamRequest = _stateLock.withLock {
         val position = _minVersion
         val cached = _recoveryRequest
         if (cached != null && cached.minVersion == position) cached
