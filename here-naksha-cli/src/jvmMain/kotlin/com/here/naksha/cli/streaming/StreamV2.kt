@@ -15,7 +15,9 @@ import naksha.model.streaming.StreamRequest
 import naksha.model.streaming.StreamTransaction
 import naksha.model.streaming.StreamTuple
 import naksha.psql.PgPlan
+import naksha.psql.PsqlPlan
 import java.lang.Long.parseLong
+import java.util.concurrent.TimeUnit
 import kotlin.concurrent.withLock
 
 class StreamV2(private val v2Session: StreamReadSessionV2, request: StreamRequest) : Stream(v2Session, request) {
@@ -77,7 +79,6 @@ class StreamV2(private val v2Session: StreamReadSessionV2, request: StreamReques
     private var _acknowledgedTuples = 0L
     private var nextVersionToRead = _minVersion
     private var hasNext : Boolean = true
-    private var _recoveryPosition = Long.MIN_VALUE
     private var _recoveryRequest: StreamRequest? = null
     @Volatile
     private var _closed = false
@@ -116,13 +117,13 @@ SELECT jsondata, ST_AsEWKB(geo) AS geo FROM (
 -- queryHistory=false, queryDeleted=true : col_del branch instead of col_hst, no action filter
 */
 
-    private var _headPlan: PgPlan? = null
+    private var _plan: PgPlan? = null
 
     /**
      * Prepare the SQL statement only once per stream, and reuse it for each chunk.
      */
     private fun headPlan(): PgPlan =
-        _headPlan ?: v2Session.connection.prepare(buildChunkSql(), arrayOf("int8")).also { _headPlan = it }
+        _plan ?: v2Session.connection.prepare(buildChunkSql(), arrayOf("int8")).also { _plan = it }
 
     // Runs once per stream
     private fun buildChunkSql(): String {
@@ -172,13 +173,11 @@ SELECT jsondata, ST_AsEWKB(geo) AS geo FROM schema.col_hst hst, min_txn n
 */
 
 
-    private var _txnPlan: PgPlan? = null
-
     /**
      * Prepare the SQL statement only once per stream, and reuse it for each chunk.
      */
     private fun txnPlan(): PgPlan =
-        _txnPlan ?: v2Session.connection.prepare(buildTxnSql(), arrayOf("int8")).also { _txnPlan = it }
+        _plan ?: v2Session.connection.prepare(buildTxnSql(), arrayOf("int8")).also { _plan = it }
 
     // Runs once per stream
     private fun buildTxnSql(): String {
@@ -218,19 +217,25 @@ SELECT jsondata, ST_AsEWKB(geo) AS geo FROM schema.col_hst hst, min_txn n
         return this
     }
 
-    override fun next(): StreamChunk = readLock.withLock {
-        if (_closed) throw NakshaException(CLOSED, "Stream closed")
-        if (!hasNext) throw NoSuchElementException("No more chunks available")
-        val cursor = if (request.ignoreTransactions)
-            headPlan().execute(arrayOf(nextVersionToRead))
-        else
-            txnPlan().execute(arrayOf(nextVersionToRead))
+    private fun Throwable.isQueryCancelled(): Boolean =
+        generateSequence(this) { it.cause }.any {
+            it is java.sql.SQLTimeoutException || (it is java.sql.SQLException && it.sqlState == "57014")
+        }
 
+    /** Must hold [readLock]. Returns `null` if the query was cancelled (timeout or close); state is then unchanged. */
+    private fun readChunk(queryTimeoutSec: Int): StreamChunk? {
+        val plan = if (request.ignoreTransactions) headPlan() else txnPlan()
+        (plan as PsqlPlan).stmt.queryTimeout = queryTimeoutSec   // plans are reused, so set it on every call; 0 = no limit
+        val cursor = try {
+            plan.execute(arrayOf(nextVersionToRead))
+        } catch (e: NakshaException) {
+            if (e.isQueryCancelled()) return null
+            throw e
+        }
         val tuples = ArrayList<StreamTuple>()
         if (request.ignoreTransactions) tuples.ensureCapacity(request.chunkSize)
         var txn = Long.MIN_VALUE
         var txnVersion = 0L
-        var lastSeq = -1L
         try {
             while (cursor.next()) {
                 val jsonData : JvmMap = cursor["jsondata"]
@@ -239,7 +244,6 @@ SELECT jsondata, ST_AsEWKB(geo) AS geo FROM schema.col_hst hst, min_txn n
                 val xyz = (jsonData["properties"] as JvmMap)["@ns:com:here:xyz"] as JvmMap // to avoid proxy creations when using feature.properties.xyz
                 val uuid = xyz["uuid"] as String
                 val featureSeq = parseLong(uuid, uuid.lastIndexOf(':') + 1, uuid.length, 10)
-                lastSeq = featureSeq
                 val rowTxn = xyz["txn"] as Long
                 if (rowTxn != txn) {
                     txn = rowTxn
@@ -269,11 +273,7 @@ SELECT jsondata, ST_AsEWKB(geo) AS geo FROM schema.col_hst hst, min_txn n
                 transaction = null)
         if (request.ignoreTransactions && chunk.tuples.size < request.chunkSize) hasNext = false
         if (!request.ignoreTransactions && (txn == Long.MIN_VALUE || txn == Version.HEAD.number)) hasNext = false
-        nextVersionToRead =
-            if (request.ignoreTransactions)
-                if (lastSeq >= 0) lastSeq + 1 else nextVersionToRead
-            else
-                if (txn == Long.MIN_VALUE) nextVersionToRead else txn
+        nextVersionToRead = resumePointOf(chunk) ?: nextVersionToRead
         synchronized(this) {
             _pending.addLast(chunk)
             _readTuples += chunk.tuples.size
@@ -281,9 +281,30 @@ SELECT jsondata, ST_AsEWKB(geo) AS geo FROM schema.col_hst hst, min_txn n
         return chunk
     }
 
-    override fun next(timeoutMillis: Long): StreamChunk? {
-        TODO("Not yet implemented")
+    override fun next(): StreamChunk = readLock.withLock {
+        if (_closed) throw NakshaException(CLOSED, "Stream closed")
+        if (!hasNext) throw NoSuchElementException("No more chunks available")
+        readChunk(0) ?: throw NakshaException(CLOSED, "Stream closed")   // null only if cancelled from outside
     }
+
+    override fun next(timeoutMillis: Long): StreamChunk? {
+        if (_closed) throw NakshaException(CLOSED, "Stream closed")
+        if (!hasNext) throw NoSuchElementException("No more chunks available")
+        if (timeoutMillis <= 0L) return null   // nothing prefetched, a DB round-trip is never instant
+        val deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(timeoutMillis)
+        if (!readLock.tryLock(timeoutMillis, TimeUnit.MILLISECONDS)) return null
+        try {
+            if (_closed) return null           // close() was called while we were waiting
+            if (!hasNext) throw NoSuchElementException("No more chunks available")
+            val remainingMs = TimeUnit.NANOSECONDS.toMillis(deadline - System.nanoTime())
+            if (remainingMs <= 0L) return null
+            val seconds = ((remainingMs + 999L) / 1000L).coerceIn(1L, Int.MAX_VALUE.toLong()).toInt()
+            return readChunk(seconds)
+        } finally {
+            readLock.unlock()
+        }
+    }
+
 
     override fun acknowledge(chunk: StreamChunk): Unit = synchronized(this) {
         require(chunk.stream === this) { "Chunk not from this stream" }
@@ -309,8 +330,7 @@ SELECT jsondata, ST_AsEWKB(geo) AS geo FROM schema.col_hst hst, min_txn n
             _closed = true
         }
         readLock.withLock {          // waits only for an in-flight next(), not for acks
-            _txnPlan?.close(); _txnPlan = null
-            _headPlan?.close(); _headPlan = null
+            _plan?.close(); _plan = null
         }
     }
 
@@ -321,7 +341,7 @@ SELECT jsondata, ST_AsEWKB(geo) AS geo FROM schema.col_hst hst, min_txn n
     override fun getRecoveryRequest(): StreamRequest = synchronized(this) {
         val position = _minVersion
         val cached = _recoveryRequest
-        if (cached != null && position == _recoveryPosition) cached
+        if (cached != null && cached.minVersion == position) cached
         else StreamRequest(
             databaseId = request.databaseId,
             catalogId = request.catalogId,
@@ -334,7 +354,6 @@ SELECT jsondata, ST_AsEWKB(geo) AS geo FROM schema.col_hst hst, min_txn n
             ignoreTransactions = request.ignoreTransactions,
             chunkSize = request.chunkSize
         ).also {
-            _recoveryPosition = position
             _recoveryRequest = it
         }
     }
