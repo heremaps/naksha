@@ -1,4 +1,4 @@
-package com.here.naksha.cli.streaming
+package com.here.naksha.cli.stream
 
 import naksha.base.Platform
 import naksha.model.IStorage

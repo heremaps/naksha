@@ -1,4 +1,4 @@
-package com.here.naksha.cli.streaming
+package com.here.naksha.cli.stream
 
 import naksha.base.Action
 import naksha.base.Id
@@ -19,6 +19,8 @@ import naksha.model.streaming.StreamTuple
 import naksha.psql.PgPlan
 import naksha.psql.PsqlPlan
 import java.lang.Long.parseLong
+import java.sql.SQLException
+import java.sql.SQLTimeoutException
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
@@ -224,7 +226,7 @@ SELECT jsondata, ST_AsEWKB(geo) AS geo FROM schema.col_hst hst, min_txn n
 
     private fun Throwable.isQueryCancelled(): Boolean =
         generateSequence(this) { it.cause }.any {
-            it is java.sql.SQLTimeoutException || (it is java.sql.SQLException && it.sqlState == "57014")
+            it is SQLTimeoutException || (it is SQLException && it.sqlState == "57014")
         }
 
     /** Must hold [_readLock]. Returns `null` if the query was cancelled (timeout or close); state is then unchanged. */
@@ -270,7 +272,7 @@ SELECT jsondata, ST_AsEWKB(geo) AS geo FROM schema.col_hst hst, min_txn n
                 )
                 tuples.add(streamTuple)
             }
-        } catch (e: java.sql.SQLException) {
+        } catch (e: SQLException) {
             if (!e.isQueryCancelled()) throw e
             throwIfFailed()
             return null
@@ -417,7 +419,7 @@ SELECT jsondata, ST_AsEWKB(geo) AS geo FROM schema.col_hst hst, min_txn n
             close()
         } catch (e: StreamException) {
             return e.recoveryRequest
-        } catch (e: java.sql.SQLException) {
+        } catch (e: SQLException) {
             NakshaError(
                 NakshaError.EXCEPTION,
                 "SQL error while closing stream for recovery",

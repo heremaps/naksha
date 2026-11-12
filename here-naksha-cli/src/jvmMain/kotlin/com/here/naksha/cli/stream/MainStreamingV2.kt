@@ -1,6 +1,7 @@
-package com.here.naksha.cli.streaming
+package com.here.naksha.cli.stream
 
 import naksha.base.Id
+import naksha.base.Platform
 import naksha.model.NakshaContext
 import naksha.model.objects.NakshaStorage
 import naksha.model.streaming.StreamRequest
@@ -35,7 +36,9 @@ class MainStreamingV2 {
               }
             }
         """)
-            val storageV2 = NakshaStorageV2(config)
+            val storageV2 = StorageProviders.load()
+                .get("v2")
+                .getStorage(Platform.toJSON(config.properties))
             val streamSession = storageV2.newStreamSession()
             val streamRequest = StreamRequest(
                 databaseId = Id(db),
