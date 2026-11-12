@@ -6,6 +6,9 @@ import naksha.model.NakshaContext
 import naksha.model.objects.NakshaStorage
 import naksha.model.streaming.StreamRequest
 
+/**
+ * With real DB credentials, this can be used in debug mode to test fetching real data.
+ */
 class MainStreamingV2 {
     companion object {
         @JvmStatic
