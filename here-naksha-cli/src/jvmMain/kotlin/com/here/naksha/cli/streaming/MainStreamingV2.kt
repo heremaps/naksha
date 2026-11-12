@@ -48,6 +48,8 @@ class MainStreamingV2 {
             )
             val stream = streamSession.read(streamRequest)
             println(stream.unacknowledgedChunks.size)
+            stream.close()
+            assert(stream.next(100) == null)
         }
     }
 
