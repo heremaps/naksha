@@ -13,6 +13,7 @@ kotlin {
                 api(project(":here-naksha-lib-model"))
                 api(project(":here-naksha-lib-view"))
                 api(project(":here-naksha-storage-http"))
+                implementation(project(":here-naksha-lib-circuit-breaker"))
 
                 implementation(libs.commons.lang3)
                 implementation(libs.commons.dbutils)

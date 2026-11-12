@@ -1,0 +1,8 @@
+{
+  "id": "{{storageId}}",
+  "type": "Storage",
+  "title": "Circuit breaker test storage",
+  "description": "Http storage for circuit breaker API tests",
+  "className": "com.here.naksha.storage.http.HttpStorage",
+  "properties": {{storageProperties}}
+}

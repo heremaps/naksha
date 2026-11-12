@@ -40,7 +40,7 @@ kotlin {
         jvmTest {
             dependencies {
                 implementation(libs.bundles.testing)
-                implementation(libs.resillience4j.retry)
+                implementation(libs.resilience4j.circuitbreaker)
                 implementation(libs.test.containers)
                 runtimeOnly(libs.junit.platform.launcher) // https://github.com/gradle/gradle/issues/34512
             }

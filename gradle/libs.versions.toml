@@ -18,6 +18,7 @@ gson = "2.14.0" # https://github.com/google/gson
 jsonio = "4.108.0" # https://github.com/jdereg/json-io
 fastjson = "2.0.57" # https://github.com/alibaba/fastjson
 simdjson = "0.4.0" # https://github.com/simdjson/simdjson-java
+resilience4j = "2.4.0"
 
 [libraries]
 jetbrains_annotations       = { module = "org.jetbrains:annotations", version = "26.1.0" }
@@ -106,7 +107,6 @@ test_containers_postgres    = { module = "org.testcontainers:postgresql", versio
 
 flipkart_zjsonpatch         = "com.flipkart.zjsonpatch:zjsonpatch:0.4.16"
 json_assert                 = "org.skyscreamer:jsonassert:1.5.3"
-resillience4j_retry         = "io.github.resilience4j:resilience4j-retry:2.3.0"
 otel                        = "io.opentelemetry:opentelemetry-api:1.51.0"
 cytodynamics                = "com.linkedin.cytodynamics:cytodynamics-nucleus:0.2.0"
 kotlinx_datetime            = "org.jetbrains.kotlinx:kotlinx-datetime:0.7.0"
@@ -120,6 +120,7 @@ gson                        = { module = "com.google.code.gson:gson", version.re
 jsonio                      = { module = "com.cedarsoftware:json-io", version.ref = "jsonio" }
 fastjson                    = { module = "com.alibaba:fastjson", version.ref="fastjson" }
 simdjson                    = { module = "org.simdjson:simdjson-java", version.ref = "simdjson" }
+resilience4j_circuitbreaker = { module = "io.github.resilience4j:resilience4j-circuitbreaker", version.ref = "resilience4j" }
 
 [plugins]
 kotlin_multiplatform        = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
