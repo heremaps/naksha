@@ -6,7 +6,7 @@ import naksha.model.IStorageConfigBuilder
 import naksha.model.IStorageProvider
 
 class V2StorageProvider : IStorageProvider {
-    override val name = "v2"
+    override val name = "naksha-v2"
     override val description = "Reads streams from Naksha V2 PostgreSQL."
 
     override fun newConfigBuilder(): IStorageConfigBuilder =
