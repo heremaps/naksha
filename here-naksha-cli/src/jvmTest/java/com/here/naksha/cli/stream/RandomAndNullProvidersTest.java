@@ -57,14 +57,15 @@ class RandomAndNullProvidersTest {
 
     @Test
     void serviceLoaderFindsBuiltInProviders() {
-        assertEquals(Set.of("null", "random"), providers.all().stream().map(IStorageProvider::getName).collect(Collectors.toSet()));
+        assertEquals(Set.of("naksha-v2","null", "random"), providers.all().stream().map(IStorageProvider::getName).collect(Collectors.toSet()));
         IllegalArgumentException e = assertThrows(IllegalArgumentException.class, () -> providers.get("v9"));
-        assertTrue(e.getMessage().contains("null, random"), e.getMessage());
+        assertTrue(e.getMessage().contains("naksha-v2, null, random"), e.getMessage());
     }
 
     @Test
     void builtInProvidersNeedNoConfiguration() {
-        for (IStorageProvider p : providers.all()) {
+        for (String name : List.of("null", "random")) {
+            IStorageProvider p = providers.get(name);
             IStorageConfigBuilder builder = p.newConfigBuilder();
             assertTrue(builder.isDone(), p.getName());
             assertEquals("{}", builder.build());
