@@ -34,12 +34,14 @@ import com.here.naksha.lib.core.models.payload.events.QueryParameterList;
 import com.here.naksha.lib.core.models.storage.*;
 import com.here.naksha.lib.core.util.ValueList;
 import java.util.*;
+import java.util.regex.Pattern;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public class PropertySearchUtil {
 
   private static final String NULL_PROP_VALUE = ".null";
+  private static final Pattern ALLOWED_PROPERTY_NAME = Pattern.compile("[a-zA-Z0-9@:_-]+");
 
   private static final String SHORT_PROP_PREFIX = "p.";
   private static final String FULL_PROP_PREFIX = XyzFeature.PROPERTIES + ".";
@@ -117,6 +119,14 @@ public class PropertySearchUtil {
     // expand key if needed (e.g. p.prop_1 should be properties.prop_1)
     final String[] propPath = expandKeyToRealJsonPath(propKey);
     if (propPath == null) return null;
+    // whitelist allowed characters in each path segment to prevent SQL injection through property names
+    for (final String segment : propPath) {
+      if (!ALLOWED_PROPERTY_NAME.matcher(segment).matches()) {
+        throw new XyzErrorException(
+            XyzError.ILLEGAL_ARGUMENT,
+            "Invalid key %s, allowed characters: [a-zA-Z0-9@:._-]".formatted(propKey));
+      }
+    }
 
     // iterate through all given values for a key
     int delimIdx = 0;

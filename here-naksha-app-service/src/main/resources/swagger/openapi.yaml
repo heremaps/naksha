@@ -12,7 +12,7 @@ servers:
 info:
   title: "Naksha Hub-API"
   description: "Naksha Hub-API is a REST API to provide simple access to geo data."
-  version: "2.2.28"
+  version: "2.2.29"
 
 security:
   - AccessToken: [ ]
@@ -1160,21 +1160,20 @@ components:
 
         Additionally, to the operators used in the examples above, the query can be written,
         with the same semantic, by using the long operators: "=gte=", "=lte=", "=gt=", "=lt=" and "=cs=".
-        The following queries yield the same result:
-          * ?p.property_name_1>=10
+        For example:
           * ?p.property_name_1=gte=10
 
 
         The available operators are:
-          - "=" - equals
-          - "!=" - not equals
+          - "=" or "=eq=" - equals
+          - "=ne=" - not equals
           - "=.null" - is null
-          - "!=.null" - is not null
-          - ">=" or "=gte=" - greater than or equals
-          - "<=" or "=lte=" - less than or equals
-          - ">" or "=gt=" - greater than
-          - "<" or "=lt=" - less than
-          - "@>" or "=cs=" - Array contains
+          - "=ne=.null" - is not null
+          - "=gte=" - greater than or equals
+          - "=lte=" - less than or equals
+          - "=gt=" - greater than
+          - "=lt=" - less than
+          - "=cs=" - Array contains
       explode: true
       schema:
         type: object
