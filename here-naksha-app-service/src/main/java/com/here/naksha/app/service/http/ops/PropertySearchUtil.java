@@ -34,12 +34,14 @@ import com.here.naksha.lib.core.models.payload.events.QueryParameterList;
 import com.here.naksha.lib.core.models.storage.*;
 import com.here.naksha.lib.core.util.ValueList;
 import java.util.*;
+import java.util.regex.Pattern;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public class PropertySearchUtil {
 
   private static final String NULL_PROP_VALUE = ".null";
+  private static final Pattern ALLOWED_PROPERTY_PATH = Pattern.compile("[a-zA-Z0-9@:._-]+");
 
   private static final String SHORT_PROP_PREFIX = "p.";
   private static final String FULL_PROP_PREFIX = XyzFeature.PROPERTIES + ".";
@@ -100,6 +102,10 @@ public class PropertySearchUtil {
       str.append(key);
     } else {
       return null; // excluding non-supported prop-search key
+    }
+    // whitelist allowed characters to prevent SQL injection through property names
+    if (!ALLOWED_PROPERTY_PATH.matcher(str).matches()) {
+      throw new XyzErrorException(XyzError.ILLEGAL_ARGUMENT, "Property path contains unsupported characters");
     }
     return str.toString().split("\\.");
   }

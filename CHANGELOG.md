@@ -1,3 +1,6 @@
+## Naksha_2.2.29
+- Fixed SQL injection via property names in property search by whitelisting allowed characters.
+
 ## Naksha_2.2.28
 - Fixed the HTTP storage circuit-breaker configuration property name to `circuitBreakerConfig`.
 
