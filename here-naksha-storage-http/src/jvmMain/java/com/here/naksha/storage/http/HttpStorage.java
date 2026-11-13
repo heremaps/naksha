@@ -130,11 +130,6 @@ public class HttpStorage extends AbstractStorage<NakshaStorage> {
     return super.newVirtualTupleNumber(catalogId, collectionId, featureId, version.number, Action.VERSION);
   }
 
-  @Override
-  public int getHardCap() {
-    throw new NotImplementedException("Not supported by HTTP storage");
-  }
-
   public @NotNull naksha.model.DataEncoding getDataEncoding(@Nullable Object feature, @Nullable Object context) {
     throw new NotImplementedException("Not supported by HTTP storage");
   }
