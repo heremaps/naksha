@@ -457,7 +457,7 @@ open class Write : AnyObject() {
      * @param atomic if _true_, copies the version found in the [uuid][XyzNs.uuid] of the feature into [version].
      * @since 3.0
      */
-    fun upsertCollection(collection: NakshaCollection, atomic: Boolean): Write {
+    fun upsertCollection(collection: NakshaCollection, atomic: Boolean = false): Write {
         this.catalogId = Id(collection.catalogId ?: throw illegalState("Missing catalogId in collection"))
         this.collectionId = COLLECTIONS_COL_ID
         this.op = WriteOp.UPSERT

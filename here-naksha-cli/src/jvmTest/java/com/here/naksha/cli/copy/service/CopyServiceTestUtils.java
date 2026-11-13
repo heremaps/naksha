@@ -113,10 +113,10 @@ public final class CopyServiceTestUtils {
 
     private static void assertCreateWrite(Write w, CopyElement target) {
         assertEquals(WriteOp.CREATE, w.getOp(), "Every write operation should be CREATE");
-        assertEquals(target.getCollectionId(), w.getCollectionId(),
+        assertEquals(target.getCollectionId(), w.getCollectionId().text(),
                 "Every write Collection ID should match target Collection ID"
         );
-        assertEquals(target.getMapId(), w.getCatalogId(),
+        assertEquals(target.getMapId(), w.getCatalogId().text(),
                 "Every write Map ID should match target Map ID"
         );
     }

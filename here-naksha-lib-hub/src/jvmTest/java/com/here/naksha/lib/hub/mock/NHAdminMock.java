@@ -38,6 +38,7 @@ import naksha.jbon.JbDictionary;
 import naksha.model.*;
 import naksha.base.NakshaError;
 import naksha.model.objects.NakshaCollection;
+import naksha.model.objects.NakshaDatabase;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.objects.NakshaStorage;
 import naksha.model.request.ErrorResponse;
@@ -59,7 +60,7 @@ public class NHAdminMock extends AbstractStorage<Config> {
   }
 
   @Override
-  protected void initStorage(@NotNull NHAdminMock.Config config, @Nullable Boolean create, @Nullable Boolean upgrade) {
+  public void initStorage(@NotNull NHAdminMock.Config config, @Nullable Boolean create, @Nullable Boolean upgrade) {
     // empty on purpose
   }
 
@@ -76,6 +77,11 @@ public class NHAdminMock extends AbstractStorage<Config> {
   @Override
   public @NotNull IStreamSession newStreamSession(@Nullable SessionOptions options) {
     throw unsupportedOp("newStreamSession");
+  }
+
+  @Override
+  public @NotNull NakshaDatabase getDatabase() {
+    return null;
   }
 
   public static class Config extends NakshaStorage {
