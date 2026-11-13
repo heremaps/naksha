@@ -474,7 +474,7 @@ open class Write : AnyObject() {
      * @since 3.0
      */
     fun deleteCollection(collection: NakshaCollection, atomic: Boolean): Write {
-        this.catalogId = Id(collection.catalogId ?: throw illegalState("Missing catalogId in collection"))
+        this.catalogId = collection.catalogId?.let { Id(it) } // allow late assignment of catalogId, to support Hub. Null catalogId is handled already at execution of the `Write`.
         this.collectionId = COLLECTIONS_COL_ID
         this.op = WriteOp.DELETE
         this.feature = collection
