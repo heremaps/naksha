@@ -196,14 +196,14 @@ open class Write : AnyObject() {
 
     /** Fluent setter for [collectionId]. */
     fun withCollectionId(value: Id?): Write {
-        catalogId = value
+        collectionId = value
         return this
     }
 
     /** Fluent setter for [collectionId]. */
     @JsName("withCollectionName")
     fun withCollectionId(value: String?): Write {
-        catalogId = if (value != null) Id(value) else null
+        collectionId = if (value != null) Id(value) else null
         return this
     }
 
@@ -457,6 +457,7 @@ open class Write : AnyObject() {
      * @param atomic if _true_, copies the version found in the [uuid][XyzNs.uuid] of the feature into [version].
      * @since 3.0
      */
+    @JvmOverloads
     fun upsertCollection(collection: NakshaCollection, atomic: Boolean = false): Write {
         this.catalogId = Id(collection.catalogId ?: throw illegalState("Missing catalogId in collection"))
         this.collectionId = COLLECTIONS_COL_ID

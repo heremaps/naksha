@@ -155,11 +155,12 @@ class PgConfig() : NakshaStorage() {
         create == otherConfig.create &&
         upgrade == otherConfig.upgrade &&
         version == otherConfig.version &&
-        pgInstancesEquals(master, otherConfig.master) &&
+        pgInstancesEquals(getMasterOrNull(), otherConfig.getMasterOrNull()) &&
         replicasEquals(replicas, otherConfig.replicas)
   }
 
-  private fun pgInstancesEquals(i1: PgInstanceConfig, i2: PgInstanceConfig): Boolean {
+  private fun pgInstancesEquals(i1: PgInstanceConfig?, i2: PgInstanceConfig?): Boolean {
+    if (i1 == null || i2 == null) return i1 === i2
     return i1.host == i2.host &&
         i1.port == i2.port &&
         i1.db == i2.db &&

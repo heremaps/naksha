@@ -5,7 +5,6 @@ import static naksha.base.NakshaError.MAP_NOT_FOUND;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -149,7 +148,7 @@ class DefaultStorageHandlerTest extends AbstractTest {
 
     // And: Request executed by storage has CollectionId chosen by priority
     WriteRequest requestPassedToStorageWriter = storageWriterRequestCaptor.getValue();
-    assertEquals(testCase.correctCollection().getId(), requestPassedToStorageWriter.getWrites().get(0).getCollectionId());
+    assertEquals(testCase.correctCollection().getId(), requestPassedToStorageWriter.getWrites().get(0).getCollectionId().text());
 
     // And: The rest of request's payload remained the same
     assertEquals(1, requestPassedToStorageWriter.getWrites().size());
@@ -194,16 +193,16 @@ class DefaultStorageHandlerTest extends AbstractTest {
     // And: passed Write Collection request was about creating single collection with correct id
     Write writeCollection = findSingleCreateCollectionWrite(capturedWrites);
     assertEquals(WriteOp.CREATE, writeCollection.getOp());
-    assertEquals(testCase.correctCollection().getId(), writeCollection.getId());
-    assertEquals(Naksha.COLLECTIONS_COL_ID, writeCollection.getCollectionId());
+    assertEquals(testCase.correctCollection().getId(), writeCollection.getId().text());
+    assertEquals(Naksha.COLLECTIONS_COL_ID, writeCollection.getCollectionId().text());
 
     // And: write features related to the same feature in correct collection
     List<Write> featureWrites = getSingularWritesToCollection(capturedWrites, testCase.correctCollection().getId());
     assertEquals(2, featureWrites.size());
     for (Write writeFeature : featureWrites) {
       assertEquals(WriteOp.CREATE, writeFeature.getOp());
-      assertEquals(featureToCreate.getId(), writeFeature.getId());
-      assertEquals(testCase.correctCollection().getId(), writeFeature.getCollectionId());
+      assertEquals(featureToCreate.getId(), writeFeature.getId().text());
+      assertEquals(testCase.correctCollection().getId(), writeFeature.getCollectionId().text());
     }
   }
 
@@ -239,7 +238,7 @@ class DefaultStorageHandlerTest extends AbstractTest {
 
     // And: passed Write Collection request was about creating collection defined in Handler properties
     assertEquals(WriteOp.CREATE, capturedCollectionWrite.getOp());
-    assertEquals(handler.properties.getCollection().getId(), capturedCollectionWrite.getId());
+    assertEquals(handler.properties.getCollection().getId(), capturedCollectionWrite.getId().text());
     NakshaCollection created = collectionFrom(capturedCollectionWrite);
     assertSame(handler.properties.getCollection(), created);
     assertEquals("test_map_id", created.getCatalogId());
@@ -646,8 +645,8 @@ class DefaultStorageHandlerTest extends AbstractTest {
     assertEquals(mapId, normalized.getCatalogId());
     assertIndexNames(normalized, "tags", "geo", "fn_nv");
     assertEquals("request_database", normalized.getDatabaseId());
-    assertEquals(mapId, submittedWrite.getCatalogId());
-    assertEquals(Naksha.COLLECTIONS_COL_ID, submittedWrite.getCollectionId());
+    assertEquals(mapId, submittedWrite.getCatalogId().text());
+    assertEquals(Naksha.COLLECTIONS_COL_ID, submittedWrite.getCollectionId().text());
   }
 
   @Test
