@@ -1,5 +1,5 @@
 {
   "type": "ErrorResponse",
   "error": "FeatureNotFound",
-  "errorMessage": "Failed to update feature 'this-surely-does-not-exists', no such feature exists"
+  "errorMessage": "Feature 'this-surely-does-not-exists' has no live HEAD state to update"
 }
