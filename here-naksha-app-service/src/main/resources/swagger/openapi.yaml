@@ -1166,9 +1166,9 @@ components:
 
         The available operators are:
           - "=" or "=eq=" - equals
-          - "=ne=" - not equals
+          - "!=" or "=ne=" - not equals
           - "=.null" - is null
-          - "=ne=.null" - is not null
+          - "!=.null" or "=ne=.null" - is not null
           - "=gte=" - greater than or equals
           - "=lte=" - less than or equals
           - "=gt=" - greater than
