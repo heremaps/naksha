@@ -504,8 +504,8 @@ class DefaultStorageHandlerTest extends AbstractTest {
     assertEquals(1, subsmittedWrites.size());
     Write submittedWrite = subsmittedWrites.get(0);
     assertEquals(WriteOp.CREATE, submittedWrite.getOp());
-    assertEquals(mapIdFromStorageProps, submittedWrite.getCatalogId());
-    assertEquals(handler.properties.getCollection().getId(), submittedWrite.getCollectionId());
+    assertEquals(mapIdFromStorageProps, submittedWrite.getCatalogId().text());
+    assertEquals(handler.properties.getCollection().getId(), submittedWrite.getCollectionId().text());
   }
 
   @Test
@@ -611,8 +611,8 @@ class DefaultStorageHandlerTest extends AbstractTest {
     verify(storageWriteSession).execute(captor.capture());
     Write write = captor.getValue().getWrites().get(0);
     assertTrue(RequestTypesUtil.isOnlyWriteCollections(captor.getValue()));
-    assertEquals(Naksha.COLLECTIONS_COL_ID, write.getCollectionId(), "WriteCollections must target naksa~collections collection");
-    assertEquals(mapIdFromStorageProps, write.getCatalogId(), "MapId must be taken from storage props");
+    assertEquals(Naksha.COLLECTIONS_COL_ID, write.getCollectionId().text(), "WriteCollections must target naksa~collections collection");
+    assertEquals(mapIdFromStorageProps, write.getCatalogId().text(), "MapId must be taken from storage props");
     assertEquals("apply_col", write.getFeature().getId());
   }
 
