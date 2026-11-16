@@ -21,6 +21,7 @@ package com.here.naksha.app.service;
 import static com.here.naksha.app.common.CommonApiTestSetup.setupSpaceAndRelatedResources;
 import static com.here.naksha.app.common.TestUtil.loadFileOrFail;
 import static com.here.naksha.app.common.TestUtil.urlEncoded;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.here.naksha.app.common.ApiTest;
 import com.here.naksha.app.common.NakshaTestWebClient;
@@ -30,6 +31,7 @@ import java.net.URISyntaxException;
 import java.net.http.HttpResponse;
 import java.util.UUID;
 import org.json.JSONException;
+import org.json.JSONObject;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
@@ -254,4 +256,23 @@ class SearchFeaturesTest extends ApiTest {
             .hasStreamIdHeader(streamId)
             .hasJsonBody(expectedBodyPart, "Get Feature response body doesn't match");
   }
+
+  @Test
+  void tc1010_testSearchRejectsSqlInjectionInPropertyKey() throws Exception {
+    final String streamId = UUID.randomUUID().toString();
+    final String query = "limit=1&p.a.b%5C.%29%20IS%20NULL%20AND%20%28%3F%20IS%20NOT%20NULL%29%20AND%20%281%3D1%29%29--%20=1";
+
+    final HttpResponse<String> response = nakshaClient.get("hub/spaces/" + SPACE_ID + "/search?" + query, streamId);
+
+    ResponseAssertions.assertThat(response)
+            .hasStatus(400)
+            .hasStreamIdHeader(streamId)
+            .hasJsonBody("""
+            {"type":"ErrorResponse", "error":"IllegalArgument"}
+            """);
+    assertEquals(
+            "Invalid key p.a.b\\.) IS NULL AND (? IS NOT NULL) AND (1=1))-- , allowed characters: [a-zA-Z0-9@:._-]",
+            new JSONObject(response.body()).getString("errorMessage"));
+  }
+
 }
