@@ -50,6 +50,13 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures, private va
         }
         return false
       }
+      if (op is Or) {
+        if (op.children.isEmpty()) return false
+        for (child in op.children) {
+          if (!isExactNextVersionLookup(child)) return false
+        }
+        return true
+      }
       if (op.at != naksha.model.objects.StandardMembers.NextVersion.name) return false
       val value = when (op) {
         is Equals -> op.value
