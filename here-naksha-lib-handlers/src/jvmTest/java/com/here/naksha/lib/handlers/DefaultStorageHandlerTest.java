@@ -680,7 +680,8 @@ class DefaultStorageHandlerTest extends AbstractTest {
     assertSame(configuredCollection, created);
     assertEquals("space_collection", created.getId());
     assertEquals(mapId, created.getCatalogId());
-    assertEquals("score", created.useMember("score").getName());
+    assertNotNull(created.getMembers());
+    assertEquals("score", created.getMembers().useMember("score").getName());
     assertIndexNames(created, "tags", "geo", "fn_nv");
   }
 
@@ -779,7 +780,7 @@ class DefaultStorageHandlerTest extends AbstractTest {
 
   private static List<Write> getSingularWritesToCollection(List<WriteRequest> writeRequests, String collectionId) {
     return flattenSingularWriteRequest(writeRequests)
-        .filter(write -> collectionId.equals(write.getCollectionId()))
+        .filter(write -> write.getCollectionId() != null && collectionId.equals(write.getCollectionId().text()))
         .collect(Collectors.toList());
   }
 

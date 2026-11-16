@@ -459,7 +459,7 @@ open class Write : AnyObject() {
      */
     @JvmOverloads
     fun upsertCollection(collection: NakshaCollection, atomic: Boolean = false): Write {
-        this.catalogId = Id(collection.catalogId ?: throw illegalState("Missing catalogId in collection"))
+        this.catalogId = collection.catalogId?.let { Id(it) } // allow late assignment of catalogId, to support Hub. Null catalogId is rejected at execution of the `Write`.
         this.collectionId = COLLECTIONS_COL_ID
         this.op = WriteOp.UPSERT
         this.feature = collection

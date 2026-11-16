@@ -20,7 +20,6 @@ package com.here.naksha.lib.handlers;
 
 import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.PROCESS;
 import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.SEND_UPSTREAM_WITHOUT_PROCESSING;
-import static com.here.naksha.lib.handlers.util.RequestTypesUtil.isOnlyWriteFeatures;
 
 import com.here.naksha.lib.core.IEvent;
 import com.here.naksha.lib.core.INaksha;
@@ -36,6 +35,7 @@ import naksha.model.NakshaContext;
 import naksha.model.request.ErrorResponse;
 import naksha.model.request.Request;
 import naksha.model.request.Response;
+import naksha.model.request.WriteRequest;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -65,7 +65,8 @@ public class AuthorizationEventHandler extends AbstractEventHandler {
   @Override
   protected EventProcessingStrategy processingStrategyFor(IEvent event) {
     final Request request = event.getRequest();
-    if (isOnlyWriteFeatures(request)) {
+    // Collection writes (e.g. issued by space update/delete) must be authorized as well, not only feature writes.
+    if (request instanceof WriteRequest) {
       return PROCESS;
     }
     return SEND_UPSTREAM_WITHOUT_PROCESSING;
