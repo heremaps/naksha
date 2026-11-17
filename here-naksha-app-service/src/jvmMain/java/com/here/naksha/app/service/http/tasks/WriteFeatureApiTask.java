@@ -265,7 +265,7 @@ public class WriteFeatureApiTask extends AbstractApiTask<XyzResponse> {
     // Validate parameters
     validateFeatureId(routingContext, featureFromRequest.getId());
 
-    final List<NakshaFeature> featuresFromRequest = new ArrayList<>();
+    final List<NakshaFeature> featuresFromRequest = new ArrayList<>(1);
     featuresFromRequest.add(featureFromRequest);
     return patchAndPreProcess(spaceId, featuresFromRequest, HttpResponseType.FEATURE, preProcessor(removeTags, addTags));
   }
