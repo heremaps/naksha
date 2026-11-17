@@ -69,7 +69,7 @@ open class PsqlStorage : PgStorage(), IStorage {
     }
 
     override fun newStreamSession(options: SessionOptions?): IStreamSession {
-        throw unsupportedOp("newStreamSession")
+        return PsqlStreamSession(this, options ?: SessionOptions.from(null))
     }
 
     override fun getDictionary(id: String): JbDictionary? = adminCatalog.getDictionary(id)
