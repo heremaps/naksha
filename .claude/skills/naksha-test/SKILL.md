@@ -4,7 +4,7 @@ description: Use ONLY when asked to run tests for the Naksha project. Do NOT use
 ---
 
 # General
-Most tests require Postgres. `here-naksha-lib-psql` starts a Docker container if no database URL is configured. The app-service tests default to a standalone Postgres at localhost; use `TEST_CONTAINERS` to have them start a managed container. When unclear, ask the user which mode they want.
+Database-backed tests need either a local PostgreSQL instance or their supported container setup. The psql library can start a container when no master is configured, but app-service defaults to an existing local database. When unclear, ask which database to use. Prefer a fresh disposable local test database; do not clear existing schemas or restart the database server. See `ai/test.md` for the full JVM procedure and the isolated integration suites.
 
 # Environment Variables
 All environment variables contain some placeholders that need to be replaced:
@@ -16,53 +16,56 @@ All environment variables contain some placeholders that need to be replaced:
 
 You can test the connection to the database. If you detect that the connection to the database fails due to wrong credentials or hostname, ask the user for host, port, user, and password _(whatever is needed)_. Use defaults for any value not provided. Tell the user the defaults.
 
-## Shared Postgres URL
-Set one shared URL when the tests should all use the same standalone Postgres instance:
+## Library tests (here-naksha-lib-psql)
+Only needs one variable. If not set, Docker auto-starts:
 
 ```bash
-export NAKSHA_TEST_DB_URL="jdbc:postgresql://{host}:{port}/postgres?user={user}&password={password}&ssl=false"
+export NAKSHA_TEST_PSQL_DB_URL="jdbc:postgresql://{host}:{port}/postgres?user={user}&password={password}&ssl=false"
 ```
 
-`NAKSHA_TEST_DB_URL` is used by `here-naksha-lib-psql` and as the fallback for admin and data
-storage in `here-naksha-app-service`. The specific variables `NAKSHA_TEST_PSQL_DB_URL`,
-`NAKSHA_TEST_ADMIN_DB_URL`, and `NAKSHA_TEST_DATA_DB_URL` override it for their respective test
-storage when separate databases are needed. `NAKSHA_TEST_STORAGE_ID` defaults to
-`local_psql_test_storage`, and the Gradle test tasks default `HUB_ADMIN_STORAGE_ID` to the same value,
-so both suites agree on the admin catalog ID without setting them.
+Alternatively, set `NAKSHA_TEST_DB_URL` as a shared URL for library, admin and data storage. The specific `NAKSHA_TEST_PSQL_DB_URL`, `NAKSHA_TEST_ADMIN_DB_URL`, and `NAKSHA_TEST_DATA_DB_URL` variables override it for their respective storage. `NAKSHA_TEST_STORAGE_ID` defaults to `local_psql_test_storage`, and Gradle defaults `HUB_ADMIN_STORAGE_ID` to the same value. Use a dedicated test database: test setup may drop Naksha schemas.
 
-Use a dedicated test database: test setup may drop Naksha schemas.
-For app-service tests, per-storage URLs in `~/.config/naksha/test_admin_db.url` and
-`~/.config/naksha/test_data_db.url` take precedence over environment variables.
+## Server tests (here-naksha-app-service)
+The app-service JUnit extension starts and stops Naksha itself in LOCAL_STANDALONE mode; do not start a second server. Port 8080 must be free. Run when service tests or the full project JVM suite are requested. For the shared-database recipe, keep the library/admin storage IDs identical and all three URLs identical:
 
-## App-service tests (`here-naksha-app-service`)
-These tests start a Naksha app instance as part of the test suite; no separately running server is
-required. By default, they expect standalone Postgres on localhost, so the context variable is
-optional. Set `NAKSHA_APP_SERVICE_TEST_CONTEXT=TEST_CONTAINERS` to use the app-service managed
-container instead.
+`LOCAL_STANDALONE` is the default context. Set `NAKSHA_APP_SERVICE_TEST_CONTEXT=TEST_CONTAINERS` to use the app-service managed container instead.
+
+```bash
+export NAKSHA_APP_SERVICE_TEST_CONTEXT=LOCAL_STANDALONE
+export NAKSHA_TEST_STORAGE_ID=local_psql_test_storage
+export HUB_ADMIN_STORAGE_ID=local_psql_test_storage
+export NAKSHA_TEST_PSQL_DB_URL="jdbc:postgresql://{host}:{port}/postgres?user={user}&password={password}&ssl=false"
+export NAKSHA_TEST_ADMIN_DB_URL="jdbc:postgresql://{host}:{port}/postgres?user={user}&password={password}&ssl=false"
+export NAKSHA_TEST_DATA_DB_URL="jdbc:postgresql://{host}:{port}/postgres?user={user}&password={password}&ssl=false"
+```
+
+Important: `TestStorageConfig` checks URL files in the working directory / `~/.config/naksha/` before environment variables. Existing `test_admin_db.url` or `test_data_db.url` can therefore override exports. Verify their target without printing credentials. `NAKSHA_TEST_PSQL_DB_URL` also globally overrides PgStorage connections, so do not combine it with service fixture URLs pointing elsewhere. Database storage identity persists in `naksha~admin`; an old database with a different storage ID is not fixed by exporting a new ID. Use a fresh database instead of deleting someone else's schemas.
 
 # Commands
 
-## All library tests (JVM):
-Docker auto-starts if no env vars are set:
+## All non-service JVM tests:
+Includes base/auth and the remaining modules as well as model/psql/jbon/geo. Set the local database override to avoid the psql library's container fallback:
 
 ```bash
-./gradlew :here-naksha-lib-model:jvmTest :here-naksha-lib-psql:jvmTest :here-naksha-lib-jbon:jvmTest :here-naksha-lib-geo:jvmTest
+./gradlew jvmTest -x :here-naksha-app-service:jvmTest --rerun --continue --console=plain
 ```
 
-## All JVM tests:
-App-service tests start Naksha as part of the suite. They default to standalone Postgres at localhost; set `NAKSHA_TEST_DB_URL` if it is running elsewhere, or explicitly select `TEST_CONTAINERS` for the app-service managed container. `here-naksha-lib-psql` starts its own container when neither URL variable is set.
+## All ordinary JVM tests (includes the self-starting service tests):
+Set the local database variables above and use Java 25. `--rerun` forces test execution; `--continue` collects independent task failures. A failing test is not necessarily a setup error: inspect the XML's first cause before changing configuration.
 
 ```bash
-./gradlew jvmTest
+./gradlew jvmTest --rerun --continue --console=plain
 ```
+
+This does not enable the 75 opt-in psql integration tests. Their 16 suites require fresh, separate databases and matching `NAKSHA_TEST_PSQL_DB_URL` plus suite-specific URL variables. Never export every suite variable to the same database and run all of them together. Follow the isolated-suite recipe in `ai/test.md`. One explicitly ignored partitioning test also remains ignored. Performance tests run unless `NAKSHA_SUPPRESS_PERF_TEST=true`; disclose this exclusion if used.
 
 ## All library tests (JS):
 ```bash
 ./gradlew :here-naksha-lib-model:jsTest :here-naksha-lib-jbon:jsTest :here-naksha-lib-geo:jsTest
 ```
 
-## App-service tests
-The test suite starts its own Naksha app instance and requires standalone Postgres or the `TEST_CONTAINERS` context:
+## Server tests
+Run when requested explicitly or as part of the full JVM suite. JUnit starts the service; only the PostgreSQL instance must already be running:
 
 ```bash
 ./gradlew :here-naksha-app-service:jvmTest
@@ -70,6 +73,6 @@ The test suite starts its own Naksha app instance and requires standalone Postgr
 
 # Common Issues
 - Kotlintest discovery errors: If `here-naksha-lib-psql:jvmTest` fails with test discovery errors, try `./gradlew clean` first
-- Connection refused: verify that the standalone Postgres host and port in `NAKSHA_TEST_DB_URL` are reachable from the Gradle process
-- Port conflicts: The `here-naksha-lib-psql` Docker container uses host port 15432. If this port is in use, it will fail to start
-- App-service tests fail with ConnectException: verify that Postgres is available and that the app-service test context is configured as intended
+- Docker not available: Configure `NAKSHA_TEST_PSQL_DB_URL` for the local PostgreSQL instance instead of the library's container fallback.
+- Port conflicts: The Docker container uses host port 15432. If this port is in use, the container will fail to start
+- Service tests fail with ConnectException: Inspect the earlier test-context/bootstrap failure or a port-8080 conflict. These tests normally start their own server; absence of a separately started server is not itself the cause.

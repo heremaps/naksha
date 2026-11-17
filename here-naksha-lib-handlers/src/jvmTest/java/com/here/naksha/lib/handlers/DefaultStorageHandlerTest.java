@@ -422,8 +422,9 @@ class DefaultStorageHandlerTest extends AbstractTest {
     );
   }
 
-  @Test
-  void shouldSucceedWhenStorageConfigHasNoMapId() {
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
+  void shouldForwardWritesWithoutConfiguredSchema(boolean requestHasCatalog) {
     // Given:
     configureStorageConfig(new NakshaStorage());
 
@@ -434,10 +435,17 @@ class DefaultStorageHandlerTest extends AbstractTest {
     when(storageWriteSession.execute(any(WriteRequest.class))).thenReturn(new SuccessResponse());
 
     // When:
-    Response response = handler.process(event(writeRandomFeature()));
+    WriteRequest request = (WriteRequest) writeRandomFeature();
+    if (requestHasCatalog) request.getWrites().get(0).setCatalogId(new Id("request_catalog"));
+    Response response = handler.process(event(request));
 
     // Then:
     assertInstanceOf(SuccessResponse.class, response);
+    ArgumentCaptor<WriteRequest> captor = ArgumentCaptor.forClass(WriteRequest.class);
+    verify(storageWriteSession).execute(captor.capture());
+    Write submitted = captor.getValue().getWrites().get(0);
+    assertNull(submitted.getCatalogId(), "A missing schema override must remain unset");
+    assertEquals(handler.properties.getCollection().getId(), submitted.getCollectionId().text());
   }
 
   @Test
@@ -471,9 +479,9 @@ class DefaultStorageHandlerTest extends AbstractTest {
     assertEquals(1, secondRequestWrites.size());
     Write mapWrite = secondRequestWrites.get(0);
     assertEquals(WriteOp.CREATE, mapWrite.getOp());
-    assertEquals(Naksha.ADMIN_CATALOG_ID, mapWrite.getCatalogId());
-    assertEquals(Naksha.CATALOGS_COL_ID, mapWrite.getCollectionId());
-    assertEquals(mapId, mapWrite.getId());
+    assertEquals(Naksha.ADMIN_CATALOG_ID, mapWrite.getCatalogId().text());
+    assertEquals(Naksha.CATALOGS_COL_ID, mapWrite.getCollectionId().text());
+    assertEquals(mapId, mapWrite.getId().text());
   }
 
   @Test
@@ -543,19 +551,19 @@ class DefaultStorageHandlerTest extends AbstractTest {
     // 1st and 3rd are WriteCollections against COLLECTIONS_COL with map from storage props
     assertTrue(RequestTypesUtil.isOnlyWriteCollections(calls.get(0)));
     assertTrue(RequestTypesUtil.isOnlyWriteCollections(calls.get(2)));
-    assertEquals(Naksha.COLLECTIONS_COL_ID, calls.get(0).getWrites().get(0).getCollectionId());
-    assertEquals(mapIdFromStorageProps, calls.get(0).getWrites().get(0).getCatalogId());
+    assertEquals(Naksha.COLLECTIONS_COL_ID, calls.get(0).getWrites().get(0).getCollectionId().text());
+    assertEquals(mapIdFromStorageProps, calls.get(0).getWrites().get(0).getCatalogId().text());
     assertEquals("target_collection", calls.get(0).getWrites().get(0).getFeature().getId());
-    assertEquals(Naksha.COLLECTIONS_COL_ID, calls.get(2).getWrites().get(0).getCollectionId());
-    assertEquals(mapIdFromStorageProps, calls.get(2).getWrites().get(0).getCatalogId());
+    assertEquals(Naksha.COLLECTIONS_COL_ID, calls.get(2).getWrites().get(0).getCollectionId().text());
+    assertEquals(mapIdFromStorageProps, calls.get(2).getWrites().get(0).getCatalogId().text());
     assertEquals("target_collection", calls.get(2).getWrites().get(0).getFeature().getId());
 
     // 2nd call is map creation in admin map / maps collection
     Write mapCreate = calls.get(1).getWrites().get(0);
     assertEquals(WriteOp.CREATE, mapCreate.getOp());
-    assertEquals(Naksha.ADMIN_CATALOG_ID, mapCreate.getCatalogId());
-    assertEquals(Naksha.CATALOGS_COL_ID, mapCreate.getCollectionId());
-    assertEquals(mapIdFromStorageProps, mapCreate.getId());
+    assertEquals(Naksha.ADMIN_CATALOG_ID, mapCreate.getCatalogId().text());
+    assertEquals(Naksha.CATALOGS_COL_ID, mapCreate.getCollectionId().text());
+    assertEquals(mapIdFromStorageProps, mapCreate.getId().text());
   }
 
 
@@ -793,7 +801,7 @@ class DefaultStorageHandlerTest extends AbstractTest {
   private static ArgumentMatcher<WriteRequest> matchesCreateCollectionRequest() {
     return writeRequest -> {
       WriteList writes = writeRequest.getWrites();
-      return writes.size() == 1 && Naksha.COLLECTIONS_COL_ID.equals(writes.get(0).getCollectionId());
+      return writes.size() == 1 && Naksha.COLLECTIONS_COL_ID.equals(writes.get(0).getCollectionId().text());
     };
   }
 
@@ -986,9 +994,9 @@ class DefaultStorageHandlerTest extends AbstractTest {
       }
       Write w = writes.get(0);
       return WriteOp.CREATE.equals(w.getOp())
-             && Naksha.ADMIN_CATALOG_ID.equals(w.getCatalogId())
-             && Naksha.CATALOGS_COL_ID.equals(w.getCollectionId())
-             && mapId.equals(w.getId());
+             && Naksha.ADMIN_CATALOG_ID.equals(w.getCatalogId().text())
+             && Naksha.CATALOGS_COL_ID.equals(w.getCollectionId().text())
+             && mapId.equals(w.getId().text());
     };
   }
 

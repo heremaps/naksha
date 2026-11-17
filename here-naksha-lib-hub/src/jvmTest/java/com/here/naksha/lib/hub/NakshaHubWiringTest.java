@@ -127,6 +127,7 @@ class NakshaHubWiringTest extends AbstractTest {
   void adminCollectionsUseSlimIndices() {
     final String adminMapId = "admin_map";
     final IStorage storage = mock(IStorage.class);
+    when(storage.getId()).thenReturn(new Id("admin_storage"));
     final IWriteSession writer = mock(IWriteSession.class);
     when(storage.newWriteSession(any())).thenReturn(writer);
     doCallRealMethod().when(storage).runInWriteSession(any(), any());
@@ -311,7 +312,7 @@ class NakshaHubWiringTest extends AbstractTest {
     assertTrue(requests.get(0) instanceof WriteRequest, "Expected WriteRequest type of request.");
     assertEquals(
         collectionId,
-        ((WriteRequest) requests.get(0)).getWrites().get(0).getCollectionId(),
+        ((WriteRequest) requests.get(0)).getWrites().get(0).getCollectionId().text(),
         "CollectionId mismatch for Write Feature request");
     // Verify: WriteCollection got called (to create missing table)
     assertTrue(requests.get(1) instanceof WriteRequest, "Expected WriteRequest type of request.");
@@ -320,7 +321,7 @@ class NakshaHubWiringTest extends AbstractTest {
         requests.get(1)
             .getWrites()
             .get(0)
-            .getId(),
+            .getId().text(),
         "CollectionId mismatch for Write Collection request");
     // Verify: WriteFeature into collectionId got called again
     assertTrue(
@@ -328,7 +329,7 @@ class NakshaHubWiringTest extends AbstractTest {
         "Expected WriteXyzFeatures type of request during reattempt.");
     assertEquals(
         collectionId,
-        requests.get(2).getWrites().get(0).getCollectionId(),
+        requests.get(2).getWrites().get(0).getCollectionId().text(),
         "CollectionId mismatch for reattempted Write Feature request");
   }
 }

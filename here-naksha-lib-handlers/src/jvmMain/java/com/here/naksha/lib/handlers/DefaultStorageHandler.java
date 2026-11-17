@@ -30,6 +30,7 @@ import naksha.model.objects.CustomIndexMappingUtil;
 import com.here.naksha.lib.core.util.PropertyMemberQueryTranslator;
 import naksha.model.util.CustomStoragePropertiesUtil;
 import naksha.base.JvmBoxingUtil;
+import naksha.base.Id;
 import naksha.model.IStorage;
 import naksha.model.Naksha;
 import naksha.model.NakshaContext;
@@ -147,7 +148,7 @@ public class DefaultStorageHandler extends AbstractEventHandler {
     return translated != null ? translated : readFeatures;
   }
 
-  private String extractMapIdFromStorageProps(@NotNull IStorage storage) {
+  private @Nullable String extractMapIdFromStorageProps(@NotNull IStorage storage) {
     NakshaStorage storageConfig = storage.getConfig();
     if(storageConfig == null) {
       throw new NakshaException(NakshaError.ILLEGAL_STATE,
@@ -546,7 +547,7 @@ public class DefaultStorageHandler extends AbstractEventHandler {
 
   private void applyMapIdAndCollectionId(
       Request request,
-      @NotNull String mapId,
+      @Nullable String mapId,
       @NotNull String collectionId
   ) {
     if (request instanceof ReadFeatures) {
@@ -555,30 +556,30 @@ public class DefaultStorageHandler extends AbstractEventHandler {
       rf.setCollectionId(collectionId);
     } else if (request instanceof WriteRequest) {
       WriteRequest wr = (WriteRequest) request;
-      if (isOnlyWriteCollections(wr)) {
-        wr.getWrites().forEach(write -> {
-          if (write.getFeature() instanceof NakshaCollection) {
-            final NakshaCollection collectionFromRequest = (NakshaCollection) write.getFeature();
-            collectionFromRequest.setId(collectionId);
-            collectionFromRequest.setCatalogId(mapId);
-            CollectionIndexPolicy.normalizeForHubCreation(collectionFromRequest);
-          }
-        });
+      final boolean writeCollections = isOnlyWriteCollections(wr);
+      final Id catalogId = mapId == null ? null : new Id(mapId);
+      final Id targetCollectionId = new Id(writeCollections ? Naksha.COLLECTIONS_COL_ID : collectionId);
+      for (Write write : wr.getWrites()) {
+        if (writeCollections && write.getFeature() instanceof NakshaCollection) {
+          final NakshaCollection collectionFromRequest = (NakshaCollection) write.getFeature();
+          collectionFromRequest.setId(collectionId);
+          collectionFromRequest.setCatalogId(mapId);
+          CollectionIndexPolicy.normalizeForHubCreation(collectionFromRequest);
+        }
+        write.setCatalogId(catalogId);
+        write.setCollectionId(targetCollectionId);
       }
-      String finalCollectionId = isOnlyWriteCollections(wr) ? Naksha.COLLECTIONS_COL_ID : collectionId;
-      wr.getWrites().forEach(write -> {
-        write.setCatalogId(new naksha.base.Id(mapId));
-        write.setCollectionId(new naksha.base.Id(finalCollectionId));
-      });
     }
   }
 
   /**
    * Hook called during {@link #process} to normalize the request before execution.
+   * @param mapId the configured catalog override, or null when the storage has no schema override.
+   * @since 3.0
    */
   protected void normalizeWriteRequest(
       @NotNull Request request,
-      @NotNull String mapId,
+      @Nullable String mapId,
       @NotNull String collectionId
   ) {
     applyMapIdAndCollectionId(request, mapId, collectionId);

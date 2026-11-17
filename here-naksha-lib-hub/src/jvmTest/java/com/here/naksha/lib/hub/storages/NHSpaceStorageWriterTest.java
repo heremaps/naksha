@@ -21,8 +21,6 @@ import com.here.naksha.lib.hub.AbstractTest;
 import com.here.naksha.lib.hub.EventPipelineFactory;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
-import java.util.stream.Collectors;
 import naksha.model.Naksha;
 import naksha.model.NakshaContext;
 import naksha.base.NakshaError;
@@ -200,14 +198,18 @@ class NHSpaceStorageWriterTest extends AbstractTest {
   private ArgumentMatcher<WriteRequest> writeCollectionRequest() {
     return writeRequest -> {
       List<Write> writes = writeRequest.getWrites();
-      return writes.size() == 1 && writes.get(0).getCollectionId().equals(Naksha.COLLECTIONS_COL_ID);
+      return writes.size() == 1 && Naksha.COLLECTIONS_COL_ID.equals(writes.get(0).getCollectionId().text());
     };
   }
 
   private ArgumentMatcher<WriteRequest> writeFeaturesRequest(String collectionId) {
     return writeRequest -> {
-      Set<String> collectionIds = writeRequest.getWrites().stream().map(Write::getCollectionId).collect(Collectors.toSet());
-      return collectionIds.size() == 1 && collectionIds.contains(collectionId);
+      List<Write> writes = writeRequest.getWrites();
+      if (writes.isEmpty()) return false;
+      for (Write write : writes) {
+        if (!collectionId.equals(write.getCollectionId().text())) return false;
+      }
+      return true;
     };
   }
 }

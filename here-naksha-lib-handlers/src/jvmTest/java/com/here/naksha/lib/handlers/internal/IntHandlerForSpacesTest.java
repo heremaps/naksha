@@ -54,7 +54,7 @@ class IntHandlerForSpacesTest extends AbstractIntHandlerTest {
   @Test
   void shouldAlwaysAllowDeletion() {
     // Given:
-    final Request writeRequest = new WriteRequest().add(new Write().deleteFeatureById(new NakshaCollection(SPACES), "to_delete"));
+    final Request writeRequest = new WriteRequest().add(new Write().deleteFeatureById(new NakshaCollection(SPACES, TEST_MAP_ID), "to_delete"));
     IEvent event = eventWith(writeRequest);
 
     // And:

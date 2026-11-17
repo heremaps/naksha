@@ -130,11 +130,6 @@ public class NHAdminMock extends AbstractStorage<Config> {
     return id;
   }
 
-  @Override
-  public int getHardCap() {
-    throw new UnsupportedOperationException("Not yet supported by NHAdminMock");
-  }
-
   private void setupCollections() {
     final NakshaContext ctx = NakshaContext.newInstance("naksha_mock");
     ctx.attachToCurrentThread();
