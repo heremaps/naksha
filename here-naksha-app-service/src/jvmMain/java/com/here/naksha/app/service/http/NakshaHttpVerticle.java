@@ -567,7 +567,7 @@ public final class NakshaHttpVerticle extends AbstractNakshaHubVerticle {
       case NakshaError.BAD_GATEWAY -> {
         return HttpResponseStatus.BAD_GATEWAY;
       }
-      case NakshaError.CONFLICT -> {
+      case NakshaError.CONFLICT, NakshaError.FEATURE_EXISTS -> {
         return HttpResponseStatus.CONFLICT;
       }
       case NakshaError.UNAUTHORIZED -> {
