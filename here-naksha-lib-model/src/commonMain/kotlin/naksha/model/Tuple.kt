@@ -362,7 +362,7 @@ data class Tuple @JvmOverloads constructor(
                 // into the members-book for it; server-stamped members (app_id, author, ...) are absent
                 // from the client feature otherwise and would be missing from the encoded blob.
                 if (memberName != TN && memberName != NEXT_VERSION && memberName != ORIGIN && memberName != GLOBAL_BOOK_FN) {
-                    member.write(f, memberValue)
+                    member.write(f, memberValue ?: UNDEFINED)
                 }
                 membersBook.put(memberName, memberValue)
             }

@@ -23,7 +23,6 @@ import static java.lang.System.arraycopy;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.Map;
-import naksha.diff.DiffContext;
 import naksha.diff.Difference;
 import naksha.diff.DifferenceCalculator;
 import naksha.diff.InsertOp;
@@ -36,7 +35,6 @@ import naksha.model.objects.NakshaFeature;
 import naksha.model.objects.NakshaProperties;
 import naksha.model.request.RequestQuery;
 import naksha.model.request.query.Property;
-import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 class ReversePatchUtil {
@@ -53,22 +51,6 @@ class ReversePatchUtil {
       patchPath(ROOT_PATH, Property.PROPERTIES, NakshaProperties.XYZ_KEY);
   private static final String XYZ_NAMESPACE_TAGS_PATH = patchPath(prependRoot(RequestQuery.TAGS_PROP_PATH));
 
-  /**
-   * Treats a key with {@code null} value as equal to an absent key, because storage materializes empty members
-   * (e.g. {@code properties.featureType}, {@code referencePoint}) as explicit {@code null} values.
-   */
-  private static final DiffContext NULL_EQUALS_ABSENT = new DiffContext() {
-    @Override
-    public boolean ignore(@NotNull Object key, @NotNull Map<?, ?> sourceMap, @NotNull Map<?, ?> targetOrPatchMap) {
-      return sourceMap.get(key) == null && targetOrPatchMap.get(key) == null;
-    }
-
-    @Override
-    public boolean areTwoNumbersEqual(@NotNull Number first, @NotNull Number second) {
-      return DiffContext.Default.INSTANCE.areTwoNumbersEqual(first, second);
-    }
-  };
-
   private ReversePatchUtil() {}
 
   static JsonNode toJsonNode(ReversePatch activityLogReversePatch) {
@@ -76,7 +58,7 @@ class ReversePatchUtil {
   }
 
   static @Nullable ReversePatch reversePatch(NakshaFeature older, NakshaFeature younger) {
-    Difference difference = DifferenceCalculator.DifferenceCalculator_C.calculateDifference(older, younger, NULL_EQUALS_ABSENT);
+    Difference difference = DifferenceCalculator.DifferenceCalculator_C.calculateDifference(older, younger);
     if (difference == null) {
       return null;
     } else {
