@@ -17,15 +17,15 @@ actual open class PgDatabaseImpl internal actual constructor(storage: PgStorage,
         throw unsupportedOp("PgDatabase.upsert_naksha_admin")
     }
 
-    actual override fun <R> execute_sql_nullable(schema: String?, table: String?, code: Fn0<R?>): R? {
+    actual override fun <R> execute_sql_nullable(schema: PgSchemaName?, table: PgTableName?, code: Fn0<R?>): R? {
         return code.call()
     }
 
-    actual override fun <R> execute_sql_notnull(schema: String?, table: String?, code: Fn0<R>): R {
+    actual override fun <R> execute_sql_notnull(schema: PgSchemaName?, table: PgTableName?, code: Fn0<R>): R {
         return code.call()
     }
 
-    actual override fun execute_sql(schema: String?, table: String?, code: Fx0) {
+    actual override fun execute_sql(schema: PgSchemaName?, table: PgTableName?, code: Fx0) {
         code.call()
     }
 }

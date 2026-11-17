@@ -10,99 +10,48 @@ import naksha.psql.PgUtil.PgUtilCompanion.quoteIdent
 /**
  * Per-root partition provisioning in the caller's transaction. No root creation, version allocation, retention, scheduling, index repair, commit or outer transaction rollback occurs here. Sweeps isolate each root attempt in a subtransaction. Internal cursors are closed; the caller's connection and cursors are never closed.
  *
- * Requires a permanent standalone RANGE (nv) root and a clean registry installation. Cooperating callers serialize with transaction advisory locks; recursive ACCESS EXCLUSIVE locks protect catalog inspection and provisioning. Callers must roll back on failure, including failures after partial DDL, and should use READ COMMITTED to observe concurrent committed provisioning.
+ * Logical settings come from collection metadata; physical storage settings come from PostgreSQL catalogs. Cooperating callers serialize DDL with scoped transaction advisory locks. No separate registration or persisted OID is required.
  * @since 3.0
  */
 internal object PgPartitions {
   private const val HEAD = 9007199254740991L
   private const val HEAD_CHECK = "(nv = '9007199254740991'::bigint)"
-  private val registry = "$ADMIN_CATALOG_QUOTED.\"naksha_partman\""
 
   /**
-   * Installs only the registry table into the existing admin schema. Does not install server functions, triggers or compatibility migrations.
+   * Synchronously provisions restricted HEAD and finite coverage using explicit logical settings. Creation passes its settings directly because its metadata row may not yet be written. PostgreSQL locks are taken only for this root; callers own rollback and commit.
    * @since 3.0
    */
-  fun install(conn: PgConnection) {
-    transaction(conn)
-    conn.execute("""
-CREATE TABLE IF NOT EXISTS $registry (
-  "schema_name" text NOT NULL CHECK (pg_catalog.octet_length("schema_name") BETWEEN 1 AND 63),
-  "table_name" text NOT NULL CHECK (pg_catalog.octet_length("table_name") BETWEEN 1 AND 29),
-  "shift" integer NOT NULL CHECK ("shift" BETWEEN 12 AND 41),
-  "partitions" integer NOT NULL CHECK ("partitions" BETWEEN 1 AND 256),
-  "root_oid" oid NOT NULL UNIQUE,
-  "toast_tuple_target" integer NOT NULL,
-  "head_fillfactor" integer NOT NULL CHECK ("head_fillfactor" BETWEEN 10 AND 100),
-  "history_fillfactor" integer NOT NULL CHECK ("history_fillfactor" BETWEEN 10 AND 100),
-  "tablespace_name" text NOT NULL CHECK (pg_catalog.octet_length("tablespace_name") BETWEEN 1 AND 63),
-  PRIMARY KEY ("schema_name", "table_name")
-)
-""").close()
-  }
-
-  /**
-   * Registers explicit immutable settings for an existing root. A null tablespace resolves to the actual root/database tablespace, not the session default. Repeated registration must match every setting and the root OID; configuration is never updated.
-   * @since 3.0
-   */
-  fun register(
-    conn: PgConnection, schema: String, table: String, shift: Int, partitions: Int,
-    toastTupleTarget: Int, headFillfactor: Int, historyFillfactor: Int, tablespace: String?
-  ) {
-    if (shift !in 12..41) throw illegalArg("Partition shift must be in 12..41")
-    settings(conn, partitions, toastTupleTarget, headFillfactor, historyFillfactor, tablespace)
-    val root = lockRoot(conn, schema, table)
-    val space = resolveTablespace(conn, root, tablespace)
-    val config = Config(root, shift, partitions, toastTupleTarget, headFillfactor, historyFillfactor, space)
-    val existing = registered(conn, schema, table)
-    if (existing != null) {
-      if (existing != config) throw illegalArg("Conflicting immutable partition registration for $schema.$table")
-      return
-    }
-    conn.execute("""
-INSERT INTO $registry
-  ("schema_name", "table_name", "shift", "partitions", "root_oid", "toast_tuple_target", "head_fillfactor", "history_fillfactor", "tablespace_name")
-VALUES ($1, $2, $3, $4, $5::text::oid, $6, $7, $8, $9)
-""", arrayOf(schema, table, shift, partitions, root.toString(), toastTupleTarget, headFillfactor, historyFillfactor, space)).close()
-  }
-
-  /**
-   * Provisions restricted HEAD plus the finite range containing [version] and up to three subsequent ranges, clipped at HEAD. Validates all retained children and repairs their missing fn leaves, without selecting an anchor or allocating a version. Requires the registered root OID to still match.
-   * @since 3.0
-   */
-  fun maintain(conn: PgConnection, schema: String, table: String, version: Long) {
+  fun maintain(conn: PgConnection, schema: PgSchemaName, table: PgTableName, version: Long, options: PgCollectionCreateOptions, nowait: Boolean = false) {
     if (version < 0 || version >= HEAD) throw illegalArg("Maintenance requires a finite version in 0..HEAD-1")
-    val root = lockRoot(conn, schema, table)
-    val config = registered(conn, schema, table)
-      ?: throw illegalArg("Unregistered partition root $schema.$table")
-    maintainLocked(conn, schema, table, version, root, config)
+    val root = lockRoot(conn, schema, table, nowait)
+    val config = configuration(conn, root, options)
+    provision(conn, schema, table, config, version)
   }
 
   /**
    * Tests physical existence under the caller's collection guard without consulting potentially tombstoned metadata.
    * @since 3.0
    */
-  fun exists(conn: PgConnection, schema: String, table: String): Boolean = oid(conn, schema, table) != null
+  fun exists(conn: PgConnection, schema: PgSchemaName, table: PgTableName): Boolean = oid(conn, schema, table) != null
 
   /**
    * Checks only the HEAD and finite range needed by a write, not the maintainer's full integrity contract. The caller must hold a shared collection guard until transaction completion, or roll back the probe's subtransaction before taking an exclusive guard for maintenance. No DDL or lock upgrade occurs here.
    * @since 3.0
    */
-  fun covered(conn: PgConnection, schema: String, table: String, version: Long): Boolean {
-    transaction(conn)
+  fun covered(conn: PgConnection, schema: PgSchemaName, table: PgTableName, version: Long, shift: Int, partitions: Int): Boolean {
+    assertNoAutoCommit(conn)
     if (version < 0 || version >= HEAD) throw illegalArg("Coverage requires a finite version in 0..HEAD-1")
     val root = oid(conn, schema, table) ?: throw collectionNotFound("Partition root $schema.$table is missing")
-    val config = registered(conn, schema, table) ?: throw illegalState("Unregistered partition root $schema.$table")
-    if (root != config.root) throw illegalState("Registered root $schema.$table has been replaced")
     // The shared collection guard excludes cooperative DDL; ONLY avoids walking retained history.
     conn.execute("LOCK TABLE ONLY ${quoteIdent(schema)}.${quoteIdent(table)} IN ACCESS SHARE MODE").close()
     if (oid(conn, schema, table) != root) throw illegalState("Partition root $schema.$table changed while acquiring its lock")
-    val number = version shr config.shift
-    val start = number shl config.shift
-    val end = minOf(start + (1L shl config.shift), HEAD)
-    val leaves = ArrayList<String>(config.partitions)
-    for (slot in 0 until config.partitions) {
-      val low = if (slot == 0) "MINVALUE" else "'${Id.partitionIndexMin(slot, config.partitions)}'"
-      val high = if (slot == config.partitions - 1) "MAXVALUE" else "'${Id.partitionIndexMin(slot + 1, config.partitions)}'"
+    val number = version shr shift
+    val start = number shl shift
+    val end = minOf(start + (1L shl shift), HEAD)
+    val leaves = ArrayList<String>(partitions)
+    for (slot in 0 until partitions) {
+      val low = if (slot == 0) "MINVALUE" else "'${Id.partitionIndexMin(slot, partitions)}'"
+      val high = if (slot == partitions - 1) "MAXVALUE" else "'${Id.partitionIndexMin(slot + 1, partitions)}'"
       leaves.add("($slot, ${PgUtil.quoteLiteral("FOR VALUES FROM ($low) TO ($high)")})")
     }
     return check(conn, """
@@ -137,17 +86,19 @@ SELECT (SELECT count(*) FROM children) = 2 AND ($6::int = 1 OR NOT EXISTS (
       AND pg_catalog.pg_get_expr(leaf.relpartbound, leaf.oid) = expected_leaf.bound
   )
 )) AS ok
-""", arrayOf(schema, table, number.toString(), "FOR VALUES FROM ('$start') TO ('$end')", root.toString(), config.partitions))
+""", arrayOf(schema, table, number.toString(), "FOR VALUES FROM ('$start') TO ('$end')", root.toString(), partitions))
   }
 
   /**
-   * Validates the locked root against its registration and provisions its coverage.
+   * Validates existing topology and checks complete future coverage without explicitly locking data tables or performing DDL. The caller must hold a collection guard. OIDs are checked again before any later DDL.
    * @since 3.0
    */
-  private fun maintainLocked(conn: PgConnection, schema: String, table: String, version: Long, root: Long, config: Config) {
-    if (root != config.root) throw illegalState("Registered root $schema.$table has been replaced")
-    settings(conn, config.partitions, config.toast, config.headFill, config.historyFill, config.space)
-    provision(conn, schema, table, config, version)
+  fun complete(conn: PgConnection, schema: PgSchemaName, table: PgTableName, version: Long, options: PgCollectionCreateOptions): Boolean {
+    assertNoAutoCommit(conn)
+    if (version < 0 || version >= HEAD) throw illegalArg("Maintenance requires a finite version in 0..HEAD-1")
+    val root = oid(conn, schema, table) ?: throw collectionNotFound("Partition root $schema.$table is missing")
+    validateRoot(conn, root, schema, table)
+    return provision(conn, schema, table, configuration(conn, root, options), version, createMissing = false)
   }
 
   /**
@@ -155,7 +106,7 @@ SELECT (SELECT count(*) FROM children) = 2 AND ($6::int = 1 OR NOT EXISTS (
    * @since 3.0
    */
   fun currentVersion(conn: PgConnection): Long {
-    transaction(conn)
+    assertNoAutoCommit(conn)
     var version = conn.execute("SELECT ((extract(year FROM d)::bigint << 41) | (extract(month FROM d)::bigint << 37) | (extract(day FROM d)::bigint << 32))::text AS version FROM (SELECT (pg_catalog.clock_timestamp() AT TIME ZONE 'UTC')::date AS d) today").fetch().use { cursor ->
       cursor.get<String>("version").toLong()
     }
@@ -173,40 +124,11 @@ SELECT (SELECT count(*) FROM children) = 2 AND ($6::int = 1 OR NOT EXISTS (
   }
 
   /**
-   * Maintains a deterministic registry snapshot at one shared [version], returning only the number of successfully maintained roots. The snapshot cursor is closed before root locking or DDL; registrations committed after the snapshot are deferred to the next sweep.
-   *
-   * Use READ COMMITTED and a single caller-owned transaction. Each root attempt uses an isolated subtransaction with nonblocking advisory and recursive physical locks. Advisory conflicts, physical lock conflicts (SQLSTATE 55P03), and registrations removed by a committed cooperative drop are skipped, rolling back the attempt and releasing its locks. Successful root locks remain held until transaction completion. Missing roots with retained registrations, changed OIDs, invalid topology and all other failures propagate; the caller must roll back the entire transaction. No sweep-wide mutex or scheduler is used.
-   * @since 3.0
-   */
-  fun maintainAll(conn: PgConnection, version: Long = currentVersion(conn)): Int {
-    transaction(conn)
-    if (version < 0 || version >= HEAD) throw illegalArg("Maintenance requires a finite version in 0..HEAD-1")
-    val roots = ArrayList<Pair<String, String>>()
-    conn.execute("""
-SELECT "schema_name", "table_name" FROM $registry
-ORDER BY "schema_name" COLLATE "C", "table_name" COLLATE "C"
-""").use { cursor ->
-      while (cursor.next()) roots.add(Pair(cursor["schema_name"], cursor["table_name"]))
-    }
-    var maintained = 0
-    for ((schema, table) in roots) {
-      if (conn.tryMaintenance {
-        if (!lockCollection(conn, schema, table, tryOnly = true)) return@tryMaintenance false
-        val config = registered(conn, schema, table) ?: return@tryMaintenance false
-        val root = lockRoot(conn, schema, table, nowait = true)
-        maintainLocked(conn, schema, table, version, root, config)
-        true
-      }) maintained++
-    }
-    return maintained
-  }
-
-  /**
-   * Provisions only restricted HEAD and its optional fn leaves for history-OFF, using no registry access. Rejects any finite or unexpected child and never creates or replaces the root.
+   * Provisions only restricted HEAD and its optional fn leaves for history-OFF, using explicit creation settings. Rejects any finite or unexpected child and never creates or replaces the root.
    * @since 3.0
    */
   fun head(
-    conn: PgConnection, schema: String, table: String, partitions: Int,
+    conn: PgConnection, schema: PgSchemaName, table: PgTableName, partitions: Int,
     toastTupleTarget: Int, headFillfactor: Int, tablespace: String?
   ) {
     settings(conn, partitions, toastTupleTarget, headFillfactor, headFillfactor, tablespace)
@@ -216,7 +138,7 @@ ORDER BY "schema_name" COLLATE "C", "table_name" COLLATE "C"
   }
 
   /**
-   * Immutable registry values, also used for unregistered HEAD-only provisioning.
+   * Transaction-local settings, never persisted separately from collection metadata and PostgreSQL catalogs.
    * @since 3.0
    */
   private data class Config(
@@ -228,27 +150,16 @@ ORDER BY "schema_name" COLLATE "C", "table_name" COLLATE "C"
    * Requires locks and DDL to remain in the caller's transaction.
    * @since 3.0
    */
-  private fun transaction(conn: PgConnection) {
+  private fun assertNoAutoCommit(conn: PgConnection) {
     if (conn.autoCommit) throw illegalState("Partition provisioning requires a caller-owned transaction")
-  }
-
-  /**
-   * Validates UTF-8 identifier limits without PostgreSQL's silent truncation.
-   * @since 3.0
-   */
-  private fun name(value: String, limit: Int) {
-    if (value.isEmpty() || '\u0000' in value || value.encodeToByteArray().size > limit) {
-      throw illegalArg("Physical name must contain 1..$limit UTF-8 bytes without NUL")
-    }
   }
 
   /**
    * Locks a catalog for the caller's transaction, exclusively for catalog creation/drop or shared for collection operations. Returns false only when a nonblocking attempt conflicts.
    * @since 3.0
    */
-  internal fun lockCatalog(conn: PgConnection, schema: String, shared: Boolean = false, tryOnly: Boolean = false): Boolean {
-    transaction(conn)
-    name(schema, 63)
+  internal fun lockCatalog(conn: PgConnection, schema: PgSchemaName, shared: Boolean = false, tryOnly: Boolean = false): Boolean {
+    assertNoAutoCommit(conn)
     if (!shared && !tryOnly) {
       val upgrading = conn.execute("""
 SELECT EXISTS (
@@ -276,10 +187,8 @@ SELECT EXISTS (
    * Takes a shared catalog guard followed by a shared write guard or exclusive maintenance/drop guard. Returns false on a nonblocking conflict; roll back the attempt's subtransaction to release any catalog guard already acquired. Upgrades retained from earlier requests are nonblocking to avoid upgrade deadlocks.
    * @since 3.0
    */
-  fun lockCollection(conn: PgConnection, schema: String, table: String, tryOnly: Boolean = false, shared: Boolean = false): Boolean {
-    transaction(conn)
-    name(schema, 63)
-    name(table, 29)
+  fun lockCollection(conn: PgConnection, schema: PgSchemaName, table: PgTableName, tryOnly: Boolean = false, shared: Boolean = false): Boolean {
+    assertNoAutoCommit(conn)
     if (!lockCatalog(conn, schema, shared = true, tryOnly = tryOnly)) return false
     if (!shared && !tryOnly) {
       val upgrading = conn.execute("""
@@ -309,11 +218,10 @@ SELECT EXISTS (
    * @since 3.0
    */
   private fun settings(conn: PgConnection, partitions: Int, toast: Int, headFill: Int, historyFill: Int, space: String?) {
-    transaction(conn)
+    assertNoAutoCommit(conn)
     if (partitions !in 1..256 || headFill !in 10..100 || historyFill !in 10..100) {
       throw illegalArg("Partition count must be in 1..256 and fillfactors in 10..100")
     }
-    if (space != null) name(space, 63)
     conn.execute("SELECT pg_catalog.current_setting('block_size') AS size").fetch().use { cursor ->
       if (toast !in 128..(cursor.get<String>("size").toInt() - 32)) {
         throw illegalArg("TOAST tuple target must be in 128..block_size-32")
@@ -325,7 +233,9 @@ SELECT EXISTS (
    * Resolves a relation without narrowing an unsigned PostgreSQL OID.
    * @since 3.0
    */
-  private fun oid(conn: PgConnection, schema: String, table: String): Long? {
+  private fun oid(conn: PgConnection, schema: PgSchemaName, table: PgTableName): Long? = oid(conn, schema, table.name)
+
+  private fun oid(conn: PgConnection, schema: PgSchemaName, table: String): Long? {
     conn.execute("SELECT c.oid::text AS oid FROM pg_catalog.pg_class c JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace WHERE n.nspname = $1 AND c.relname = $2",
       arrayOf(schema, table)).use { cursor ->
       return if (cursor.next()) cursor.get<String>("oid").toLong() else null
@@ -336,12 +246,16 @@ SELECT EXISTS (
    * Serializes a collection, recursively locks descendants (optionally NOWAIT) and checks the mandatory root contract.
    * @since 3.0
    */
-  private fun lockRoot(conn: PgConnection, schema: String, table: String, nowait: Boolean = false): Long {
+  private fun lockRoot(conn: PgConnection, schema: PgSchemaName, table: PgTableName, nowait: Boolean = false): Long {
     lockCollection(conn, schema, table)
     val root = oid(conn, schema, table) ?: throw illegalState("Partition root $schema.$table is missing")
     // Without ONLY, PostgreSQL locks all existing descendants as well.
     conn.execute("LOCK TABLE ${quoteIdent(schema)}.${quoteIdent(table)} IN ACCESS EXCLUSIVE MODE${if (nowait) " NOWAIT" else ""}").close()
     if (oid(conn, schema, table) != root) throw illegalState("Partition root $schema.$table changed while acquiring its lock")
+    return validateRoot(conn, root, schema, table)
+  }
+
+  private fun validateRoot(conn: PgConnection, root: Long, schema: PgSchemaName, table: PgTableName): Long {
     if (!check(conn, """
 WITH keys AS (
   SELECT
@@ -373,21 +287,42 @@ AND EXISTS (
   }
 
   /**
-   * Reads registry values through portable text representations for numeric results.
+   * Resolves physical storage settings from existing leaves, with creation-policy defaults when no leaf exists yet. Logical partition settings always come from the collection descriptor or synchronous creation arguments.
    * @since 3.0
    */
-  private fun registered(conn: PgConnection, schema: String, table: String): Config? {
+  private fun configuration(conn: PgConnection, root: Long, options: PgCollectionCreateOptions): Config {
+    var toast = options.toastTupleTarget
+    var headFill = 50
+    var historyFill = 100
+    var space = resolveTablespace(conn, root, options.tablespace)
     conn.execute("""
-SELECT "root_oid"::text AS root, "shift"::text AS shift, "partitions"::text AS partitions,
-  "toast_tuple_target"::text AS toast, "head_fillfactor"::text AS head_fill,
-  "history_fillfactor"::text AS history_fill, "tablespace_name" AS space
-FROM $registry WHERE "schema_name" = $1 AND "table_name" = $2
-""", arrayOf(schema, table)).use { cursor ->
-      if (!cursor.next()) return null
-      return Config(cursor.get<String>("root").toLong(), cursor.get<String>("shift").toInt(),
-        cursor.get<String>("partitions").toInt(), cursor.get<String>("toast").toInt(),
-        cursor.get<String>("head_fill").toInt(), cursor.get<String>("history_fill").toInt(), cursor["space"])
+SELECT DISTINCT ON (is_head) is_head,
+  coalesce((SELECT option_value FROM pg_catalog.pg_options_to_table(c.reloptions) WHERE option_name = 'toast_tuple_target'), $2::text) AS toast,
+  coalesce((SELECT option_value FROM pg_catalog.pg_options_to_table(c.reloptions) WHERE option_name = 'fillfactor'), '100') AS fill,
+  s.spcname AS space
+FROM pg_catalog.pg_partition_tree($1::text::oid::regclass) t
+JOIN pg_catalog.pg_class c ON c.oid = t.relid
+JOIN pg_catalog.pg_class r ON r.oid = $1::text::oid
+CROSS JOIN LATERAL (SELECT starts_with(c.relname, r.relname || '${'$'}head') AS is_head) kind
+JOIN pg_catalog.pg_database d ON d.datname = pg_catalog.current_database()
+JOIN pg_catalog.pg_tablespace s ON s.oid = coalesce(nullif(c.reltablespace, 0), d.dattablespace)
+WHERE t.isleaf AND t.level > 0
+ORDER BY is_head, c.oid
+""", arrayOf(root.toString(), toast.toString())).use { cursor ->
+      while (cursor.next()) {
+        if (cursor.get<Boolean>("is_head")) {
+          headFill = cursor.get<String>("fill").toInt()
+          toast = cursor.get<String>("toast").toInt()
+          space = cursor.get<String>("space")
+        } else {
+          historyFill = cursor.get<String>("fill").toInt()
+          toast = cursor.get<String>("toast").toInt()
+          space = cursor.get<String>("space")
+        }
+      }
     }
+    settings(conn, options.partitions, toast, headFill, historyFill, space)
+    return Config(root, options.shift, options.partitions, toast, headFill, historyFill, space)
   }
 
   /**
@@ -437,7 +372,7 @@ WHERE i.inhparent = $1::text::oid ORDER BY c.relname
    * Validates topology, payload, checks and native index attachment without repairing changed objects.
    * @since 3.0
    */
-  private fun child(conn: PgConnection, schema: String, table: String, parent: Long, bound: String, partitioned: Boolean): Long {
+  private fun child(conn: PgConnection, schema: PgSchemaName, table: String, parent: Long, bound: String, partitioned: Boolean): Long {
     val child = oid(conn, schema, table) ?: throw illegalState("Missing partition $schema.$table")
     if (!check(conn, """
 SELECT EXISTS (
@@ -497,7 +432,7 @@ AND NOT EXISTS (
    * Checks explicit physical leaf options and the actual (rather than session-default) tablespace.
    * @since 3.0
    */
-  private fun storage(conn: PgConnection, schema: String, table: String, leaf: Long, config: Config, fill: Int) {
+  private fun storage(conn: PgConnection, schema: PgSchemaName, table: String, leaf: Long, config: Config, fill: Int) {
     if (!check(conn, """
 SELECT EXISTS (
   SELECT 1 FROM pg_catalog.pg_class c JOIN pg_catalog.pg_database d ON d.datname = pg_catalog.current_database()
@@ -515,7 +450,7 @@ SELECT EXISTS (
    * @since 3.0
    */
   private fun create(
-    conn: PgConnection, schema: String, table: String, parent: String, ddlBound: String,
+    conn: PgConnection, schema: PgSchemaName, table: String, parent: String, ddlBound: String,
     isHead: Boolean, partitioned: Boolean, config: Config, fill: Int
   ) {
     if (oid(conn, schema, table) != null) return
@@ -529,14 +464,23 @@ SELECT EXISTS (
    * Performs a validation-only pass before creating coverage and repairing all retained children.
    * @since 3.0
    */
-  private fun provision(conn: PgConnection, schema: String, table: String, config: Config, version: Long?) {
-    if (config.shift !in 12..41) throw illegalState("Invalid registered partition shift")
+  private fun provision(conn: PgConnection, schema: PgSchemaName, table: PgTableName, config: Config, version: Long?, createMissing: Boolean = true): Boolean {
+    if (config.shift !in 12..41) throw illegalState("Invalid partition shift")
     resolveTablespace(conn, config.root, config.space)
     val width = 1L shl config.shift
+    var missing = oid(conn, schema, table.headName) == null
+    if (version != null) {
+      val first = version shr config.shift
+      for (slot in 0..3) {
+        val number = first + slot
+        if (number * width < HEAD && oid(conn, schema, table + "$" + number) == null) missing = true
+      }
+    }
     for (pass in 0..1) {
+      if (pass == 1 && (!missing || !createMissing)) return !missing
       if (pass == 1) {
-        create(conn, schema, table + "\$head", table, "DEFAULT", true, config.partitions > 1, config, config.headFill)
-        child(conn, schema, table + "\$head", config.root, "DEFAULT", config.partitions > 1)
+        create(conn, schema, table.headName, table.name, "DEFAULT", true, config.partitions > 1, config, config.headFill)
+        child(conn, schema, table.headName, config.root, "DEFAULT", config.partitions > 1)
         if (version != null) {
           val first = version shr config.shift
           for (slot in 0..3) {
@@ -544,14 +488,14 @@ SELECT EXISTS (
             if (start >= HEAD) continue
             val end = minOf(start + width, HEAD)
             val childName = table + "$" + (first + slot)
-            create(conn, schema, childName, table, "FOR VALUES FROM ($start) TO ($end)", false, config.partitions > 1, config, config.historyFill)
+            create(conn, schema, childName, table.name, "FOR VALUES FROM ($start) TO ($end)", false, config.partitions > 1, config, config.historyFill)
             child(conn, schema, childName, config.root, "FOR VALUES FROM ('$start') TO ('$end')", config.partitions > 1)
           }
         }
       }
       for ((childSchema, childName) in children(conn, config.root)) {
-        if (childSchema != schema) throw illegalState("Unexpected cross-schema child $childSchema.$childName")
-        val isHead = childName == table + "\$head"
+        if (childSchema != schema.name) throw illegalState("Unexpected cross-schema child $childSchema.$childName")
+        val isHead = childName == table.headName
         var bound = "DEFAULT"
         val fill = if (isHead) config.headFill else config.historyFill
         if (!isHead) {
@@ -574,7 +518,7 @@ SELECT EXISTS (
         val expected = HashSet<String>()
         for (slot in 0 until config.partitions) expected.add(childName + "$" + slot)
         for ((leafSchema, leafName) in children(conn, child)) {
-          if (leafSchema != schema || leafName !in expected) throw illegalState("Unexpected fn leaf $leafSchema.$leafName")
+          if (leafSchema != schema.name || leafName !in expected) throw illegalState("Unexpected fn leaf $leafSchema.$leafName")
         }
         for (slot in 0 until config.partitions) {
           val low = if (slot == 0) "MINVALUE" else Id.partitionIndexMin(slot, config.partitions).toString()
@@ -582,12 +526,16 @@ SELECT EXISTS (
           val expectedLow = if (slot == 0) low else "'$low'"
           val expectedHigh = if (slot == config.partitions - 1) high else "'$high'"
           val leafName = childName + "$" + slot
-          if (pass == 0 && oid(conn, schema, leafName) == null) continue
+          if (pass == 0 && oid(conn, schema, leafName) == null) {
+            missing = true
+            continue
+          }
           if (pass == 1) create(conn, schema, leafName, childName, "FOR VALUES FROM ($low) TO ($high)", false, false, config, fill)
           val leaf = child(conn, schema, leafName, child, "FOR VALUES FROM ($expectedLow) TO ($expectedHigh)", false)
           storage(conn, schema, leafName, leaf, config, fill)
         }
       }
     }
+    return true
   }
 }

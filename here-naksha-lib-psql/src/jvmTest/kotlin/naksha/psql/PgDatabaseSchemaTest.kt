@@ -20,10 +20,10 @@ class PgDatabaseSchemaTest {
             val conn = Mockito.mock(PgConnection::class.java, Mockito.RETURNS_DEEP_STUBS)
             Mockito.doAnswer { invocation ->
                 assertEquals("SELECT oid::text AS oid FROM pg_catalog.pg_namespace WHERE nspname = $1", invocation.getArgument<String>(0))
-                assertEquals("Mixed Name", invocation.getArgument<Array<Any?>>(1)[0])
+                assertEquals("Mixed Name", (invocation.getArgument<Array<Any?>>(1)[0] as PgSchemaName).name)
                 cursor
             }.`when`(conn).execute(Mockito.anyString(), Mockito.any())
-            assertEquals(oid?.toLong() ?: -1L, database.catalog_get_schema_oid(conn, "Mixed Name"))
+            assertEquals(oid?.toLong() ?: -1L, database.catalog_get_schema_oid(conn, PgSchemaName.checked("Mixed Name")))
             Mockito.verify(cursor).close()
         }
     }
@@ -49,7 +49,7 @@ class PgDatabaseSchemaTest {
                 }
                 cursor
             }.`when`(conn).execute(Mockito.anyString(), Mockito.nullable(Array<Any?>::class.java))
-            val oid = database.catalog_get_or_create_schema(conn, "Mixed Name", "logical catalog")
+            val oid = database.catalog_get_or_create_schema(conn, PgSchemaName.checked("Mixed Name"), "logical catalog")
             assertEquals(if (exists) -4294967295L else 4294967295L, oid)
             assertEquals("SELECT oid::text AS oid FROM pg_catalog.pg_namespace WHERE nspname = $1", statements[0])
             val lockPosition = if (exists) 1 else 2
@@ -72,7 +72,7 @@ class PgDatabaseSchemaTest {
     fun rejectsNamesThatWouldBeTruncatedBeforeExecutingSql() {
         val conn = Mockito.mock(PgConnection::class.java)
         for (name in listOf("", "a\u0000b", "a".repeat(64), "\u00e9".repeat(32))) {
-            assertFailsWith<NakshaException> { database.catalog_get_or_create_schema(conn, name, "logical") }
+            assertFailsWith<NakshaException> { database.catalog_get_or_create_schema(conn, PgSchemaName.checked(name), "logical") }
         }
         Mockito.verifyNoInteractions(conn)
     }

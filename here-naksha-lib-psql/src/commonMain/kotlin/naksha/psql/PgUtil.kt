@@ -12,6 +12,7 @@ import naksha.base.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 import naksha.psql.PgPlatform.PgPlatformCompanion.quote_literal
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
+import kotlin.js.JsName
 import kotlin.jvm.JvmField
 import kotlin.jvm.JvmStatic
 
@@ -135,6 +136,21 @@ class PgUtil private constructor() {
             sb.append('"')
             return sb.toString()
         }
+
+        @JsStatic
+        @JvmStatic
+        @JsName("quoteDatabaseName")
+        fun quoteIdent(name: PgDatabaseName): String = name.quotedName
+
+        @JsStatic
+        @JvmStatic
+        @JsName("quoteSchemaName")
+        fun quoteIdent(name: PgSchemaName): String = name.quotedName
+
+        @JsStatic
+        @JvmStatic
+        @JsName("quoteTableName")
+        fun quoteIdent(name: PgTableName): String = name.quotedName
 
         /**
          * Calculates the partition number between 0 and 255. This is the unsigned value of the first byte of the MD5 hash above the

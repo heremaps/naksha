@@ -37,14 +37,16 @@ class PgPlv8MaintenanceTest {
     val storage = PgStorage(config, true, false)
     assertTrue(storage.initialized)
     val database = storage.database
-    val schema = "PLV8 Maintenance"
+    val schema = "PLV8-Maintenance"
     val table = "history_root"
-    val logicalCatalog = "Original \"Catalog"
-    val logicalCollection = "Original.Collection"
+    val verifiedSchema = PgSchemaName.checked(schema)
+    val verifiedTable = PgTableName.checked(table)
+    val logicalCatalog = schema
+    val logicalCollection = table
     val root = PgUtil.quoteIdent(schema) + "." + PgUtil.quoteIdent(table)
     val payload = PgColumn(3, Member("payload", MemberType.STRING), "STORAGE MAIN COLLATE \"C\"")
     val sequence = "\"naksha~admin\"." + PgUtil.quoteIdent(NAKSHA_VERSION_SEQ)
-    val registry = "\"naksha~admin\".naksha_partman"
+    val registry = PgPartitionTestMetadata.ROOTS
 
     // Independent JVM connection proves bootstrap and module installation were committed.
     storage.newConnection(Naksha.useAdminOptions(), false, PgStorage.SKIP_INIT).use { conn ->
@@ -69,9 +71,9 @@ class PgPlv8MaintenanceTest {
           SELECT count(*) FROM "naksha~admin".es_modules
           WHERE name = 'naksha_psql' AND source LIKE '%naksha_maintain%'
         """))
-        assertTrue(database.catalog_get_or_create_schema(conn, schema, logicalCatalog) > 0)
+        assertTrue(database.catalog_get_or_create_schema(conn, verifiedSchema, logicalCatalog) > 0)
         database.collection_create_table_if_not_exists(
-          conn = conn, schema = schema, table = table,
+          conn = conn, schema = verifiedSchema, table = verifiedTable,
           columns = arrayOf(PgColumn.FnColumn, PgColumn.VersionColumn, PgColumn.NextVersionColumn, payload),
           indices = emptyArray(),
           options = PgCollectionCreateOptions(true, 3, 12, 10, -1, 3,
@@ -80,6 +82,7 @@ class PgPlv8MaintenanceTest {
         )
         assertEquals(PgUtil.quoteIdent(logicalCatalog) + "." + PgUtil.quoteIdent(logicalCollection),
           scalar(conn, "SELECT obj_description(${literal(root)}::regclass, 'pg_class')"))
+        PgPartitionTestMetadata.publish(database, conn, schema, table, 3)
         conn.execute("""
           INSERT INTO $root (fn, version, nv, ${payload.ident})
           VALUES (${Long.MIN_VALUE}, 3, ${Version.HEAD.number}, NULL),
@@ -225,21 +228,18 @@ class PgPlv8MaintenanceTest {
         try {
           val failureTable = "z_failure"
           database.collection_create_table_if_not_exists(
-            conn = conn, schema = schema, table = failureTable,
+            conn = conn, schema = verifiedSchema, table = PgTableName.checked(failureTable),
             columns = arrayOf(PgColumn.FnColumn, PgColumn.VersionColumn, PgColumn.NextVersionColumn, payload),
             indices = emptyArray(),
             options = PgCollectionCreateOptions(false, 3, 12, 10, -1, 3,
               PgStorageClass.Consistent, null, 2048),
-            logicalCatalog = logicalCatalog, logicalCollection = "Failure.Collection"
+            logicalCatalog = logicalCatalog, logicalCollection = failureTable
           )
-          database.collection_register_partitions(conn, schema, failureTable, 12, 3, 2048, 50, 100, null)
+          PgPartitionTestMetadata.publish(database, conn, schema, failureTable, 3)
           val conflict = PgUtil.quoteIdent(schema) + "." +
             PgUtil.quoteIdent(failureTable + "$" + ((anchor shr 12) + 2))
           conn.execute("CREATE TABLE $conflict (unrelated text)").close()
-          assertEquals("history_root,z_failure", scalar(conn, """
-            SELECT string_agg(table_name, ',' ORDER BY table_name COLLATE "C") FROM $registry
-            WHERE schema_name = ${literal(schema)}
-          """))
+          assertNotNull(PgMaintenance.find(database, conn, verifiedSchema, PgTableName.checked(failureTable)), "The sweep must discover the new root from collection metadata")
           val failedBefore = snapshot(conn)
           val failurePoint = conn.jdbc.setSavepoint()
           try {
@@ -310,7 +310,7 @@ class PgPlv8MaintenanceTest {
     SELECT coalesce(string_agg(ROW(c.oid, n.nspname, c.relname, c.relkind, c.reloptions,
       obj_description(c.oid, 'pg_class'), pg_get_expr(c.relpartbound, c.oid))::text, '|' ORDER BY c.oid), '')
     FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
-    WHERE n.nspname IN ('naksha~admin', 'PLV8 Maintenance')
+    WHERE n.nspname IN ('naksha~admin', 'PLV8-Maintenance')
   """)
 
   private fun scalar(conn: PgConnection, sql: String): String? = scalar(conn.jdbc, sql)

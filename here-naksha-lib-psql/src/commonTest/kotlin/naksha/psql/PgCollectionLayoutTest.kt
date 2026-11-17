@@ -16,6 +16,7 @@ import naksha.model.objects.MemberType
 import naksha.model.objects.NakshaAdmin
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.StandardMembers
+import naksha.model.objects.StoreMode
 import naksha.model.objects.XyzIndices
 import naksha.model.objects.XyzMembers
 import naksha.psql.PgWriter.PgWriterCompanion.prepareCollectionLayout
@@ -31,6 +32,24 @@ import kotlin.test.assertSame
 import kotlin.test.assertTrue
 
 class PgCollectionLayoutTest {
+  @Test
+  fun partitionMetadataCannotDivergeFromTheCreateOnlyPhysicalLayout() {
+    val existing = NakshaCollection("immutable_partitions")
+    prepareCollectionLayout(existing)
+    for (field in 0..3) {
+      val incoming = NakshaCollection("immutable_partitions")
+      when (field) {
+        0 -> incoming.shift = 12
+        1 -> incoming.partitions = 7
+        2 -> incoming.storeHistory = StoreMode.OFF
+        3 -> incoming.storageClass = "brittle"
+      }
+      assertFailsWith<NakshaException> { prepareCollectionLayout(incoming, existing) }
+    }
+    val equivalent = NakshaCollection("immutable_partitions").apply { partitions = 0; storageClass = "P" }
+    prepareCollectionLayout(equivalent, existing)
+  }
+
   @Test
   fun unresolvedModelDoesNotSelectStorageDefaults() {
     val collection = NakshaCollection("unresolved")

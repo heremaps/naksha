@@ -62,11 +62,11 @@ class PgDatabaseInsertTest {
       conn.autoCommit = false
       try {
         conn.execute("SET LOCAL lock_timeout = '5s'; SET LOCAL statement_timeout = '120s'").close()
-        assertTrue(database.catalog_get_or_create_schema(conn, catalog.name, catalog.id.text) > 0)
+        assertTrue(database.catalog_get_or_create_schema(conn, catalog.schema, catalog.id.text) > 0)
         val history = collection(storage, conn, catalog, true)
         val current = collection(storage, conn, catalog, false)
         val version = PgPartitions.currentVersion(conn) + 4L
-        database.collection_maintain_partitions(conn, catalog.name, history.name, version)
+        database.collection_maintain_partitions(conn, catalog.schema, history.table, version, history.creationOptions(config, database.maxTupleSize))
         assertAll("rows_insert live contract",
           Executable { isolated(conn) { ordinaryAndDuplicate(database, conn, history, version) } },
           Executable { isolated(conn) { rejectsWholeBatch(database, conn, history, version) } },
@@ -78,7 +78,7 @@ class PgDatabaseInsertTest {
         assertFalse(conn.autoCommit)
         conn.rollback()
         assertEquals("0", scalar(conn,
-          "SELECT count(*) FROM pg_namespace WHERE nspname = ${PgUtil.quoteLiteral(catalog.name)}"),
+          "SELECT count(*) FROM pg_namespace WHERE nspname = ${PgUtil.quoteLiteral(catalog.schema.name)}"),
           "Insert and fixture operations must not commit the caller's transaction")
       } finally {
         conn.rollback()
@@ -107,7 +107,7 @@ class PgDatabaseInsertTest {
     assertEquals(storage.id.text, descriptor.naksha.databaseId)
     assertEquals(catalog.id.text, descriptor.naksha.catalogId)
     database.collection_create_table_if_not_exists(
-      conn, catalog.name, descriptor.name, descriptor.columns, descriptor.indices,
+      conn, catalog.schema, descriptor.table, descriptor.columns, descriptor.indices,
       descriptor.creationOptions(storage.config, database.maxTupleSize), catalog.id.text, descriptor.id.text
     )
     return descriptor

@@ -127,7 +127,8 @@ class PgReadFlowTest {
 
   private fun insertHistoricalMetadata(storage: PgStorage, conn: PgConnection, metadata: PgCollection, head: Tuple) {
     val version = head.version - 4L
-    storage.database.collection_maintain_partitions(conn, metadata.catalogId.catalogName(), metadata.name, version)
+    storage.database.collection_maintain_partitions(conn, metadata.schema, metadata.table, version,
+      metadata.creationOptions(storage.config, storage.database.maxTupleSize))
     val columns = metadata.columns.joinToString { it.ident }
     val values = metadata.columns.joinToString {
       when (it.name) {

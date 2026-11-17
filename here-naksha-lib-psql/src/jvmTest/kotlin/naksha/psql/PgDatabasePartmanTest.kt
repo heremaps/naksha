@@ -8,6 +8,7 @@ import naksha.model.objects.Member
 import naksha.model.objects.MemberType
 import org.junit.jupiter.api.Assumptions.assumeTrue
 import org.mockito.Mockito
+import java.sql.DriverManager
 import java.util.UUID
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -24,7 +25,18 @@ class PgDatabasePartmanTest {
   private val logicalCatalog = "Logical \"Catalog"
   private val logicalCollection = "Logical.Collection"
   private val head = Version.HEAD.number
-  private val registry = "\"naksha~admin\".\"naksha_partman\""
+  private val settings = HashMap<String, PgCollectionCreateOptions>()
+
+  @Test
+  fun partitionCreationNeedsNoSeparateRegistry() = withDatabase { conn, schema ->
+    create(conn, schema, "history", options(true, 3))
+    assertLeafCount(conn, relation(schema, "history"), 15)
+    assertNull(scalar(conn, "SELECT to_regclass('\"naksha~admin\".\"naksha~partman\"')"))
+    assertNull(scalar(conn, "SELECT to_regclass('\"naksha~admin\".naksha_partman')"))
+    database.catalog_drop_schema(conn, PgSchemaName.checked("naksha~admin"))
+    maintain(conn, schema, "history", 0L)
+    assertLeafCount(conn, relation(schema, "history"), 27)
+  }
 
   @Test
   fun createsHistoryOnAndOffWithSevenAndOnePartitions() = withDatabase { conn, schema ->
@@ -36,8 +48,6 @@ class PgDatabasePartmanTest {
         assertEquals((if (history) 5 else 1).toString(), scalar(conn,
           "SELECT count(*) FROM pg_partition_tree(${literal(root)}::regclass) WHERE level = 1"))
         assertLeafCount(conn, root, (if (history) 5 else 1) * partitions)
-        assertEquals(if (history) "1" else "0", scalar(conn,
-          "SELECT count(*) FROM $registry WHERE schema_name = ${literal(schema)} AND table_name = ${literal(table)}"))
         assertRootContract(conn, schema, table)
         assertStorageAndInheritance(conn, root)
 
@@ -62,7 +72,7 @@ class PgDatabasePartmanTest {
     for (partitions in listOf(7, 1)) {
       val table = "routing_$partitions"
       create(conn, schema, table, options(true, partitions))
-      database.collection_maintain_partitions(conn, schema, table, 0L)
+      maintain(conn, schema, table, 0L)
       assertLeafCount(conn, relation(schema, table), 9 * partitions)
       assertRouting(conn, schema, table, partitions, 12, 0L)
       expectFailure(conn) { insert(conn, schema, table, Long.MIN_VALUE, 4L, head) }
@@ -85,36 +95,35 @@ class PgDatabasePartmanTest {
     val table = "repair"
     val root = relation(schema, table)
     create(conn, schema, table, options(true, 7))
-    database.collection_maintain_partitions(conn, schema, table, 0L)
+    maintain(conn, schema, table, 0L)
     val index = PgIndex("payload_lookup", arrayOf(payload to PgOrder.ASC),
       includes = arrayOf(PgColumn.FnColumn, PgColumn.NextVersionColumn, PgColumn.VersionColumn))
-    database.collection_create_index(conn, schema, table, index)
+    database.collection_create_index(conn, PgSchemaName.checked(schema), PgTableName.checked(table), index)
     assertStorageAndInheritance(conn, root)
     val missing = relation(schema, table + "\$3\$6")
     conn.execute("DROP TABLE $missing").close()
     assertNull(scalar(conn, "SELECT to_regclass(${literal(missing)})"))
 
     val imported = 40960000000000L
-    database.collection_maintain_partitions(conn, schema, table, imported)
+    maintain(conn, schema, table, imported)
     assertTrue(scalar(conn, "SELECT to_regclass(${literal(missing)})") != null)
     assertLeafCount(conn, root, 13 * 7)
     assertRouting(conn, schema, table, 7, 12, imported)
     assertStorageAndInheritance(conn, root)
     val before = snapshot(conn, schema)
-    database.collection_register_partitions(conn, schema, table, 12, 7, 2048, 50, 100, null)
-    database.collection_maintain_partitions(conn, schema, table, imported)
+    maintain(conn, schema, table, imported)
     assertEquals(before, snapshot(conn, schema))
 
-    val indexRoot = relation(schema, index.id.indexName(table))
+    val indexRoot = relation(schema, index.id.indexName(PgTableName.checked(table)))
     val indexOids = scalar(conn, """
       WITH RECURSIVE tree AS (
         SELECT ${literal(indexRoot)}::regclass::oid AS oid
         UNION ALL SELECT h.inhrelid FROM pg_inherits h JOIN tree t ON t.oid = h.inhparent
       ) SELECT string_agg(oid::text, ',') FROM tree
     """)!!
-    database.collection_drop_index(conn, schema, table, index)
+    database.collection_drop_index(conn, PgSchemaName.checked(schema), PgTableName.checked(table), index)
     assertEquals("0", scalar(conn, "SELECT count(*) FROM pg_class WHERE oid IN ($indexOids)"))
-    database.collection_maintain_partitions(conn, schema, table, imported + (4L shl 12))
+    maintain(conn, schema, table, imported + (4L shl 12))
     assertEquals("0", scalar(conn,
       "SELECT count(*) FROM pg_index i JOIN pg_partition_tree(${literal(root)}::regclass) t ON t.relid = i.indrelid WHERE i.indnkeyatts = 1 AND pg_get_indexdef(i.indexrelid, 1, true) LIKE 'payload%'"))
     assertLeafCount(conn, root, 17 * 7)
@@ -139,19 +148,18 @@ class PgDatabasePartmanTest {
 
     val table = "partial"
     create(conn, schema, table, options(false, 1))
-    database.collection_register_partitions(conn, schema, table, 12, 1, 2048, 50, 100, null)
     conn.execute("CREATE TABLE ${relation(schema, table + "\$2")} (unrelated text)").close()
     val registered = snapshot(conn, schema)
     // The conflict is encountered after ranges 0 and 1 can have been created.
     // Recovery belongs to the caller, not to the maintainer.
-    expectFailure(conn) { database.collection_maintain_partitions(conn, schema, table, 0L) }
+    expectFailure(conn) { maintain(conn, schema, table, 0L) }
     assertEquals(registered, snapshot(conn, schema))
     assertLeafCount(conn, relation(schema, table), 1)
     conn.execute("DROP TABLE ${relation(schema, table + "\$2")}").close()
-    database.collection_maintain_partitions(conn, schema, table, 0L)
+    maintain(conn, schema, table, 0L)
     assertLeafCount(conn, relation(schema, table), 5)
     conn.execute("DROP TABLE ${relation(schema, table)} CASCADE").close()
-    expectFailure(conn) { database.collection_maintain_partitions(conn, schema, table, 0L) }
+    expectFailure(conn) { maintain(conn, schema, table, 0L) }
     assertNull(scalar(conn, "SELECT to_regclass(${literal(relation(schema, table))})"))
   }
 
@@ -161,15 +169,14 @@ class PgDatabasePartmanTest {
     // HEAD-only creation avoids unrelated clock-selected finite ranges in this boundary case.
     create(conn, schema, table, options(false, 256).copy(shift = 41))
     assertLeafCount(conn, relation(schema, table), 256)
-    database.collection_register_partitions(conn, schema, table, 41, 256, 2048, 50, 100, null)
-    database.collection_maintain_partitions(conn, schema, table, head - 1)
+    maintain(conn, schema, table, head - 1)
     assertEquals("2", scalar(conn,
       "SELECT count(*) FROM pg_partition_tree(${literal(relation(schema, table))}::regclass) WHERE level = 1"))
     assertLeafCount(conn, relation(schema, table), 512)
     assertEquals("FOR VALUES FROM ('9005000231485440') TO ('9007199254740991')", scalar(conn,
       "SELECT pg_get_expr(relpartbound, oid) FROM pg_class WHERE oid = ${literal(relation(schema, table + "\$4095"))}::regclass"))
     assertRouting(conn, schema, table, 256, 41, head - 1)
-    database.collection_maintain_partitions(conn, schema, table, head - 1)
+    maintain(conn, schema, table, head - 1)
     assertLeafCount(conn, relation(schema, table), 512)
     assertStorageAndInheritance(conn, relation(schema, table))
   }
@@ -184,76 +191,48 @@ class PgDatabasePartmanTest {
     assertEquals("false", scalar(conn, "SELECT is_called::text FROM \"naksha~admin\".naksha_version_seq"))
   }
 
-  @Test
-  fun sweepsAllRegisteredRootsWithoutAllocatingVersions() = withDatabase { conn, schema ->
-    assertEquals(0, database.maintain_partitions(conn))
-    create(conn, schema, "z_root", options(true, 1))
-    create(conn, schema, "a_root", options(true, 3))
-    create(conn, schema, "head_only", options(false, 1))
-    val watermark = 9000000000000003L
-    conn.execute("CREATE SEQUENCE \"naksha~admin\".naksha_version_seq AS bigint START $watermark INCREMENT BY 4").close()
-    assertEquals(2, database.maintain_partitions(conn))
-    for (table in listOf("a_root", "z_root")) {
-      assertTrue(scalar(conn, "SELECT to_regclass(${literal(relation(schema, table + "\$${watermark shr 12}"))})") != null)
-    }
-    assertLeafCount(conn, relation(schema, "head_only"), 1)
-    val before = snapshot(conn, schema)
-    assertEquals(2, database.maintain_partitions(conn))
-    assertEquals(before, snapshot(conn, schema))
-    assertEquals("false", scalar(conn, "SELECT is_called::text FROM \"naksha~admin\".naksha_version_seq"))
-  }
-
-  @Test
-  fun failedSweepRollsBackEarlierRootsInDeterministicOrder() = withDatabase { conn, schema ->
-    create(conn, schema, "a_good", options(false, 1))
-    create(conn, schema, "z_bad", options(false, 1))
-    for (table in listOf("z_bad", "a_good")) {
-      database.collection_register_partitions(conn, schema, table, 12, 1, 2048, 50, 100, null)
-    }
-    conn.execute("CREATE TABLE ${relation(schema, "z_bad\$2")} (unrelated text)").close()
-    val before = snapshot(conn, schema)
-    val savepoint = conn.jdbc.setSavepoint()
-    try {
-      assertFailsWith<NakshaException> { PgPartitions.maintainAll(conn, 0) }
-      assertTrue(scalar(conn, "SELECT to_regclass(${literal(relation(schema, "a_good\$0"))})") != null,
-        "C-ordered sweep must reach a_good before failing at z_bad; caller owns rollback")
-    } finally {
-      conn.jdbc.rollback(savepoint)
-      conn.jdbc.releaseSavepoint(savepoint)
-    }
-    assertEquals(before, snapshot(conn, schema))
-    conn.execute("DROP TABLE ${relation(schema, "z_bad\$2")}").close()
-    assertEquals(2, PgPartitions.maintainAll(conn, 0))
-    assertLeafCount(conn, relation(schema, "a_good"), 5)
-    assertLeafCount(conn, relation(schema, "z_bad"), 5)
-  }
-
   private fun withDatabase(test: (PgConnection, String) -> Unit) {
     val url = System.getenv("NAKSHA_TEST_PSQL_DB_URL")
-    assumeTrue(!url.isNullOrBlank(), "Set NAKSHA_TEST_PSQL_DB_URL to a dedicated clean PostgreSQL test database")
-    val instance = PgInstance.of(PgInstanceConfig.fromUri(url!!))
+    assumeTrue(!url.isNullOrBlank(), "Set NAKSHA_TEST_PSQL_DB_URL to PostgreSQL with permission to create disposable test databases")
+    // Allocator-boundary and rollback tests use a disposable database without changing the shared suite's version sequence.
+    val name = "naksha_partman_test_" + UUID.randomUUID().toString().replace("-", "")
+    DriverManager.getConnection(url!!).use { admin ->
+      admin.createStatement().use { it.execute("CREATE DATABASE ${PgUtil.quoteIdent(name)} TEMPLATE template0") }
+      try {
+        val instance = PgInstance.of(PgInstanceConfig.fromUri(url).withDb(name))
+        withConnection(instance, test)
+      } finally {
+        admin.createStatement().use { it.execute("DROP DATABASE ${PgUtil.quoteIdent(name)}") }
+      }
+    }
+  }
+
+  private fun withConnection(instance: PgInstance, test: (PgConnection, String) -> Unit) {
     instance.openConnection(Naksha.useAdminOptions(), false, PgStorage.SKIP_INIT).use { conn ->
       val schema = "Partman Test " + UUID.randomUUID().toString().replace("-", "")
       try {
         conn.autoCommit = false
         conn.execute("SET LOCAL lock_timeout = '5s'; SET LOCAL statement_timeout = '120s'").close()
-        assertNull(scalar(conn, "SELECT to_regclass(${literal(registry)})"), "Use a database without a persisted partition registry")
         conn.execute("CREATE SCHEMA IF NOT EXISTS \"naksha~admin\"").close()
-        PgPartitions.install(conn)
         assertEquals("0", scalar(conn, """
           SELECT count(*) FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
           WHERE n.nspname = 'naksha~admin' AND starts_with(p.proname, 'naksha_partman_')
         """), "Tests must not rely on installed naksha_partman_* server functions")
-        assertTrue(database.catalog_get_or_create_schema(conn, schema, logicalCatalog) > 0)
+        assertTrue(database.catalog_get_or_create_schema(conn, PgSchemaName.checked(schema), logicalCatalog) > 0)
         test(conn, schema)
         assertFalse(conn.isClosed())
         assertFalse(conn.autoCommit)
         conn.rollback()
         assertEquals("0", scalar(conn, "SELECT count(*) FROM pg_namespace WHERE nspname = ${literal(schema)}"),
           "Collection operations must never commit the caller's transaction")
-        assertNull(scalar(conn, "SELECT to_regclass(${literal(registry)})"))
+        assertEquals("0", scalar(conn, "SELECT count(*) FROM pg_namespace WHERE nspname = 'naksha~admin'"),
+          "Rollback must remove the admin schema and registry created by the fixture")
       } finally {
-        conn.rollback()
+        try {
+          conn.rollback()
+        } finally {
+          conn.terminate()
+        }
       }
     }
   }
@@ -268,10 +247,15 @@ class PgDatabasePartmanTest {
     conn: PgConnection, schema: String, table: String, options: PgCollectionCreateOptions,
     definitions: Array<PgColumn> = columns, owner: String = logicalCollection
   ) {
+    settings.putIfAbsent(table, options)
     database.collection_create_table_if_not_exists(
-      conn = conn, schema = schema, table = table, columns = definitions, indices = emptyArray(),
+      conn = conn, schema = PgSchemaName.checked(schema), table = PgTableName.checked(table), columns = definitions, indices = emptyArray(),
       options = options, logicalCatalog = logicalCatalog, logicalCollection = owner
     )
+  }
+
+  private fun maintain(conn: PgConnection, schema: String, table: String, version: Long) {
+    database.collection_maintain_partitions(conn, PgSchemaName.checked(schema), PgTableName.checked(table), version, settings.getValue(table).copy(storeHistory = true))
   }
 
   private fun assertRootContract(conn: PgConnection, schema: String, table: String) {

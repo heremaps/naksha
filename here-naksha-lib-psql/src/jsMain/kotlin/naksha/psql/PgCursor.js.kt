@@ -87,7 +87,13 @@ actual class PgCursor private actual constructor() : AutoCloseable {
 
     actual fun column(name: String): Any? {
         val value = this.value ?: return null
-        return value[name]
+        val cell = value[name]
+        // Binary columns are ByteArray, regardless of the transport view's element type. Reinterpret the exact byte window as Int8Array, including DataView and wider typed arrays, without copying or converting elements.
+        if (js("cell instanceof ArrayBuffer").unsafeCast<Boolean>()) return js("new Int8Array(cell)").unsafeCast<ByteArray>()
+        if (js("ArrayBuffer.isView(cell)").unsafeCast<Boolean>()) {
+          return js("new Int8Array(cell.buffer, cell.byteOffset, cell.byteLength)").unsafeCast<ByteArray>()
+        }
+        return cell
     }
 
     @JsName("columnValue")

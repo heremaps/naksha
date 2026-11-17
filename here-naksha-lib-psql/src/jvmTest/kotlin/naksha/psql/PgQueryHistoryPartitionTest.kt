@@ -158,7 +158,7 @@ class PgQueryHistoryPartitionTest : PgTestBase(collection = null) {
             }
             val relations = HashSet<String>()
             collectRelations(samples[0]["Plan"], relations)
-            if (!baseline) assertEquals(expectedTables + if (index == 2) setOf("${Id(collection.id).collectionName()}\$head\$${Id("256").partitionIndex(partitions)}") else emptySet(), relations)
+            if (!baseline) assertEquals(expectedTables + if (index == 2) setOf("${Id(collection.id).tableName()}\$head\$${Id("256").partitionIndex(partitions)}") else emptySet(), relations)
             val planning = samples.map { it["Planning Time"].asDouble() }.sorted()[2]
             val execution = samples.map { it["Execution Time"].asDouble() }.sorted()[2]
             val plan = samples[0]["Plan"]

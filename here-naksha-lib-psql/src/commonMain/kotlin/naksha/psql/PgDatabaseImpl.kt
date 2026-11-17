@@ -24,7 +24,7 @@ expect open class PgDatabaseImpl internal constructor(storage: PgStorage, id: Id
         schema_oid: Int?,
         installed_version: NakshaVersion?
     ): Int
-    override fun <R> execute_sql_nullable(schema: String?, table: String?, code: Fn0<R?>): R?
-    override fun <R> execute_sql_notnull(schema: String?, table: String?, code: Fn0<R>): R
-    override fun execute_sql(schema: String?, table: String?, code: Fx0)
+    override fun <R> execute_sql_nullable(schema: PgSchemaName?, table: PgTableName?, code: Fn0<R?>): R?
+    override fun <R> execute_sql_notnull(schema: PgSchemaName?, table: PgTableName?, code: Fn0<R>): R
+    override fun execute_sql(schema: PgSchemaName?, table: PgTableName?, code: Fx0)
 }

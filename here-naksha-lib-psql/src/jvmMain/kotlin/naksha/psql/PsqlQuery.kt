@@ -197,7 +197,7 @@ class PsqlQuery(query: String, private val typeNames: Array<String>?) {
     fun bindArguments(stmt: PreparedStatement, args: Array<Any?>) {
         var i = 0
         while (i < args.size) {
-            val arg = args[i]
+            val arg = pgNameArgument(args[i])
             val typeName = typeNames?.get(i)
             val indices = dollarToIndices[i + 1]
             check(indices != null) { "Indices must not be null - could not resolve index for \$${i + 1}" }

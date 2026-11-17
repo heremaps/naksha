@@ -27,8 +27,10 @@ class PgDatabaseIndexTest {
             }
         }.`when`(conn).execute(Mockito.anyString(), Mockito.nullable(Array<Any?>::class.java))
         val index = PgIndex("lookup", arrayOf(PgColumn.FnColumn to PgOrder.ASC))
-        database.collection_create_index(conn, "My Schema", "root", index)
-        database.collection_drop_index(conn, "My Schema", "root", index)
+        val schema = PgSchemaName.checked("My Schema")
+        val table = PgTableName.checked("root")
+        database.collection_create_index(conn, schema, table, index)
+        database.collection_drop_index(conn, schema, table, index)
         assertEquals(8, statements.size)
         for (offset in listOf(0, 4)) {
             assertTrue(statements[offset].contains("pg_advisory_xact_lock_shared"))
@@ -48,11 +50,11 @@ class PgDatabaseIndexTest {
     fun rejectsInvalidDefinitionsAndTruncatedNamesBeforeDdl() {
         val conn = Mockito.mock(PgConnection::class.java)
         assertFailsWith<NakshaException> {
-            database.collection_create_index(conn, "schema", "root", PgIndex("empty", emptyArray()))
+            database.collection_create_index(conn, PgSchemaName.checked("schema"), PgTableName.checked("root"), PgIndex("empty", emptyArray()))
         }
         val index = PgIndex("lookup", arrayOf(PgColumn.FnColumn to PgOrder.ASC))
-        assertFailsWith<NakshaException> { database.collection_create_index(conn, "schema", "a".repeat(64), index) }
-        assertFailsWith<NakshaException> { database.collection_drop_index(conn, "schema", "a".repeat(64), index) }
+        assertFailsWith<NakshaException> { database.collection_create_index(conn, PgSchemaName.checked("schema"), PgTableName.checked("a".repeat(64)), index) }
+        assertFailsWith<NakshaException> { database.collection_drop_index(conn, PgSchemaName.checked("schema"), PgTableName.checked("a".repeat(64)), index) }
         Mockito.verifyNoInteractions(conn)
     }
 
@@ -74,8 +76,10 @@ class PgDatabaseIndexTest {
             val index = PgIndex(name, arrayOf(PgColumn.FnColumn to PgOrder.ASC))
             val table = "a".repeat(25)
             val physical = "$table\$${index.id.indexName()}"
-            database.collection_create_index(conn, "schema", table, index)
-            database.collection_drop_index(conn, "schema", table, index)
+            val verifiedSchema = PgSchemaName.checked("schema")
+            val verifiedTable = PgTableName.checked(table)
+            database.collection_create_index(conn, verifiedSchema, verifiedTable, index)
+            database.collection_drop_index(conn, verifiedSchema, verifiedTable, index)
             for (offset in listOf(statements.size - 8, statements.size - 4)) {
                 assertTrue(statements[offset].contains("pg_advisory_xact_lock_shared"))
                 assertTrue(statements[offset + 1].contains("AS upgrading"))

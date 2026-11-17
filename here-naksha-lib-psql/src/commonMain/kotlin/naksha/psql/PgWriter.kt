@@ -51,6 +51,16 @@ open class PgWriter internal constructor(
      * @since 3.0
      */
     internal fun prepareCollectionLayout(collection: NakshaCollection, existing: NakshaCollection? = null) {
+      if (existing != null) {
+        val previousClass = existing.storageClass
+        val nextClass = collection.storageClass
+        val previousStorage = if (previousClass == null) PgStorageClass.Consistent else PgStorageClass.of(previousClass)
+        val nextStorage = if (nextClass == null) PgStorageClass.Consistent else PgStorageClass.of(nextClass)
+        if (maxOf(1, existing.partitions) != maxOf(1, collection.partitions) || existing.shift != collection.shift ||
+          existing.storeHistory !== collection.storeHistory || previousStorage !== nextStorage) {
+          throw illegalArg("Collection partition and storage settings are immutable after creation")
+        }
+      }
       collection.validateLayoutDeclarations()
       if (existing != null && collection.members != null) validateCollectionSchemaUnchanged(existing, collection)
       PgCollection.resolveLayout(collection)
@@ -223,7 +233,7 @@ open class PgWriter internal constructor(
         }
         // Acquire the combined set in catalog order with scoped modes before preparation or row locks. Existing schema reuse stays shared; later upgrades use PgPartitions' nonblocking retry path.
         for (catalogId in orderedCatalogs) {
-          val schema = catalogId.catalogName()
+          val schema = catalogId.schemaName()
           val exclusive = catalogId in exclusiveCatalogs ||
             catalogId in catalogPreparations && storage.database.catalog_get_schema_oid(conn, schema) < 0
           PgPartitions.lockCatalog(conn, schema, shared = !exclusive)
@@ -239,20 +249,20 @@ open class PgWriter internal constructor(
           if (!catalogCollectionsExist(conn, catalogId)) newCatalogs.add(catalogId)
         }
         for ((catalogId, collectionId) in orderedCollections) {
-          PgPartitions.lockCollection(conn, catalogId.catalogName(), collectionId.collectionName(), shared = true)
+          PgPartitions.lockCollection(conn, catalogId.schemaName(), collectionId.tableName(), shared = true)
           if (catalogId in newCatalogs || catalogId to collectionId in exclusiveCollections &&
-            !PgPartitions.exists(conn, catalogId.catalogName(), collectionId.collectionName())) {
+            !PgPartitions.exists(conn, catalogId.schemaName(), collectionId.tableName())) {
             newCollections.add(catalogId to collectionId)
             continue
           }
-          // Guard-only DDL targets may be tombstones with no physical root or registration. Their metadata rows live in the write destination, not in the dropped target.
+          // Guard-only DDL targets may be tombstones with no physical root. Their metadata rows live in the write destination, not in the dropped target.
           if (catalogId to collectionId !in writeCollections) continue
           val collection = session.getPgCollection(catalogId.intValue, collectionId.intValue, conn)
           if (collection == null) {
             newCollections.add(catalogId to collectionId)
           } else if (collection.storeHistory) {
             try {
-              if (!PgPartitions.covered(conn, catalogId.catalogName(), collection.name, version)) missing.add(catalogId to collectionId)
+              if (!PgPartitions.covered(conn, catalogId.schemaName(), collection.table, version, collection.shift, collection.partitions)) missing.add(catalogId to collectionId)
             } catch (e: NakshaException) {
               if (e.error.code == NakshaError.COLLECTION_NOT_FOUND) {
                 // Cache keys are logical identities, not physical aliases from the coverage probe.
@@ -268,14 +278,17 @@ open class PgWriter internal constructor(
           conn.execute("ROLLBACK TO SAVEPOINT \"$coverageSavepoint\"").close()
           for ((catalogId, collectionId) in orderedCollections) {
             val key = catalogId to collectionId
-            PgPartitions.lockCollection(conn, catalogId.catalogName(), collectionId.collectionName(),
+            PgPartitions.lockCollection(conn, catalogId.schemaName(), collectionId.tableName(),
               shared = key !in missing && key !in exclusiveCollections && key !in newCollections)
           }
           for ((catalogId, collectionId) in orderedCollections) {
             if (catalogId to collectionId in missing) {
               try {
-                if (!PgPartitions.covered(conn, catalogId.catalogName(), collectionId.collectionName(), version)) {
-                  storage.database.collection_maintain_partitions(conn, catalogId.catalogName(), collectionId.collectionName(), version)
+                val collection = session.getPgCollection(catalogId.intValue, collectionId.intValue, conn)
+                  ?: throw collectionNotFound("Collection ${catalogId.text}.${collectionId.text} no longer exists")
+                if (!PgPartitions.covered(conn, catalogId.schemaName(), collection.table, version, collection.shift, collection.partitions)) {
+                  storage.database.collection_maintain_partitions(conn, catalogId.schemaName(), collection.table, version,
+                    collection.creationOptions(storage.config, storage.database.maxTupleSize))
                 }
               } catch (e: NakshaException) {
                 if (e.error.code == NakshaError.COLLECTION_NOT_FOUND) {
@@ -297,7 +310,8 @@ open class PgWriter internal constructor(
           if (!write.dbCollection.storeHistory || write.dbCollection.catalogId to write.dbCollection.id !in newCollections) continue
           val collection = write.dbCollection
           val range = "${collection.catalogId.intValue}:${collection.id.intValue}:${version shr collection.shift}"
-          if (preparedRanges.add(range)) storage.database.collection_maintain_partitions(conn, collection.catalogId.catalogName(), collection.name, version)
+          if (preparedRanges.add(range)) storage.database.collection_maintain_partitions(conn, collection.schema, collection.table, version,
+            collection.creationOptions(storage.config, storage.database.maxTupleSize))
         }
 
         // Lock rows by catalog, collection and ID, independent of operation or atomicity.
@@ -316,8 +330,8 @@ open class PgWriter internal constructor(
           }
         }
         // Drop physical data only after every logical mutation has passed validation.
-        for (write in collectionDrops) storage.database.collection_drop_if_exists(conn, write.dbCatalog.name, write.id.collectionName())
-        for (write in catalogDrops) storage.database.catalog_drop_schema(conn, write.id.catalogName())
+        for (write in collectionDrops) storage.database.collection_drop_if_exists(conn, write.dbCatalog.schema, write.id.tableName())
+        for (write in catalogDrops) storage.database.catalog_drop_schema(conn, write.id.schemaName())
         // We can drop the savepoint, if there is any.
         if (savepointCreated) conn.execute("RELEASE SAVEPOINT \"$savepointId\"").close()
       } catch (t: Throwable) {
@@ -459,7 +473,7 @@ open class PgWriter internal constructor(
           pgWrite.tupleNumber = tuple.tupleNumber
           if (f is NakshaCatalog) {
             val pgCatalog = PgCatalog(tuple)
-            if (database.catalog_get_or_create_schema(conn, name = pgCatalog.name, originalName = pgCatalog.id.text) < 0) {
+            if (database.catalog_get_or_create_schema(conn, name = pgCatalog.schema, originalName = pgCatalog.id.text) < 0) {
               throw catalogExists("Creation of catalog '$id' failed, it exists already")
             }
             val collections = prepareCatalogCollections(conn, pgCatalog)
@@ -470,8 +484,8 @@ open class PgWriter internal constructor(
             val pgCollection = PgCollection(catalogId, tuple)
             database.collection_create_table_if_not_exists(
               conn = conn,
-              schema = dbCatalog.name,
-              table = pgCollection.name,
+              schema = dbCatalog.schema,
+              table = pgCollection.table,
               columns = pgCollection.columns,
               indices = pgCollection.indices,
               options = pgCollection.creationOptions(storage.config, database.maxTupleSize),
@@ -501,7 +515,7 @@ open class PgWriter internal constructor(
           pgWrite.tupleNumber = tuple.tupleNumber
           if (f is NakshaCatalog) {
             val pgCatalog = PgCatalog(tuple)
-            database.catalog_get_or_create_schema(conn, name = pgCatalog.name, originalName = pgCatalog.id.text)
+            database.catalog_get_or_create_schema(conn, name = pgCatalog.schema, originalName = pgCatalog.id.text)
             val collections = prepareCatalogCollections(conn, pgCatalog)
             pgWrite.pgCatalog = pgCatalog
             session.cachePgCatalog(pgCatalog) // This allows following write instructions to succeed.
@@ -510,8 +524,8 @@ open class PgWriter internal constructor(
             val pgCollection = PgCollection(catalogId, tuple)
             database.collection_create_table_if_not_exists(
               conn = conn,
-              schema = dbCatalog.name,
-              table = pgCollection.name,
+              schema = dbCatalog.schema,
+              table = pgCollection.table,
               columns = pgCollection.columns,
               indices = pgCollection.indices,
               options = pgCollection.creationOptions(storage.config, database.maxTupleSize),
@@ -544,8 +558,8 @@ open class PgWriter internal constructor(
     if (catalogCollectionsExist(conn, catalog.id)) return collection
     database.collection_create_table_if_not_exists(
       conn = conn,
-      schema = catalog.name,
-      table = collection.name,
+      schema = catalog.schema,
+      table = collection.table,
       columns = collection.columns,
       indices = collection.indices,
       options = collection.creationOptions(storage.config, database.maxTupleSize),
@@ -561,12 +575,12 @@ open class PgWriter internal constructor(
    */
   private fun catalogCollectionsExist(conn: PgConnection, catalogId: Id): Boolean {
     if (catalogId == Id.ADMIN_CATALOG_ID) return true
-    val table = Id.COLLECTIONS_COL_ID.collectionName()
+    val table = Id.COLLECTIONS_COL_ID.tableName()
     conn.execute("""
 SELECT pg_catalog.obj_description(c.oid, 'pg_class') AS owner
 FROM pg_catalog.pg_class c JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
 WHERE n.nspname = $1 AND c.relname = $2
-""", arrayOf(catalogId.catalogName(), table)).use { cursor ->
+""", arrayOf(catalogId.schemaName(), table)).use { cursor ->
       if (!cursor.next()) return false
       val owner = "${PgUtil.quoteIdent(catalogId.text)}.${PgUtil.quoteIdent(Id.COLLECTIONS_COL_ID.text)}"
       if (cursor.column("owner") != owner) throw illegalState("Physical catalog collections table belongs to another logical identity")

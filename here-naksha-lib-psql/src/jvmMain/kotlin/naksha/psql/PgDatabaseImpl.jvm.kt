@@ -20,7 +20,7 @@ actual open class PgDatabaseImpl internal actual constructor(storage: PgStorage,
     const val DUPLICATE_TABLE: String = "42P07"
   }
 
-  actual override fun <R> execute_sql_nullable(schema: String?, table: String?, code: Fn0<R?>): R? {
+  actual override fun <R> execute_sql_nullable(schema: PgSchemaName?, table: PgTableName?, code: Fn0<R?>): R? {
     try {
       return code.call()
     } catch (e: PSQLException) {
@@ -29,7 +29,7 @@ actual open class PgDatabaseImpl internal actual constructor(storage: PgStorage,
     }
   }
 
-  actual override fun <R> execute_sql_notnull(schema: String?, table: String?, code: Fn0<R>): R {
+  actual override fun <R> execute_sql_notnull(schema: PgSchemaName?, table: PgTableName?, code: Fn0<R>): R {
     try {
       return code.call()
     } catch (e: PSQLException) {
@@ -38,7 +38,7 @@ actual open class PgDatabaseImpl internal actual constructor(storage: PgStorage,
     }
   }
 
-  actual override fun execute_sql(schema: String?, table: String?, code: Fx0) {
+  actual override fun execute_sql(schema: PgSchemaName?, table: PgTableName?, code: Fx0) {
     try {
       code.call()
     } catch (e: PSQLException) {
@@ -157,7 +157,6 @@ actual open class PgDatabaseImpl internal actual constructor(storage: PgStorage,
         "storageNumber" to id.number.toString()
       )
     )
-    PgPartitions.install(conn)
     logger.info("Create version-sequence ...")
     // For a version number, the lower two bit must be always set.
     val START_VERSION = Version.now(0L, Action.VERSION)
@@ -167,8 +166,8 @@ actual open class PgDatabaseImpl internal actual constructor(storage: PgStorage,
     for (c in listOf(pgAdminCollections, pgAdminTransactions, pgAdminCatalogs, pgAdminBooks)) {
       collection_create_table_if_not_exists(
         conn = conn,
-        schema = ADMIN_CATALOG_TEXT,
-        table = c.name,
+        schema = c.schema,
+        table = c.table,
         columns = c.columns,
         indices = c.indices,
         options = c.creationOptions(storage.config, maxTupleSize),

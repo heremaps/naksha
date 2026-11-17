@@ -6,7 +6,6 @@ import naksha.base.NakshaError
 import naksha.base.NakshaException
 import naksha.base.TupleNumber
 import naksha.base.Version
-import naksha.base.proxy
 import naksha.jbon.HeapBook
 import naksha.model.NewTuple
 import naksha.base.Guid
@@ -35,7 +34,7 @@ class PgMutationAuditTest : PgTestBase(collection = null) {
       storage.adminConnection().use { conn ->
         val pgCollection = assertNotNull(storage.database.getPgCollection(Id(catalog.id).intValue, Id(collection.id).intValue, conn))
         val cc = assertNotNull(pgCollection.columns.firstOrNull { it.name == StandardMembers.ChangeCount.name })
-        val target = "${PgUtil.quoteIdent(pgCollection.catalogId.catalogName())}.${PgUtil.quoteIdent(pgCollection.id.collectionName())}"
+        val target = "${PgUtil.quoteIdent(pgCollection.catalogId.schemaName())}.${PgUtil.quoteIdent(pgCollection.id.tableName())}"
         conn.execute("SAVEPOINT audit_cc").close()
         conn.execute("UPDATE $target SET ${cc.ident} = ${Int.MAX_VALUE - 1} WHERE nv = ${Version.HEAD.number}").close()
         conn.execute("SAVEPOINT audit_delete_boundary").close()
@@ -118,11 +117,10 @@ class PgMutationAuditTest : PgTestBase(collection = null) {
 
   @Test
   fun metadataBatchMissNamesFailingCatalogAndKeepsContext() {
-    val ids = listOf("audit_catalog_a", "audit_catalog_b").sortedWith { a, b -> Id(a).compareTo(Id(b)) }
-    val existing = assertNotNull(executeWrite(WriteRequest().add(Write().createCatalog(NakshaCatalog(storage.id, ids[0])))).features[0])
-    val missing = NakshaCatalog(storage.id, ids[1])
+    val existing = initCatalog("naksha_psql_catalog_b")
+    val missing = NakshaCatalog(storage.id, "naksha_psql_catalog_a")
     val error = executeWriteErrorResponse(WriteRequest()
-      .add(Write().updateCatalog(existing.proxy(NakshaCatalog::class), false))
+      .add(Write().updateCatalog(existing, false))
       .add(Write().updateCatalog(missing, false))).error
     assertEquals(NakshaError.CATALOG_NOT_FOUND, error.code)
     assertEquals(missing.id, error.id)

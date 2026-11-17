@@ -17,7 +17,7 @@ actual class PgPlan private actual constructor(): AutoCloseable {
 
     actual fun execute(args: Array<Any?>?): PgCursor {
         val plan = this.plan ?: throw illegalState("Cursor is closed")
-        return PgCursor(if (args != null) plan.cursor(args) else plan.cursor())
+        return PgCursor(if (args != null) plan.cursor(pgNameArguments(args).unsafeCast<Array<dynamic>>()) else plan.cursor())
     }
 
     actual fun addBatch(args: Array<Any?>?) {

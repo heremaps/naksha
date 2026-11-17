@@ -58,7 +58,7 @@ import kotlin.jvm.JvmStatic
 class Id private constructor(
     private var _number: Long,
     private var _text: String?,
-) : Comparable<Id?>, CharSequence {
+) : Attributable(), Comparable<Id?>, CharSequence {
 
     /**
      * Creates a numeric identifier, requires the given `number` to be a positive integer.

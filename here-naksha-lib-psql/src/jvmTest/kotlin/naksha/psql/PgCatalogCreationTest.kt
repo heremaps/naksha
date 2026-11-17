@@ -19,7 +19,7 @@ import kotlin.test.assertTrue
 
 @EnabledIfEnvironmentVariable(named = "NAKSHA_TEST_CATALOG_DB_URL", matches = ".+")
 class PgCatalogCreationTest {
-  private val registry = "\"naksha~admin\".naksha_partman"
+  private val registry = PgPartitionTestMetadata.ROOTS
 
   @Test
   fun createsReservedCollectionsTransactionallyAndResolvesColdSessionDescriptor() {
@@ -56,14 +56,14 @@ class PgCatalogCreationTest {
       conn.autoCommit = false
       try {
         conn.execute("SET LOCAL lock_timeout = '5s'; SET LOCAL statement_timeout = '120s'").close()
-        assertTrue(database.catalog_get_or_create_schema(conn, catalog.name, catalog.id.text) > 0)
+        assertTrue(database.catalog_get_or_create_schema(conn, catalog.schema, catalog.id.text) > 0)
         create(storage, conn, catalog, descriptor)
         assertPhysicalContract(conn, catalog, descriptor)
         val before = snapshot(conn, catalog)
         val registration = registration(conn, catalog)
         val savepoint = conn.jdbc.setSavepoint()
         try {
-          assertTrue(database.catalog_get_or_create_schema(conn, catalog.name, catalog.id.text) < 0)
+          assertTrue(database.catalog_get_or_create_schema(conn, catalog.schema, catalog.id.text) < 0)
           create(storage, conn, catalog, descriptor)
           assertEquals(before, snapshot(conn, catalog), "Repeated creation must preserve object OIDs and definitions")
           assertEquals(registration, registration(conn, catalog))
@@ -79,11 +79,11 @@ class PgCatalogCreationTest {
         assertFalse(conn.isClosed())
         assertFalse(conn.autoCommit)
         conn.rollback()
-        assertEquals("0", scalar(conn, "SELECT count(*) FROM pg_namespace WHERE nspname = ${literal(catalog.name)}"))
-        assertEquals("0", scalar(conn, "SELECT count(*) FROM $registry WHERE schema_name = ${literal(catalog.name)}"))
+        assertEquals("0", scalar(conn, "SELECT count(*) FROM pg_namespace WHERE nspname = ${literal(catalog.schema.name)}"))
+        assertEquals("0", scalar(conn, "SELECT count(*) FROM $registry WHERE schema_name = ${literal(catalog.schema.name)}"))
         assertNull(scalar(conn, "SELECT to_regclass(${literal(descriptor.qualifiedName)})"))
 
-        assertTrue(database.catalog_get_or_create_schema(conn, catalog.name, catalog.id.text) > 0)
+        assertTrue(database.catalog_get_or_create_schema(conn, catalog.schema, catalog.id.text) > 0)
         create(storage, conn, catalog, descriptor)
         conn.commit()
       } finally {
@@ -121,7 +121,7 @@ class PgCatalogCreationTest {
     owner: String = collection.id.text) {
     val database = storage.database
     database.collection_create_table_if_not_exists(
-      conn = conn, schema = catalog.name, table = collection.name,
+      conn = conn, schema = catalog.schema, table = collection.table,
       columns = collection.columns, indices = collection.indices,
       options = collection.creationOptions(storage.config, database.maxTupleSize),
       logicalCatalog = catalog.id.text, logicalCollection = owner
@@ -163,20 +163,20 @@ class PgCatalogCreationTest {
     assertEquals("1", scalar(conn, """
       SELECT count(*) FROM pg_index i JOIN pg_class c ON c.oid = i.indexrelid
       JOIN pg_am a ON a.oid = c.relam WHERE i.indrelid = $root
-        AND c.relname = ${literal(tags.id.indexName(collection.name))} AND a.amname = 'gin'
+        AND c.relname = ${literal(tags.id.indexName(collection.table))} AND a.amname = 'gin'
         AND i.indisvalid AND i.indisready AND i.indnkeyatts = 1 AND i.indnatts = 1
     """))
     for (suffix in listOf("\$id", "\$version", "\$head")) {
-      assertNotNull(scalar(conn, "SELECT to_regclass(${literal("${catalog.quotedName}.${PgUtil.quoteIdent(collection.name + suffix)}")})"))
+      assertNotNull(scalar(conn, "SELECT to_regclass(${literal("${catalog.quotedName}.${PgUtil.quoteIdent(collection.table.name + suffix)}")})"))
     }
     assertEquals("5", scalar(conn, "SELECT count(*) FROM pg_partition_tree($root) WHERE level = 1"))
     assertEquals("4", scalar(conn, """
       SELECT count(*) FROM pg_partition_tree($root) t JOIN pg_class c ON c.oid = t.relid
-      WHERE t.level = 1 AND c.relname <> ${literal(collection.name + "\$head")}
+      WHERE t.level = 1 AND c.relname <> ${literal(collection.table.headName)}
     """))
     assertEquals("1", scalar(conn, """
-      SELECT count(*) FROM $registry WHERE schema_name = ${literal(catalog.name)}
-        AND table_name = ${literal(collection.name)}
+      SELECT count(*) FROM $registry WHERE schema_name = ${literal(catalog.schema.name)}
+        AND table_name = ${literal(collection.table.name)}
     """))
     assertEquals("0", scalar(conn, """
       SELECT count(*) FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
@@ -191,11 +191,11 @@ class PgCatalogCreationTest {
   private fun snapshot(conn: PgConnection, catalog: PgCatalog): String? = scalar(conn, """
     SELECT string_agg(ROW(c.oid, c.relname, c.relkind, c.reloptions,
       obj_description(c.oid, 'pg_class'), pg_get_expr(c.relpartbound, c.oid))::text, '|' ORDER BY c.oid)
-    FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace WHERE n.nspname = ${literal(catalog.name)}
+    FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace WHERE n.nspname = ${literal(catalog.schema.name)}
   """)
 
   private fun registration(conn: PgConnection, catalog: PgCatalog): String? = scalar(conn,
-    "SELECT row_to_json(r)::text FROM $registry r WHERE schema_name = ${literal(catalog.name)}")
+    "SELECT row_to_json(r)::text FROM $registry r WHERE schema_name = ${literal(catalog.schema.name)}")
 
   private fun scalar(conn: PgConnection, sql: String): String? {
     conn.jdbc.createStatement().use { statement ->

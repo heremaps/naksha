@@ -94,7 +94,7 @@ class PgCreateFlowTest {
         session.useConnNonNull(false) { conn ->
           assertFalse(conn.autoCommit)
           conn.jdbc.createStatement().use { statement ->
-            val schema = PgUtil.quoteLiteral(Id(temporaryCatalog.id).catalogName())
+            val schema = PgUtil.quoteLiteral(Id(temporaryCatalog.id).schemaName().name)
             statement.executeQuery("SELECT 1 FROM pg_namespace WHERE nspname = $schema").use { rows ->
               assertFalse(rows.next(), "Request rollback must remove the prepared temporary schema and its internal tables")
             }
@@ -103,7 +103,7 @@ class PgCreateFlowTest {
             statement.executeQuery("SELECT 1 FROM $root WHERE fn = $ordinal").use { rows ->
               assertFalse(rows.next(), "Failed batch must not persist temporary catalog metadata")
             }
-            val invalidRoot = "${pgCatalog.quotedName}.${PgUtil.quoteIdent(Id(invalidCollection.id).collectionName())}"
+            val invalidRoot = "${pgCatalog.quotedName}.${PgUtil.quoteIdent(Id(invalidCollection.id).tableName())}"
             statement.executeQuery("SELECT to_regclass(${PgUtil.quoteLiteral(invalidRoot)}) IS NULL").use { rows ->
               assertTrue(rows.next())
               assertTrue(rows.getBoolean(1), "Invalid collection must not leave a physical root")
@@ -132,7 +132,7 @@ class PgCreateFlowTest {
     }
     DriverManager.getConnection(url).use { jdbc ->
       jdbc.createStatement().use { statement ->
-        statement.executeQuery("SELECT 1 FROM pg_namespace WHERE nspname = ${PgUtil.quoteLiteral(Id(catalog.id).catalogName())}").use { rows ->
+        statement.executeQuery("SELECT 1 FROM pg_namespace WHERE nspname = ${PgUtil.quoteLiteral(Id(catalog.id).schemaName().name)}").use { rows ->
           assertFalse(rows.next(), "Rollback must remove the catalog schema and its collection roots")
         }
         val root = storage.database.pgAdminCatalogs.qualifiedName

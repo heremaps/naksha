@@ -6,7 +6,6 @@ import java.util.concurrent.TimeUnit
 import naksha.base.Id
 import naksha.base.NakshaError
 import naksha.base.Version
-import naksha.model.Naksha
 import naksha.model.objects.NakshaCatalog
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaFeature
@@ -126,14 +125,14 @@ class PgWriterOrderingRegressionTest : PgTestBase(collection = null) {
       .add(Write().createCollection(targetCollection))
       .add(Write().createFeature(targetCollection, NakshaFeature("kept"))))
     val before = snapshot(targetCollection)
-    val schema = Id(target.id).catalogName()
-    val registryBefore = registrations(schema)
+    val schema = Id(target.id).schemaName()
+    val registryBefore = registrations(schema.name)
     assertTrue(registryBefore.isNotEmpty())
     assertTrue(executeWriteErrorResponse(WriteRequest()
       .add(Write().deleteCatalogById(target.id))
       .add(Write().createFeature(targetCollection, NakshaFeature("kept")))).error.isConflict())
     assertEquals(before, snapshot(targetCollection))
-    assertEquals(registryBefore, registrations(schema))
+    assertEquals(registryBefore, registrations(schema.name))
     // Collection preparation takes a shared catalog guard; DELETE must take its exclusive guard first.
     val drop = WriteRequest()
       .add(Write().createCollection(NakshaCollection("prepared_then_dropped", target.id)))
@@ -143,11 +142,11 @@ class PgWriterOrderingRegressionTest : PgTestBase(collection = null) {
       session.rollback()
     }
     assertEquals(before, snapshot(targetCollection))
-    assertEquals(registryBefore, registrations(schema))
+    assertEquals(registryBefore, registrations(schema.name))
     assertEquals(1, read(targetCollection).size)
     executeWrite(drop)
     assertEquals(listOf(emptyList(), emptyList(), emptyList()), snapshot(targetCollection))
-    assertTrue(registrations(schema).isEmpty())
+    assertTrue(registrations(schema.name).isEmpty())
     assertTrue(readMetadata(Id.ADMIN_CATALOG_ID.text, Id.CATALOGS_COL_ID.text, target.id).isEmpty())
     storage.adminConnection().use { conn ->
       conn.execute("SELECT 1 FROM pg_catalog.pg_namespace WHERE nspname = $1", arrayOf(schema)).use { cursor ->
@@ -222,9 +221,9 @@ class PgWriterOrderingRegressionTest : PgTestBase(collection = null) {
           requests.add(request)
         }
         storage.adminConnection().use { blocker ->
-          val schema = Id(if (catalogWork) ids[0] else catalog.id).catalogName()
+          val schema = Id(if (catalogWork) ids[0] else catalog.id).schemaName()
           if (catalogWork) PgPartitions.lockCatalog(blocker, schema)
-          else PgPartitions.lockCollection(blocker, schema, Id(ids[0]).collectionName())
+          else PgPartitions.lockCollection(blocker, schema, Id(ids[0]).tableName())
           storage.newWriteSession(newSessionOptions()).use { firstWrite ->
             storage.newWriteSession(newSessionOptions()).use { secondWrite ->
               val sessions = listOf(firstWrite as PgSession, secondWrite as PgSession)
@@ -253,9 +252,9 @@ class PgWriterOrderingRegressionTest : PgTestBase(collection = null) {
                     Thread.sleep(10)
                   }
                   assertTrue(waiting, "Both writers must queue on the lowest combined guard")
-                  val highSchema = Id(if (catalogWork) ids[1] else catalog.id).catalogName()
+                  val highSchema = Id(if (catalogWork) ids[1] else catalog.id).schemaName()
                   val unlocked = if (catalogWork) PgPartitions.lockCatalog(observer, highSchema, tryOnly = true)
-                    else PgPartitions.lockCollection(observer, highSchema, Id(ids[1]).collectionName(), tryOnly = true)
+                    else PgPartitions.lockCollection(observer, highSchema, Id(ids[1]).tableName(), tryOnly = true)
                   assertTrue(unlocked, "Neither writer may acquire its DELETE subset ahead of the combined order")
                   observer.rollback()
                 }
@@ -381,7 +380,7 @@ class PgWriterOrderingRegressionTest : PgTestBase(collection = null) {
   }
 
   private fun relation(target: NakshaCollection): String =
-    "${PgUtil.quoteIdent(Id(assertNotNull(target.catalogId)).catalogName())}.${PgUtil.quoteIdent(Id(target.id).collectionName())}"
+    "${PgUtil.quoteIdent(Id(assertNotNull(target.catalogId)).schemaName())}.${PgUtil.quoteIdent(Id(target.id).tableName())}"
 
   private fun read(target: NakshaCollection): Map<String, NakshaFeature> {
     val features = executeRead(ReadFeatures().apply {
@@ -402,14 +401,14 @@ class PgWriterOrderingRegressionTest : PgTestBase(collection = null) {
   }).features
 
   private fun registrations(schema: String): List<String> = storage.adminConnection().use { conn ->
-    strings(conn, "SELECT row_to_json(r)::text AS value FROM \"naksha~admin\".naksha_partman r WHERE schema_name = $1 ORDER BY table_name", arrayOf(schema))
+    strings(conn, "SELECT row_to_json(r)::text AS value FROM ${PgPartitionTestMetadata.ROOTS} r WHERE schema_name = $1 ORDER BY table_name", arrayOf(schema))
   }
 
   private fun snapshot(target: NakshaCollection): List<List<String>> = storage.adminConnection().use { conn ->
-    val schema = Id(assertNotNull(target.catalogId)).catalogName()
-    val table = Id(target.id).collectionName()
+    val schema = Id(assertNotNull(target.catalogId)).schemaName()
+    val table = Id(target.id).tableName()
     val objects = strings(conn, "SELECT c.oid::text || ':' || c.relname AS value FROM pg_catalog.pg_class c JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace WHERE n.nspname = $1 AND (c.relname = $2 OR starts_with(c.relname, $2 || '$')) ORDER BY c.oid", arrayOf(schema, table))
-    val registry = strings(conn, "SELECT row_to_json(r)::text AS value FROM \"naksha~admin\".naksha_partman r WHERE schema_name = $1 AND table_name = $2", arrayOf(schema, table))
+    val registry = strings(conn, "SELECT row_to_json(r)::text AS value FROM ${PgPartitionTestMetadata.ROOTS} r WHERE schema_name = $1 AND table_name = $2", arrayOf(schema, table))
     val rows = if (objects.isEmpty()) emptyList() else strings(conn,
       "SELECT row_to_json(r)::text AS value FROM ${relation(target)} r ORDER BY fn, nv, version")
     listOf(objects, registry, rows)

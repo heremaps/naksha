@@ -17,9 +17,11 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class PgMaintenanceConcurrencyTest {
-  private val schema = "Maintenance Concurrency"
-  private val otherSchema = "Other Maintenance Catalog"
-  private val registry = "\"naksha~admin\".naksha_partman"
+  private val schema = "Maintenance-Concurrency"
+  private val otherSchema = "Other-Maintenance-Catalog"
+  private val verifiedSchema = PgSchemaName.checked(schema)
+  private val verifiedOtherSchema = PgSchemaName.checked(otherSchema)
+  private val registry = PgPartitionTestMetadata.ROOTS
   private val sequence = "\"naksha~admin\"." + PgUtil.quoteIdent(NAKSHA_VERSION_SEQ)
 
   @Test
@@ -46,8 +48,8 @@ class PgMaintenanceConcurrencyTest {
     val executor = java.util.concurrent.Executors.newSingleThreadExecutor()
     try {
       connection(storage).use { observer ->
-        storage.database.catalog_get_or_create_schema(observer, schema, schema)
-        storage.database.catalog_get_or_create_schema(observer, otherSchema, otherSchema)
+        storage.database.catalog_get_or_create_schema(observer, verifiedSchema, schema)
+        storage.database.catalog_get_or_create_schema(observer, verifiedOtherSchema, otherSchema)
         create(storage.database, observer, schema, "a")
         create(storage.database, observer, schema, "b")
         create(storage.database, observer, otherSchema, "c")
@@ -57,7 +59,7 @@ class PgMaintenanceConcurrencyTest {
         assertTrue(expected >= 3, "Committed bootstrap roots must be included in sweep counts")
         assertEquals("3", scalar(observer, """
           SELECT count(*) FROM $registry WHERE schema_name IN (${literal(schema)}, ${literal(otherSchema)})
-            AND partitions = 1 AND shift = 12
+            AND table_name IN ('a', 'b', 'c')
         """))
 
         collectionGuardScenarios(storage, executor, observer, expected)
@@ -80,7 +82,7 @@ class PgMaintenanceConcurrencyTest {
       connection(storage).use { holder ->
         try {
           // A completed per-root call must retain both advisory and physical locks until transaction end.
-          PgPartitions.maintain(holder, schema, "a", PgPartitions.currentVersion(holder))
+          storage.database.collection_maintain_partitions(holder, verifiedSchema, PgTableName.checked("a"), PgPartitions.currentVersion(holder))
           noGlobalLocks(holder)
           assertEquals("1", scalar(holder, """
             SELECT count(*) FROM pg_locks WHERE pid = pg_backend_pid()
@@ -144,13 +146,13 @@ class PgMaintenanceConcurrencyTest {
       connection(storage).use { holder ->
         try {
           // An existing catalog is visible in the registry snapshot, unlike an uncommitted new schema.
-          assertTrue(PgPartitions.lockCatalog(holder, schema))
+          assertTrue(PgPartitions.lockCatalog(holder, verifiedSchema))
           noGlobalLocks(holder)
           val anchor = advanceAnchor(observer)
           coverage(observer, anchor, false, false, false)
           val busyRoots = assertNotNull(scalar(observer,
             "SELECT count(*) FROM $registry WHERE schema_name = ${literal(schema)}")).toInt()
-          assertEquals(2, busyRoots)
+          assertEquals(3, busyRoots)
           assertEquals(expected - busyRoots, sweep(storage, executor, plv8),
             "Exclusive catalog guard must skip every root in S, not the other catalog (plv8=$plv8)")
           coverage(observer, anchor, false, false, true)
@@ -168,13 +170,13 @@ class PgMaintenanceConcurrencyTest {
     connection(storage).use { first ->
       connection(storage).use { second ->
         try {
-          assertTrue(PgPartitions.lockCatalog(first, schema, shared = true))
-          assertTrue(PgPartitions.lockCatalog(second, schema, shared = true))
+          assertTrue(PgPartitions.lockCatalog(first, verifiedSchema, shared = true))
+          assertTrue(PgPartitions.lockCatalog(second, verifiedSchema, shared = true))
           first.execute("CREATE TEMP TABLE catalog_upgrade_probe (value integer) ON COMMIT DROP").close()
           first.execute("INSERT INTO catalog_upgrade_probe VALUES (42)").close()
           for (conn in listOf(first, second)) {
             val rejected = executor.submit(Callable {
-              val failure = assertFailsWith<NakshaException> { PgPartitions.lockCatalog(conn, schema) }
+              val failure = assertFailsWith<NakshaException> { PgPartitions.lockCatalog(conn, verifiedSchema) }
               assertTrue(failure.message.orEmpty().contains("retry", ignoreCase = true), failure.message)
               assertFalse(conn.isClosed())
               assertFalse(conn.autoCommit)
@@ -187,7 +189,7 @@ class PgMaintenanceConcurrencyTest {
           assertEquals("42", scalar(first, "SELECT value FROM catalog_upgrade_probe"),
             "Rejected upgrade must preserve earlier caller writes without rollback")
           second.rollback()
-          val upgraded = executor.submit(Callable { PgPartitions.lockCatalog(first, schema) })
+          val upgraded = executor.submit(Callable { PgPartitions.lockCatalog(first, verifiedSchema) })
           assertTrue(upgraded.get(1, TimeUnit.SECONDS),
             "The same transaction must upgrade once the other shared guard is released")
           assertEquals("1", scalar(first, """
@@ -208,16 +210,17 @@ class PgMaintenanceConcurrencyTest {
   }
 
   private fun independentCreation(storage: PgStorage, executor: ExecutorService, observer: PgConnection) {
-    val catalog = "Concurrent Collection Creation"
+    val catalog = "Concurrent-Creation"
+    val verifiedCatalog = PgSchemaName.checked(catalog)
     val database = storage.database
     observer.autoCommit = false
     timeouts(observer)
-    assertTrue(database.catalog_get_or_create_schema(observer, catalog, catalog) > 0)
+    assertTrue(database.catalog_get_or_create_schema(observer, verifiedCatalog, catalog) > 0)
     observer.commit()
     observer.autoCommit = true
     connection(storage).use { first ->
       try {
-        assertTrue(database.catalog_get_or_create_schema(first, catalog, catalog) < 0)
+        assertTrue(database.catalog_get_or_create_schema(first, verifiedCatalog, catalog) < 0)
         create(database, first, catalog, "a")
         first.execute("""
           INSERT INTO ${relation(catalog, "a")} (fn, version, nv)
@@ -228,12 +231,14 @@ class PgMaintenanceConcurrencyTest {
         val second = executor.submit(Callable {
           connection(storage).use { worker ->
             try {
-              assertTrue(database.catalog_get_or_create_schema(worker, catalog, catalog) < 0,
+              assertTrue(database.catalog_get_or_create_schema(worker, verifiedCatalog, catalog) < 0,
                 "Existing catalog lookup must retain only a shared guard")
-              create(database, worker, catalog, "b")
+              database.collection_create_table_if_not_exists(worker, verifiedCatalog, PgTableName.checked("b"),
+                arrayOf(PgColumn.FnColumn, PgColumn.VersionColumn, PgColumn.NextVersionColumn), emptyArray(),
+                PgCollectionCreateOptions(true, 1, 12, 10, -1, 3, PgStorageClass.Consistent, null, 2048), catalog, "b")
               worker.execute("INSERT INTO ${relation(catalog, "b")} (fn, version) VALUES (1, 7)").close()
               assertFalse(worker.tryMaintenance {
-                PgPartitions.lockCollection(worker, catalog, "a", tryOnly = true)
+                PgPartitions.lockCollection(worker, verifiedCatalog, PgTableName.checked("a"), tryOnly = true)
               }, "Same collection creation must not bypass the first creator's lock")
               worker.commit()
             } finally {
@@ -269,13 +274,13 @@ class PgMaintenanceConcurrencyTest {
   private fun independentCatalogCreation(storage: PgStorage, executor: ExecutorService, observer: PgConnection) {
     connection(storage).use { first ->
       try {
-        assertTrue(storage.database.catalog_get_or_create_schema(first, "New Catalog A", "New Catalog A") > 0)
+        assertTrue(storage.database.catalog_get_or_create_schema(first, PgSchemaName.checked("New-Catalog-A"), "New-Catalog-A") > 0)
         noGlobalLocks(first)
         val second = executor.submit(Callable {
           connection(storage).use { worker ->
             try {
-              assertTrue(storage.database.catalog_get_or_create_schema(worker, "New Catalog B", "New Catalog B") > 0)
-              create(storage.database, worker, "New Catalog B", "b")
+              assertTrue(storage.database.catalog_get_or_create_schema(worker, PgSchemaName.checked("New-Catalog-B"), "New-Catalog-B") > 0)
+              create(storage.database, worker, "New-Catalog-B", "b")
               worker.commit()
             } finally {
               worker.rollback()
@@ -283,8 +288,8 @@ class PgMaintenanceConcurrencyTest {
           }
         })
         second.get(5, TimeUnit.SECONDS)
-        assertEquals("1", scalar(observer, "SELECT count(*) FROM pg_namespace WHERE nspname = 'New Catalog B'"))
-        assertEquals("0", scalar(observer, "SELECT count(*) FROM pg_namespace WHERE nspname = 'New Catalog A'"),
+        assertEquals("1", scalar(observer, "SELECT count(*) FROM pg_namespace WHERE nspname = 'New-Catalog-B'"))
+        assertEquals("0", scalar(observer, "SELECT count(*) FROM pg_namespace WHERE nspname = 'New-Catalog-A'"),
           "Independent schema creation must finish before the first catalog commits")
         first.commit()
       } finally {
@@ -374,8 +379,11 @@ class PgMaintenanceConcurrencyTest {
   }
 
   private fun create(database: PgDatabase, conn: PgConnection, catalog: String, table: String) {
+    val verifiedCatalog = PgSchemaName.checked(catalog)
+    val verifiedTable = PgTableName.checked(table)
+    if (!PgPartitions.exists(conn, verifiedCatalog, verifiedTable)) PgPartitionTestMetadata.publish(database, conn, catalog, table)
     database.collection_create_table_if_not_exists(
-      conn = conn, schema = catalog, table = table,
+      conn = conn, schema = verifiedCatalog, table = verifiedTable,
       columns = arrayOf(PgColumn.FnColumn, PgColumn.VersionColumn, PgColumn.NextVersionColumn),
       indices = emptyArray(),
       options = PgCollectionCreateOptions(true, 1, 12, 10, -1, 3, PgStorageClass.Consistent, null, 2048),

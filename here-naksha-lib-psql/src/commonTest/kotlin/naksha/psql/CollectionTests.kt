@@ -82,7 +82,7 @@ class CollectionTests : PgTestBase(collection = null, catalogId = "") {
             val columns = mutableListOf<String>()
             conn.execute(
                 sql = "SELECT column_name FROM information_schema.columns WHERE table_schema = $1 AND table_name = $2",
-                args = arrayOf(Id(catalog.id).catalogName(), Id(collection.id).collectionName())
+                args = arrayOf(Id(catalog.id).schemaName(), Id(collection.id).tableName())
             ).use { cursor ->
                 while (cursor.next()) columns.add(cursor["column_name"])
                 assertEquals(XyzMembers.ALL.size + 1, columns.size)
@@ -105,11 +105,11 @@ class CollectionTests : PgTestBase(collection = null, catalogId = "") {
     }
 
     private fun checkIndicesCreatedForTable(tableName: String) {
-        val root = Id(tableName).collectionName()
+        val root = Id(tableName).tableName()
         storage.adminConnection().use { conn ->
             conn.execute(
                 sql = "SELECT indexname FROM pg_indexes WHERE schemaname = $1 AND tablename = $2",
-                args = arrayOf(Id(catalog.id).catalogName(), root)
+                args = arrayOf(Id(catalog.id).schemaName(), root)
             ).use { cursor ->
                 val existingIndices = mutableListOf<String>()
                 while (cursor.next()) existingIndices.add(cursor["indexname"])
@@ -125,8 +125,8 @@ class CollectionTests : PgTestBase(collection = null, catalogId = "") {
 
     /** Verifies every root index has a valid, ready native descendant on every table in the partition tree. @since 3.0 */
     private fun assertIndexInheritance(collectionId: String) {
-        val schema = Id(catalog.id).catalogName()
-        val root = Id(collectionId).collectionName()
+        val schema = Id(catalog.id).schemaName()
+        val root = Id(collectionId).tableName()
         storage.adminConnection().use { conn ->
             conn.execute("""
                 WITH RECURSIVE root_indices AS (
@@ -158,8 +158,8 @@ class CollectionTests : PgTestBase(collection = null, catalogId = "") {
 
     /** Returns the root and all native descendants, verifying HEAD and finite-range naming/topology. @since 3.0 */
     private fun collectionTableNames(collection: NakshaCollection): List<String> {
-        val schema = Id(catalog.id).catalogName()
-        val root = Id(collection.id).collectionName()
+        val schema = Id(catalog.id).schemaName()
+        val root = Id(collection.id).tableName()
         val names = mutableListOf<String>()
         val children = mutableListOf<String>()
         var leaves = 0
@@ -179,7 +179,7 @@ class CollectionTests : PgTestBase(collection = null, catalogId = "") {
                 }
             }
         }
-        assertTrue(root in names, "Missing collection root $schema.$root")
+        assertTrue(root.name in names, "Missing collection root $schema.$root")
         assertTrue("$root\$head" in children, "Missing HEAD partition on $schema.$root")
         if (collection.storeHistory == StoreMode.OFF) {
             assertEquals(listOf("$root\$head"), children, "History-OFF must have only HEAD")
@@ -282,10 +282,10 @@ class CollectionTests : PgTestBase(collection = null, catalogId = "") {
         collection = createCollectionResponse.features[0]!!.proxy(NakshaCollection::class)
 
         // Proof that del table was not created
-        val delTableName = "${Id(collectionId).collectionName()}\$del"
+        val delTableName = "${Id(collectionId).tableName()}\$del"
         storage.adminConnection().use { conn ->
             val SQL = "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_schema = $1 AND table_name = $2)"
-            conn.execute(SQL, arrayOf(Id(catalog.id).catalogName(), delTableName)).use { cursor ->
+            conn.execute(SQL, arrayOf(Id(catalog.id).schemaName(), delTableName)).use { cursor ->
                 assertFalse(cursor.fetch()["exists"])
             }
         }
@@ -460,7 +460,7 @@ class CollectionTests : PgTestBase(collection = null, catalogId = "") {
             val columns = mutableListOf<String>()
             conn.execute(
                 "SELECT column_name FROM information_schema.columns WHERE table_schema = $1 AND table_name = $2",
-                arrayOf(Id(catalog.id).catalogName(), Id(collection.id).collectionName())
+                arrayOf(Id(catalog.id).schemaName(), Id(collection.id).tableName())
             ).use { cursor -> while (cursor.next()) columns.add(cursor["column_name"]) }
             // Note: `lib-psql` does split `tn` into `fn` and `version` columns, so we have one more column than members!
             assertEquals(
@@ -493,7 +493,7 @@ class CollectionTests : PgTestBase(collection = null, catalogId = "") {
             val columns = mutableListOf<String>()
             conn.execute(
                 "SELECT column_name FROM information_schema.columns WHERE table_schema = $1 AND table_name = $2",
-                arrayOf(Id(catalog.id).catalogName(), Id(collection.id).collectionName())
+                arrayOf(Id(catalog.id).schemaName(), Id(collection.id).tableName())
             ).use { cursor -> while (cursor.next()) columns.add(cursor["column_name"]) }
             val expectedColumns = expectedHeadColumnNames(collection)
             assertEquals(
@@ -506,7 +506,7 @@ class CollectionTests : PgTestBase(collection = null, catalogId = "") {
             val indexNames = mutableListOf<String>()
             conn.execute(
                 "SELECT indexname FROM pg_indexes WHERE schemaname = $1 AND tablename = $2",
-                arrayOf(Id(catalog.id).catalogName(), Id(collection.id).collectionName())
+                arrayOf(Id(catalog.id).schemaName(), Id(collection.id).tableName())
             ).use { cursor -> while (cursor.next()) indexNames.add(cursor["indexname"]) }
             assertNoOptionalIndices(indexNames, collection.id)
             assertEquals(4, indexNames.size, "Expected only intrinsic indices: $indexNames")
@@ -532,7 +532,7 @@ class CollectionTests : PgTestBase(collection = null, catalogId = "") {
             val columns = mutableListOf<String>()
             conn.execute(
                 "SELECT column_name FROM information_schema.columns WHERE table_schema = $1 AND table_name = $2",
-                arrayOf(Id(catalog.id).catalogName(), Id(collection.id).collectionName())
+                arrayOf(Id(catalog.id).schemaName(), Id(collection.id).tableName())
             ).use { cursor -> while (cursor.next()) columns.add(cursor["column_name"]) }
             val expectedColumns = expectedHeadColumnNames(collection) // mandatory head columns + score
             assertEquals(expectedColumns.size, columns.size,
@@ -545,11 +545,11 @@ class CollectionTests : PgTestBase(collection = null, catalogId = "") {
             val indexNames = mutableListOf<String>()
             conn.execute(
                 "SELECT indexname FROM pg_indexes WHERE schemaname = $1 AND tablename = $2",
-                arrayOf(Id(catalog.id).catalogName(), Id(collection.id).collectionName())
+                arrayOf(Id(catalog.id).schemaName(), Id(collection.id).tableName())
             ).use { cursor -> while (cursor.next()) indexNames.add(cursor["indexname"]) }
             assertNoOptionalIndices(indexNames, collection.id)
             // Custom index must be present.
-            val customIndexId = Id("idx_score").indexName(Id(collection.id).collectionName())
+            val customIndexId = Id("idx_score").indexName(Id(collection.id).tableName())
             assertTrue(customIndexId in indexNames,
                 "Custom index '$customIndexId' not found in: $indexNames")
             assertEquals(5, indexNames.size, "Expected intrinsic indices plus idx_score: $indexNames")
@@ -573,16 +573,16 @@ class CollectionTests : PgTestBase(collection = null, catalogId = "") {
             var dataType: String? = null
             conn.execute(
                 "SELECT data_type FROM information_schema.columns WHERE table_schema = $1 AND table_name = $2 AND column_name = $3",
-                arrayOf(Id(catalog.id).catalogName(), Id(collection.id).collectionName(), Id("labels").columnName())
+                arrayOf(Id(catalog.id).schemaName(), Id(collection.id).tableName(), Id("labels").columnName())
             ).use { cursor -> if (cursor.next()) dataType = cursor["data_type"] }
             assertEquals("ARRAY", dataType, "TAG_LIST member 'labels' must be materialized as a text[] array")
 
             // Index: GIN index over the array column.
-            val customIndexId = Id("idx_labels").indexName(Id(collection.id).collectionName())
+            val customIndexId = Id("idx_labels").indexName(Id(collection.id).tableName())
             var indexDef: String? = null
             conn.execute(
                 "SELECT indexdef FROM pg_indexes WHERE schemaname = $1 AND tablename = $2 AND indexname = $3",
-                arrayOf(Id(catalog.id).catalogName(), Id(collection.id).collectionName(), customIndexId)
+                arrayOf(Id(catalog.id).schemaName(), Id(collection.id).tableName(), customIndexId)
             ).use { cursor -> if (cursor.next()) indexDef = cursor["indexdef"] }
             assertNotNull(indexDef, "SET index '$customIndexId' not found")
             assertTrue(indexDef!!.contains("USING gin", ignoreCase = true),
@@ -631,7 +631,7 @@ class CollectionTests : PgTestBase(collection = null, catalogId = "") {
             storage.adminConnection().use { conn ->
                 conn.execute(
                     "SELECT column_name FROM information_schema.columns WHERE table_schema = \$1 AND table_name = \$2 ORDER BY ordinal_position",
-                    arrayOf(Id(catalog.id).catalogName(), tableName)
+                    arrayOf(Id(catalog.id).schemaName(), tableName)
                 ).use { cursor -> while (cursor.next()) columns.add(cursor["column_name"]) }
             }
             assertTrue(columns.isNotEmpty(), "No columns found for table '$tableName'")
@@ -659,7 +659,7 @@ class CollectionTests : PgTestBase(collection = null, catalogId = "") {
     /** Asserts no optional/default indices (XYZ + pn/pt/gv) were auto-created; only declared ones are materialized. */
     private fun assertNoOptionalIndices(indexNames: List<String>, collectionId: String) {
         val standardSpecial = listOf(StandardIndices.PublishNumber, StandardIndices.PublishTime, StandardIndices.GlobalVersion)
-        val root = Id(collectionId).collectionName()
+        val root = Id(collectionId).tableName()
         for (idx in XyzIndices.ALL + standardSpecial) {
             assertFalse(idx.id.indexName(root) in indexNames, "Unexpected optional index '${idx.name}', found: $indexNames")
         }

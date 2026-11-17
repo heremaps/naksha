@@ -18,7 +18,7 @@ import kotlin.test.assertTrue
 class PgMaintenancePermissionsTest {
   private val admin = "\"naksha~admin\""
   private val wrapper = "$admin.naksha_maintain()"
-  private val registry = "$admin.naksha_partman"
+  private val roots = PgPartitionTestMetadata.ROOTS
   private val modules = "$admin.es_modules"
   private val sequence = "$admin.${PgUtil.quoteIdent(NAKSHA_VERSION_SEQ)}"
 
@@ -39,7 +39,7 @@ class PgMaintenancePermissionsTest {
       val installer = assertNotNull(scalar(setup, "SELECT current_user::text"))
       val role = "naksha_maint_" + UUID.randomUUID().toString().replace("-", "")
       val quotedRole = PgUtil.quoteIdent(role)
-      val schema = "Permissions Maintenance"
+      val schema = "Permissions-Maintenance"
       val quotedSchema = PgUtil.quoteIdent(schema)
       val table = "role_history"
       val root = "$quotedSchema.${PgUtil.quoteIdent(table)}"
@@ -57,13 +57,13 @@ class PgMaintenancePermissionsTest {
         execute(setup, "GRANT SELECT ON $modules TO $quotedRole")
         expectDenied(url, role, "sequence $NAKSHA_VERSION_SEQ")
         execute(setup, "GRANT SELECT ON SEQUENCE $sequence TO $quotedRole")
-        expectDenied(url, role, "table naksha_partman")
-        execute(setup, "GRANT SELECT ON $registry TO $quotedRole")
+        expectDenied(url, role, "table naksha~catalogs")
+        execute(setup, "GRANT SELECT ON ALL TABLES IN SCHEMA $admin TO $quotedRole")
 
         val managed = ArrayList<String>()
         setup.createStatement().use { statement ->
           statement.executeQuery("""
-            SELECT t.relid::regclass::text FROM $registry r
+            SELECT t.relid::regclass::text FROM $roots r
             CROSS JOIN LATERAL pg_partition_tree(r.root_oid::regclass) t
             ORDER BY r.schema_name COLLATE "C", r.table_name COLLATE "C", t.level, t.relid
           """).use { rows ->
@@ -71,7 +71,13 @@ class PgMaintenancePermissionsTest {
           }
         }
         assertTrue(managed.isNotEmpty(), "Bootstrap must register admin history roots")
-        expectDenied(url, role, "table")
+        DriverManager.getConnection(url).use { idle ->
+          idle.autoCommit = false
+          enterRole(idle, role)
+          assertTrue(assertNotNull(scalar(idle, "SELECT $wrapper")).toInt() > 0,
+            "Read-only metadata privileges suffice for a fully covered no-op sweep")
+          idle.rollback()
+        }
 
         // DML permits the recursive lock, but cannot authorize CREATE TABLE ... PARTITION OF.
         execute(setup, "GRANT USAGE, CREATE ON SCHEMA $admin TO $quotedRole")
@@ -81,7 +87,7 @@ class PgMaintenancePermissionsTest {
         }
         execute(setup, "SELECT setval(${literal(sequence)}::regclass, $anchor, true)")
         val missingLeaf = assertNotNull(scalar(setup, """
-          SELECT t.relid::regclass::text FROM $registry r
+          SELECT t.relid::regclass::text FROM $roots r
           CROSS JOIN LATERAL pg_partition_tree(r.root_oid::regclass) t
           WHERE t.isleaf ORDER BY r.schema_name COLLATE "C", r.table_name COLLATE "C", t.relid LIMIT 1
         """))
@@ -95,13 +101,12 @@ class PgMaintenancePermissionsTest {
 
         // Only managed tables change owner, not the admin schema, wrapper, metadata or allocator.
         execute(setup, "CREATE SCHEMA $quotedSchema AUTHORIZATION $quotedRole")
-        execute(setup, "GRANT INSERT ON $registry TO $quotedRole")
         storage.newConnection(Naksha.useAdminOptions(), false, PgStorage.SKIP_INIT).use { conn ->
           try {
             conn.execute("SET LOCAL ROLE $quotedRole").close()
             assertEquals(role, scalar(conn.jdbc, "SELECT current_user::text"))
             storage.database.collection_create_table_if_not_exists(
-              conn = conn, schema = schema, table = table,
+              conn = conn, schema = PgSchemaName.checked(schema), table = PgTableName.checked(table),
               columns = arrayOf(PgColumn.FnColumn, PgColumn.VersionColumn, PgColumn.NextVersionColumn),
               indices = emptyArray(),
               options = PgCollectionCreateOptions(true, 3, 12, 10, -1, 3,
@@ -113,16 +118,27 @@ class PgMaintenancePermissionsTest {
             conn.rollback()
           }
         }
-        execute(setup, "REVOKE INSERT ON $registry FROM $quotedRole")
+        storage.newConnection(Naksha.useAdminOptions(), false, PgStorage.SKIP_INIT).use { conn ->
+          PgPartitionTestMetadata.publish(storage.database, conn, schema, table, 3)
+          conn.commit()
+        }
+        val metadataRelations = ArrayList<String>()
+        setup.createStatement().use { statement ->
+          statement.executeQuery("SELECT relid::regclass::text FROM pg_partition_tree('${quotedSchema}.\"naksha~collections\"'::regclass)").use { rows ->
+            while (rows.next()) metadataRelations.add(rows.getString(1))
+          }
+        }
+        for (relation in metadataRelations) execute(setup, "ALTER TABLE $relation OWNER TO $quotedRole")
+        execute(setup, "GRANT SELECT ON ALL TABLES IN SCHEMA $quotedSchema TO $quotedRole")
         execute(setup, "SELECT setval(${literal(sequence)}::regclass, ${anchor + 16L * 4096L}, true)")
         val future = "$quotedSchema.${PgUtil.quoteIdent(table + "$" + ((anchor shr 12) + 16))}"
         assertNull(scalar(setup, "SELECT to_regclass(${literal(future)})"))
-        val expected = assertNotNull(scalar(setup, "SELECT count(*) FROM $registry"))
+        val expected = assertNotNull(scalar(setup, "SELECT count(*) FROM $roots"))
         assertTrue(expected.toInt() > 1, "The global sweep must include admin roots and the role-created root")
         val allocator = scalar(setup, "SELECT ROW(last_value, is_called)::text FROM $sequence")
         assertEquals("0", scalar(setup, """
           SELECT count(*) FROM pg_class WHERE oid IN (
-            ${literal(modules)}::regclass, ${literal(registry)}::regclass, ${literal(sequence)}::regclass
+            ${literal(modules)}::regclass, ${literal(sequence)}::regclass
           ) AND relowner = ${literal(role)}::regrole
         """))
         assertEquals(installer, scalar(setup, "SELECT pg_get_userbyid(nspowner) FROM pg_namespace WHERE nspname = 'naksha~admin'"))
@@ -139,7 +155,7 @@ class PgMaintenancePermissionsTest {
               SELECT (rolsuper OR rolcreaterole OR rolcreatedb OR rolreplication OR rolbypassrls OR rolcanlogin)::text
               FROM pg_roles WHERE rolname = current_user
             """))
-            assertEquals("false", scalar(cold, "SELECT has_table_privilege(current_user, ${literal(registry)}, 'INSERT,UPDATE,DELETE,TRUNCATE')::text"))
+            assertEquals("false", scalar(cold, "SELECT has_table_privilege(current_user, ${literal(modules)}, 'INSERT,UPDATE,DELETE,TRUNCATE')::text"))
             assertEquals("false", scalar(cold, "SELECT has_sequence_privilege(current_user, ${literal(sequence)}, 'USAGE,UPDATE')::text"))
             val settings = sessionSettings(cold)
             val before = snapshot(cold)
@@ -149,7 +165,7 @@ class PgMaintenancePermissionsTest {
             assertNotNull(scalar(cold, "SELECT to_regclass(${literal(future)})"))
             assertEquals("3", scalar(cold, "SELECT count(*) FROM pg_partition_tree(${literal(future)}::regclass) WHERE isleaf"))
             assertEquals("0", scalar(cold, """
-              SELECT count(*) FROM $registry r
+              SELECT count(*) FROM $roots r
               CROSS JOIN LATERAL pg_partition_tree(r.root_oid::regclass) t
               JOIN pg_class c ON c.oid = t.relid WHERE c.relowner <> current_user::regrole
             """), "All managed roots, intermediate partitions and leaves must belong to the worker")
@@ -221,7 +237,7 @@ class PgMaintenancePermissionsTest {
     SELECT coalesce(string_agg(ROW(c.oid, c.relowner, c.relname, c.relkind,
       pg_get_expr(c.relpartbound, c.oid))::text, '|' ORDER BY c.oid), '')
     FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
-    WHERE n.nspname IN ('naksha~admin', 'Permissions Maintenance')
+    WHERE n.nspname IN ('naksha~admin', 'Permissions-Maintenance')
   """)
 
   private fun execute(conn: Connection, sql: String) {

@@ -7,12 +7,9 @@ import naksha.base.illegalArg
  * Immutable physical settings for creating a collection root and its partition set.
  *
  * This value contains no collection metadata, connection, table hierarchy, or executable SQL.
- * All settings are create-only: passing different settings for an existing root does not alter it.
- * Naksha validates these settings before DDL. Its custom SQL maintainer owns history and performance
- * partition provisioning; callers do not choose an initial partition version.
+ * All settings are create-only: passing different settings for an existing root does not alter it. Naksha validates these settings before DDL. Shared Kotlin owns synchronous initialization and later JVM/PLV8 history and performance partition provisioning; callers do not choose an initial partition version.
  *
- * @property storeHistory whether to register finite history ranges with the custom maintainer. When false,
- * only HEAD storage is created; history range settings are not used to provision partitions.
+ * @property storeHistory whether to provision finite history ranges. When false, only HEAD storage is created and background discovery skips this collection.
  * @property partitions number of physical feature-number range groups (1..256);
  * 1 disables fn subpartitioning.
  * @property shift exponent defining each finite nv range width as `1L shl shift`.
@@ -50,8 +47,8 @@ internal data class PgCollectionCreateOptions(
         if (toastTupleTarget !in MIN_POSTGRES_TOAST_TUPLE_TARGET..MAX_POSTGRES_TOAST_TUPLE_TARGET) {
             throw illegalArg("TOAST target is outside PostgreSQL's supported range: $toastTupleTarget")
         }
-        if (tablespace != null && (tablespace.isEmpty() || '\u0000' in tablespace)) {
-            throw illegalArg("Tablespace must be a non-empty unquoted identifier without NUL")
+        if (tablespace != null && (tablespace.isEmpty() || '\u0000' in tablespace || tablespace.encodeToByteArray().size > PG_IDENTIFIER_BYTES)) {
+            throw illegalArg("Tablespace must contain 1..63 UTF-8 bytes without NUL")
         }
         if (storageClass == PgStorageClass.Unknown) throw illegalArg("Unknown storage class")
     }

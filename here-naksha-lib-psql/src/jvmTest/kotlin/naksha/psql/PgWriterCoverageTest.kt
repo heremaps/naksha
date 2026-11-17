@@ -135,8 +135,8 @@ class PgWriterCoverageTest : PgTestBase(collection = null) {
       val version = ((tx.version.number shr 12) + 32) shl 12
       tx.setVersion(Version(version))
       session.useConn(false) { conn ->
-        PgPartitions.lockCollection(conn, Id(catalog.id).catalogName(), Id(collection.id).collectionName(), shared = true)
-        assertFalse(PgPartitions.covered(conn, Id(catalog.id).catalogName(), Id(collection.id).collectionName(), version))
+        PgPartitions.lockCollection(conn, Id(catalog.id).schemaName(), Id(collection.id).tableName(), shared = true)
+        assertFalse(PgPartitions.covered(conn, Id(catalog.id).schemaName(), Id(collection.id).tableName(), version, collection.shift, collection.partitions))
       }
       val write = when (op) {
         "UPDATE" -> Write().updateFeature(collection, NakshaFeature(op), false)
@@ -146,7 +146,7 @@ class PgWriterCoverageTest : PgTestBase(collection = null) {
       }
       assertSuccess(session.executeWrite(WriteRequest().add(write)))
       session.useConn(false) { conn ->
-        assertTrue(PgPartitions.covered(conn, Id(catalog.id).catalogName(), Id(collection.id).collectionName(), version))
+        assertTrue(PgPartitions.covered(conn, Id(catalog.id).schemaName(), Id(collection.id).tableName(), version, collection.shift, collection.partitions))
         conn.execute("SELECT nv::text AS nv, tableoid::regclass::text AS leaf FROM ${relation()} WHERE fn = $1::bigint AND nv >= $version AND nv <> ${Version.HEAD.number}",
           arrayOf(Id.featureNumberToOrdinal(Id(op).number).toString())).use { cursor ->
           assertTrue(cursor.next(), "$op must archive its predecessor")
@@ -171,12 +171,12 @@ class PgWriterCoverageTest : PgTestBase(collection = null) {
     storage.newWriteSession(newSessionOptions()).use { session ->
       assertSuccess(session.executeWrite(WriteRequest().add(Write().createFeature(collection, NakshaFeature("guarded")))))
       observer.use { conn ->
-        val schema = Id(catalog.id).catalogName()
-        val table = Id(collection.id).collectionName()
+        val schema = Id(catalog.id).schemaName()
+        val table = Id(collection.id).tableName()
         conn.autoCommit = false
         conn.prepareStatement("SELECT pg_try_advisory_xact_lock(hashtextextended(format('naksha:partman:%I.%I', ?::text, ?::text), 0))").use { statement ->
-          statement.setString(1, schema)
-          statement.setString(2, table)
+          statement.setString(1, schema.name)
+          statement.setString(2, table.name)
           statement.executeQuery().use { result ->
             assertTrue(result.next())
             assertFalse(result.getBoolean(1), "Collection drop and maintenance must wait for covered writers")
@@ -203,15 +203,15 @@ class PgWriterCoverageTest : PgTestBase(collection = null) {
       storeHistory = StoreMode.ON
     })
     storage.adminConnection().use { conn ->
-      val schema = Id(catalog.id).catalogName()
-      val table = Id(collection.id).collectionName()
+      val schema = Id(catalog.id).schemaName()
+      val table = Id(collection.id).tableName()
       val version = PgPartitions.currentVersion(conn)
       conn.execute("DROP TABLE ${PgUtil.quoteIdent(schema)}.${PgUtil.quoteIdent(table + "${'$'}${version shr 41}${'$'}6")}").close()
       conn.commit()
     }
     executeWrite(WriteRequest().add(Write().createFeature(collection, NakshaFeature("repaired"))))
     storage.adminConnection().use { conn ->
-      assertTrue(PgPartitions.covered(conn, Id(catalog.id).catalogName(), Id(collection.id).collectionName(), PgPartitions.currentVersion(conn)))
+      assertTrue(PgPartitions.covered(conn, Id(catalog.id).schemaName(), Id(collection.id).tableName(), PgPartitions.currentVersion(conn), collection.shift, collection.partitions))
     }
   }
 
@@ -222,10 +222,10 @@ class PgWriterCoverageTest : PgTestBase(collection = null) {
       shift = 41
       storeHistory = StoreMode.ON
     })
-    val schema = Id(catalog.id).catalogName()
-    val table = Id(collection.id).collectionName()
+    val schema = Id(catalog.id).schemaName()
+    val table = Id(collection.id).tableName()
     storage.adminConnection().use { conn ->
-      PgPartitions.maintain(conn, schema, table, 0)
+      storage.database.collection_maintain_partitions(conn, schema, table, 0)
       conn.commit()
       java.sql.DriverManager.getConnection(System.getenv("NAKSHA_TEST_COVERAGE_DB_URL")).use { blocker ->
         blocker.autoCommit = false
@@ -235,7 +235,7 @@ class PgWriterCoverageTest : PgTestBase(collection = null) {
         try {
           conn.execute("SET LOCAL statement_timeout = '3s'").close()
           PgPartitions.lockCollection(conn, schema, table, shared = true)
-          assertTrue(PgPartitions.covered(conn, schema, table, PgPartitions.currentVersion(conn)),
+          assertTrue(PgPartitions.covered(conn, schema, table, PgPartitions.currentVersion(conn), collection.shift, collection.partitions),
             "Required coverage must not lock or deparse unrelated retained leaves")
         } finally {
           conn.rollback()
@@ -248,19 +248,19 @@ class PgWriterCoverageTest : PgTestBase(collection = null) {
   @Test
   fun realTableoidRoutingAtEveryFnBoundaryAndClippedHead() {
     storage.adminConnection().use { conn ->
-      val schema = Id(catalog.id).catalogName()
+      val schema = Id(catalog.id).schemaName()
       val head = Version.HEAD.number
       try {
         for (partitions in listOf(1, 7, 256)) {
-          val table = "coverage_route_$partitions"
+          val table = PgTableName.checked("coverage_route_$partitions")
           storage.database.collection_create_table_if_not_exists(conn, schema, table,
             arrayOf(PgColumn.FnColumn, PgColumn.VersionColumn, PgColumn.NextVersionColumn), emptyArray(),
             PgCollectionCreateOptions(storeHistory = false, partitions = partitions, shift = 41, retain = 10,
               backward = -1, forward = 3, storageClass = PgStorageClass.Consistent, tablespace = null, toastTupleTarget = 2048),
-            catalog.id, table)
-          PgPartitions.register(conn, schema, table, 41, partitions, 2048, 50, 100, null)
-          PgPartitions.maintain(conn, schema, table, head - 1)
-          assertTrue(PgPartitions.covered(conn, schema, table, head - 1))
+            catalog.id, table.name)
+          val options = PgCollectionCreateOptions(true, partitions, 41, 10, -1, 3, PgStorageClass.Consistent, null, 2048)
+          PgPartitions.maintain(conn, schema, table, head - 1, options)
+          assertTrue(PgPartitions.covered(conn, schema, table, head - 1, 41, partitions))
           val root = "${PgUtil.quoteIdent(schema)}.${PgUtil.quoteIdent(table)}"
           for (slot in 0 until partitions) {
             val low = if (slot == 0) Long.MIN_VALUE else Id.partitionIndexMin(slot, partitions)
@@ -276,11 +276,11 @@ class PgWriterCoverageTest : PgTestBase(collection = null) {
             }
           }
           // A fast coverage check is not a substitute for explicit maintenance integrity validation.
-          conn.execute("ALTER TABLE ${PgUtil.quoteIdent(schema)}.${PgUtil.quoteIdent(table + "${'$'}head" + if (partitions == 1) "" else "${'$'}0")} SET (fillfactor = 70)").close()
-          assertTrue(PgPartitions.covered(conn, schema, table, head - 1))
+          conn.execute("ALTER TABLE ${PgUtil.quoteIdent(schema)}.${PgUtil.quoteIdent(table + "${'$'}head" + if (partitions == 1) "" else "${'$'}0")} ADD CHECK (fn <> 12345)").close()
+          assertTrue(PgPartitions.covered(conn, schema, table, head - 1, 41, partitions))
           val savepoint = conn.jdbc.setSavepoint()
           try {
-            assertFailsWith<NakshaException> { PgPartitions.maintain(conn, schema, table, head - 1) }
+            assertFailsWith<NakshaException> { PgPartitions.maintain(conn, schema, table, head - 1, options) }
           } finally { conn.jdbc.rollback(savepoint) }
         }
       } finally { conn.rollback() }
@@ -288,5 +288,5 @@ class PgWriterCoverageTest : PgTestBase(collection = null) {
   }
 
   private fun relation(): String =
-    "${PgUtil.quoteIdent(Id(catalog.id).catalogName())}.${PgUtil.quoteIdent(Id(collection.id).collectionName())}"
+    "${PgUtil.quoteIdent(Id(catalog.id).schemaName())}.${PgUtil.quoteIdent(Id(collection.id).tableName())}"
 }

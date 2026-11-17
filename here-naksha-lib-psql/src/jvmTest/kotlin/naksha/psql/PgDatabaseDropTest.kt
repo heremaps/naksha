@@ -18,7 +18,7 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class PgDatabaseDropTest {
-  private val registry = "\"naksha~admin\".naksha_partman"
+  private val registry = PgPartitionTestMetadata.ROOTS
 
   @Test
   fun dropsRootsAndSchemasTransactionallyAndSerializesWithMaintenance() {
@@ -49,7 +49,7 @@ class PgDatabaseDropTest {
       try {
         timeouts(conn)
         for (name in listOf(schema, other, concurrent)) {
-          assertTrue(database.catalog_get_or_create_schema(conn, name, name) > 0)
+          assertTrue(database.catalog_get_or_create_schema(conn, PgSchemaName.checked(name), name) > 0)
         }
         create(database, conn, schema, "history_root", true, 3)
         create(database, conn, schema, "head_only", false, 1)
@@ -72,7 +72,7 @@ class PgDatabaseDropTest {
         val data = data(conn, schema, "history_root")
         val rootOids = objectOids(conn, schema, "history_root")
         val savepoint = conn.jdbc.setSavepoint()
-        database.collection_drop_if_exists(conn, schema, "history_root")
+        database.collection_drop_if_exists(conn, PgSchemaName.checked(schema), PgTableName.checked("history_root"))
         assertDropped(conn, schema, "history_root", rootOids)
         assertEquals(preserved, snapshot(conn, other))
         assertFalse(conn.isClosed())
@@ -83,14 +83,14 @@ class PgDatabaseDropTest {
         assertEquals(registered, registrySnapshot(conn), "Rollback must restore the exact registration and root OID")
         assertEquals(data, data(conn, schema, "history_root"))
 
-        database.collection_drop_if_exists(conn, schema, "history_root")
-        database.collection_drop_if_exists(conn, schema, "history_root")
-        database.collection_drop_if_exists(conn, schema, "missing_root")
-        database.collection_drop_if_exists(conn, "Drop Missing", "missing_root")
+        database.collection_drop_if_exists(conn, PgSchemaName.checked(schema), PgTableName.checked("history_root"))
+        database.collection_drop_if_exists(conn, PgSchemaName.checked(schema), PgTableName.checked("history_root"))
+        database.collection_drop_if_exists(conn, PgSchemaName.checked(schema), PgTableName.checked("missing_root"))
+        database.collection_drop_if_exists(conn, PgSchemaName.checked("Drop Missing"), PgTableName.checked("missing_root"))
         sweep(conn)
         assertDropped(conn, schema, "history_root", rootOids)
         val headOids = objectOids(conn, schema, "head_only")
-        database.collection_drop_if_exists(conn, schema, "head_only")
+        database.collection_drop_if_exists(conn, PgSchemaName.checked(schema), PgTableName.checked("head_only"))
         assertDropped(conn, schema, "head_only", headOids)
         conn.commit()
 
@@ -115,7 +115,7 @@ class PgDatabaseDropTest {
         val remainingData = data(conn, schema, "remaining_a")
         assertEquals("2", registrations(conn, schema))
         val schemaSavepoint = conn.jdbc.setSavepoint()
-        database.catalog_drop_schema(conn, schema)
+        database.catalog_drop_schema(conn, PgSchemaName.checked(schema))
         assertSchemaDropped(conn, schema, schemaOids)
         assertEquals(preserved, snapshot(conn, other))
         conn.jdbc.rollback(schemaSavepoint)
@@ -125,9 +125,9 @@ class PgDatabaseDropTest {
         assertEquals(schemaOid, scalar(conn, "SELECT oid::text FROM pg_namespace WHERE nspname = ${literal(schema)}"))
         assertEquals(remainingData, data(conn, schema, "remaining_a"))
         assertEquals("fixture", scalar(conn, "SELECT value FROM ${relation(schema, "unrelated")}"))
-        database.catalog_drop_schema(conn, schema)
-        database.catalog_drop_schema(conn, schema)
-        database.catalog_drop_schema(conn, "Drop Missing")
+        database.catalog_drop_schema(conn, PgSchemaName.checked(schema))
+        database.catalog_drop_schema(conn, PgSchemaName.checked(schema))
+        database.catalog_drop_schema(conn, PgSchemaName.checked("Drop Missing"))
         conn.commit()
         storage.newConnection(Naksha.useAdminOptions(), false, PgStorage.SKIP_INIT).use { observer ->
           observer.autoCommit = false
@@ -154,34 +154,30 @@ class PgDatabaseDropTest {
         conn.autoCommit = false
         timeouts(conn)
         val bareSchema = "Drop Without Registry"
-        assertTrue(database.catalog_get_or_create_schema(conn, bareSchema, bareSchema) > 0)
+        assertTrue(database.catalog_get_or_create_schema(conn, PgSchemaName.checked(bareSchema), bareSchema) > 0)
         create(database, conn, bareSchema, "head_only", false, 1)
         create(database, conn, bareSchema, "schema_root", false, 1)
         conn.commit()
         val bareBefore = snapshot(conn, bareSchema)
         val registryBefore = registrySnapshot(conn)
-        val registryOid = scalar(conn, "SELECT ${literal(registry)}::regclass::oid::text")
         val bareSavepoint = conn.jdbc.setSavepoint()
         try {
-          // Temporarily remove only our disposable database's registry, never the installed wrapper.
-          conn.execute("DROP TABLE $registry").close()
-          database.collection_drop_if_exists(conn, bareSchema, "head_only")
-          database.collection_drop_if_exists(conn, bareSchema, "head_only")
+          database.collection_drop_if_exists(conn, PgSchemaName.checked(bareSchema), PgTableName.checked("head_only"))
+          database.collection_drop_if_exists(conn, PgSchemaName.checked(bareSchema), PgTableName.checked("head_only"))
           assertNull(scalar(conn, "SELECT to_regclass(${literal(relation(bareSchema, "head_only"))})"))
           assertNotNull(scalar(conn, "SELECT to_regclass(${literal(relation(bareSchema, "schema_root"))})"))
-          database.catalog_drop_schema(conn, bareSchema)
-          database.catalog_drop_schema(conn, bareSchema)
+          database.catalog_drop_schema(conn, PgSchemaName.checked(bareSchema))
+          database.catalog_drop_schema(conn, PgSchemaName.checked(bareSchema))
           assertEquals("0", scalar(conn, "SELECT count(*) FROM pg_namespace WHERE nspname = ${literal(bareSchema)}"))
-          assertNull(scalar(conn, "SELECT to_regclass(${literal(registry)})"), "Drops must not install a missing registry")
+          assertNull(scalar(conn, "SELECT to_regclass('\"naksha~admin\".\"naksha~partman\"')"), "Drops must never install a partition registry")
           assertEquals(preserved, snapshot(conn, other))
         } finally {
           conn.jdbc.rollback(bareSavepoint)
           conn.jdbc.releaseSavepoint(bareSavepoint)
         }
-        assertEquals(registryOid, scalar(conn, "SELECT ${literal(registry)}::regclass::oid::text"))
         assertEquals(registryBefore, registrySnapshot(conn))
         assertEquals(bareBefore, snapshot(conn, bareSchema))
-        database.catalog_drop_schema(conn, bareSchema)
+        database.catalog_drop_schema(conn, PgSchemaName.checked(bareSchema))
         conn.commit()
         sweep(conn)
         conn.commit()
@@ -194,19 +190,19 @@ class PgDatabaseDropTest {
   private fun validate(database: PgDatabase, conn: PgConnection, schema: String) {
     // No recovery savepoint: a server-side error would poison the next SELECT.
     for (name in listOf("", "bad\u0000name", "s".repeat(64), "\u00e9".repeat(32))) {
-      assertFailsWith<NakshaException> { database.catalog_drop_schema(conn, name) }
+      assertFailsWith<NakshaException> { database.catalog_drop_schema(conn, PgSchemaName.checked(name)) }
       assertEquals("1", scalar(conn, "SELECT 1"))
-      assertFailsWith<NakshaException> { database.collection_drop_if_exists(conn, name, "history_root") }
+      assertFailsWith<NakshaException> { database.collection_drop_if_exists(conn, PgSchemaName.checked(name), PgTableName.checked("history_root")) }
       assertEquals("1", scalar(conn, "SELECT 1"))
     }
     for (name in listOf("", "bad\u0000name", "t".repeat(30), "\u00e9".repeat(15))) {
-      assertFailsWith<NakshaException> { database.collection_drop_if_exists(conn, schema, name) }
+      assertFailsWith<NakshaException> { database.collection_drop_if_exists(conn, PgSchemaName.checked(schema), PgTableName.checked(name)) }
       assertEquals("1", scalar(conn, "SELECT 1"))
     }
     conn.commit()
     conn.autoCommit = true
-    assertFailsWith<NakshaException> { database.collection_drop_if_exists(conn, schema, "history_root") }
-    assertFailsWith<NakshaException> { database.catalog_drop_schema(conn, schema) }
+    assertFailsWith<NakshaException> { database.collection_drop_if_exists(conn, PgSchemaName.checked(schema), PgTableName.checked("history_root")) }
+    assertFailsWith<NakshaException> { database.catalog_drop_schema(conn, PgSchemaName.checked(schema)) }
     assertEquals("1", scalar(conn, "SELECT 1"))
     assertNotNull(scalar(conn, "SELECT to_regclass(${literal(relation(schema, "history_root"))})"))
     conn.autoCommit = false
@@ -225,7 +221,8 @@ class PgDatabaseDropTest {
           // Creation retains a shared catalog guard, not a sweep-wide lock.
           create(storage.database, holder, schema, "transaction_root", false, 1)
           val temporaryOids = objectOids(holder, schema, "transaction_root")
-          if (!schemaDrop) storage.database.collection_maintain_partitions(holder, schema, "history_root", 0)
+          if (!schemaDrop) storage.database.collection_maintain_partitions(holder, PgSchemaName.checked(schema), PgTableName.checked("history_root"), 0,
+            PgCollectionCreateOptions(true, 3, 12, 10, -1, 3, PgStorageClass.Consistent, null, 2048))
           val oids = if (schemaDrop) temporaryOids else objectOids(holder, schema, "history_root")
           val lockKey = if (schemaDrop) literal("naksha:schema:$schema") else
             "format('naksha:partman:%I.%I', ${literal(schema)}, 'history_root')"
@@ -237,8 +234,8 @@ class PgDatabaseDropTest {
                 try {
                   timeouts(worker)
                   workerPid.complete(assertNotNull(scalar(worker, "SELECT pg_backend_pid()")).toInt())
-                  if (schemaDrop) storage.database.catalog_drop_schema(worker, schema)
-                  else storage.database.collection_drop_if_exists(worker, schema, "history_root")
+                  if (schemaDrop) storage.database.catalog_drop_schema(worker, PgSchemaName.checked(schema))
+                  else storage.database.collection_drop_if_exists(worker, PgSchemaName.checked(schema), PgTableName.checked("history_root"))
                   worker.commit()
                 } finally {
                   worker.rollback()
@@ -279,7 +276,7 @@ class PgDatabaseDropTest {
             assertFalse(drop.isDone, "Scoped locks must remain held after method return")
             // A queued drop must not prevent cross-call maintenance of unlocked scopes.
             assertTrue(storage.database.maintain_partitions(holder) > 0)
-            storage.database.collection_drop_if_exists(holder, schema, "transaction_root")
+            storage.database.collection_drop_if_exists(holder, PgSchemaName.checked(schema), PgTableName.checked("transaction_root"))
             assertDropped(holder, schema, "transaction_root", temporaryOids)
             assertFalse(drop.isDone, "Cross-call maintenance and drop must retain the transaction's scoped locks")
             holder.commit()
@@ -313,13 +310,14 @@ class PgDatabaseDropTest {
 
   private fun create(database: PgDatabase, conn: PgConnection, schema: String, table: String, history: Boolean, partitions: Int) {
     database.collection_create_table_if_not_exists(
-      conn = conn, schema = schema, table = table,
+      conn = conn, schema = PgSchemaName.checked(schema), table = PgTableName.checked(table),
       columns = arrayOf(PgColumn.FnColumn, PgColumn.VersionColumn, PgColumn.NextVersionColumn),
       indices = emptyArray(),
       options = PgCollectionCreateOptions(history, partitions, 12, 10, -1, 3, PgStorageClass.Consistent, null, 2048),
       logicalCatalog = schema, logicalCollection = table
     )
-    if (history) database.collection_maintain_partitions(conn, schema, table, 0)
+    if (history) database.collection_maintain_partitions(conn, PgSchemaName.checked(schema), PgTableName.checked(table), 0,
+      PgCollectionCreateOptions(true, partitions, 12, 10, -1, 3, PgStorageClass.Consistent, null, 2048))
     conn.execute("INSERT INTO ${relation(schema, table)} (fn, version, nv) VALUES " +
       "(${Long.MIN_VALUE}, 1, ${Version.HEAD.number}), (${Long.MAX_VALUE}, 2, ${Version.HEAD.number})").close()
     if (history) conn.execute("INSERT INTO ${relation(schema, table)} (fn, version, nv) VALUES (0, 0, 3)").close()

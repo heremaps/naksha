@@ -27,7 +27,6 @@ import naksha.psql.PgColumn.PgColumn_C.EXTENDED
 import naksha.psql.PgColumn.PgColumn_C.EXTERNAL
 import naksha.psql.PgColumn.PgColumn_C.MAIN
 import naksha.psql.PgColumn.PgColumn_C.PLAIN
-import naksha.psql.PgUtil.PgUtilCompanion.quoteIdent
 import kotlin.js.JsExport
 import kotlin.js.JsName
 import kotlin.jvm.JvmField
@@ -95,26 +94,32 @@ open class PgCollection @JvmOverloads constructor(
   val id: Id = tuple.id
 
   /**
-   * The unquoted physical root name, derived from [id] through the shared alias policy. The original logical name remains [Id.text].
+   * The verified physical root table name, derived from [id] through the shared alias policy. The original logical name remains [Id.text].
    * @since 3.0
    * @see quotedName
    */
   @JvmField
-  val name: String = id.collectionName()
+  val table: PgTableName = id.tableName()
 
   /**
-   * The name of the table of the collection, optionally quoted in double quotes.
+   * The verified physical schema containing this collection, derived from [catalogId] through the shared alias policy. The original logical catalog identity remains in [catalogId].
    * @since 3.0
-   * @see name
+   */
+  val schema: PgSchemaName = catalogId.schemaName()
+
+  /**
+   * The SQL-quoted physical name of the collection's root table.
+   * @since 3.0
+   * @see table
    */
   @JvmField
-  val quotedName: String = quoteIdent(name)
+  val quotedName: String = table.quotedName
 
   /**
    * The root relation with schema and table quoted separately, independent of search_path.
    * @since 3.0
    */
-  val qualifiedName: String = "${quoteIdent(catalogId.catalogName())}.$quotedName"
+  val qualifiedName: String = "${schema.quotedName}.$quotedName"
 
   /**
    * The columns to expect in the table.

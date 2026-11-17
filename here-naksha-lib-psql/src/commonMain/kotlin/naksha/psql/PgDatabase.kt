@@ -282,7 +282,7 @@ SELECT basics.*, procs.* FROM basics, procs;
             }
             if (installed_version < minAdminVersion) {
               if (!doUpgrade) {
-                throw illegalState("The storage '$id' is in a newer version ($installed_version) that this library ($psql_version), access denied (there is a risk damaging the storage)")
+                throw illegalState("The storage '$id' uses admin version $installed_version, but this library requires at least $minAdminVersion; enable upgrade before accessing the storage")
               }
               logger.info("Upgrade Naksha admin-map from $installed_version to $psql_version for storage $id")
               upsert_naksha_admin(conn, this.id, psql_version, admin_schema_oid, installed_version)
@@ -317,11 +317,11 @@ SELECT basics.*, procs.* FROM basics, procs;
    * @return the list of the names of all databases available in the storage.
    * @since 3.0
    */
-  internal fun list_databases(conn: PgConnection): List<String> {
-    val list = ArrayList<String>()
+  internal fun list_databases(conn: PgConnection): List<PgDatabaseName> {
+    val list = ArrayList<PgDatabaseName>()
     conn.execute("SELECT datname FROM pg_database WHERE datallowconn AND NOT datistemplate").use { cursor: PgCursor ->
       while (cursor.next()) {
-        list.add( cursor["datname"] as String )
+        list.add(PgDatabaseName.checked(cursor["datname"] as String))
       }
     }
     return list
@@ -445,7 +445,7 @@ SELECT basics.*, procs.* FROM basics, procs;
    * @return the result `code` function.
    * @throws NakshaException if the code raised any exception, converting especially SQL exceptions into correct [NakshaError] objects.
    */
-  protected abstract fun <R> execute_sql_nullable(schema: String? = null, table: String? = null, code: Fn0<R?>): R?
+  protected abstract fun <R> execute_sql_nullable(schema: PgSchemaName? = null, table: PgTableName? = null, code: Fn0<R?>): R?
 
   /**
    * Execute the given SQL code, when throwing, this method will catch all exceptions and ensure that a valid [NakshaException] is thrown.
@@ -455,7 +455,7 @@ SELECT basics.*, procs.* FROM basics, procs;
    * @return the result `code` function.
    * @throws NakshaException if the code raised any exception, converting especially SQL exceptions into correct [NakshaError] objects.
    */
-  protected abstract fun <R> execute_sql_notnull(schema: String? = null, table: String? = null, code: Fn0<R>): R
+  protected abstract fun <R> execute_sql_notnull(schema: PgSchemaName? = null, table: PgTableName? = null, code: Fn0<R>): R
 
   /**
    * Execute the given SQL code, when throwing, this method will catch all exceptions and ensure that a valid [NakshaException] is thrown.
@@ -464,7 +464,7 @@ SELECT basics.*, procs.* FROM basics, procs;
    * @param code the function that executes SQL code, it does not need to use any exception handling.
    * @throws NakshaException if the code raised any exception, converting especially SQL exceptions into correct [NakshaError] objects.
    */
-  protected abstract fun execute_sql(schema: String? = null, table: String? = null, code: Fx0)
+  protected abstract fun execute_sql(schema: PgSchemaName? = null, table: PgTableName? = null, code: Fx0)
 
   //
   // Note: We can't ensure that another schema or table with a different name, but same number is created.
@@ -482,7 +482,7 @@ SELECT basics.*, procs.* FROM basics, procs;
    * @return if the schema exists, the 32-bit unsigned `OID` of the schema; `-1` if no such schema exists.
    * @since 3.0
    */
-  internal fun catalog_get_schema_oid(conn: PgConnection, name: String): Long {
+  internal fun catalog_get_schema_oid(conn: PgConnection, name: PgSchemaName): Long {
     return execute_sql_notnull(schema = name) {
       conn.execute("SELECT oid::text AS oid FROM pg_catalog.pg_namespace WHERE nspname = $1", arrayOf(name)).use { cursor ->
         if (cursor.next()) cursor.get<String>("oid").toLong() else -1L
@@ -504,11 +504,8 @@ SELECT basics.*, procs.* FROM basics, procs;
    * @return the 32-bit unsigned `OID` of the created schema, returns a negative `OID` if the schema existed already.
    * @since 3.0
    */
-  internal fun catalog_get_or_create_schema(conn: PgConnection, name: String, originalName: String): Long {
+  internal fun catalog_get_or_create_schema(conn: PgConnection, name: PgSchemaName, originalName: String): Long {
     return execute_sql_notnull(schema = name) {
-      if (name.isEmpty() || '\u0000' in name || name.encodeToByteArray().size > 63) {
-        throw illegalId("Physical schema name must contain 1..63 UTF-8 bytes without NUL")
-      }
       if (conn.autoCommit) throw illegalState("Schema creation requires a caller-owned transaction")
       if (catalog_get_schema_oid(conn, name) > 0) {
         PgPartitions.lockCatalog(conn, name, shared = true)
@@ -532,24 +529,16 @@ SELECT basics.*, procs.* FROM basics, procs;
   /**
    * Drops the catalog schema cascading _(recursive, so including all tables, indices, ...)_.
    *
-   * An absent schema is a successful no-op, including cleanup of orphaned partition registry rows. A missing registry is not installed. Logical catalog metadata is the caller's concern; dropping the admin schema is allowed and leaves the storage unusable.
+   * An absent schema is a successful no-op. Logical catalog metadata is the caller's concern; dropping the admin schema is allowed and leaves the storage unusable. No separate partition registry exists.
    * An exclusive catalog guard excludes collection operations in this schema without locking unrelated catalogs. Maintenance skips the busy catalog; PostgreSQL's cascading drop locks suffice without iterating roots.
    * @param conn the caller-owned connection; requires autoCommit false and does not commit, roll back or close it.
    * @param name the unquoted name of the schema; must contain 1..63 UTF-8 bytes without NUL.
    * @since 3.0
    */
-  internal fun catalog_drop_schema(conn: PgConnection, name: String) {
+  internal fun catalog_drop_schema(conn: PgConnection, name: PgSchemaName) {
     execute_sql(schema = name) {
       if (conn.autoCommit) throw illegalState("Schema drop requires a caller-owned transaction")
-      if (name.isEmpty() || '\u0000' in name || name.encodeToByteArray().size > PG_IDENTIFIER_BYTES) {
-        throw illegalId("Physical schema name must contain 1..63 UTF-8 bytes without NUL")
-      }
       PgPartitions.lockCatalog(conn, name)
-      val registry = "$ADMIN_CATALOG_QUOTED.\"naksha_partman\""
-      val installed = conn.execute("SELECT pg_catalog.to_regclass($1)::text AS name", arrayOf(registry)).fetch().use { cursor ->
-        cursor.column("name") != null
-      }
-      if (installed) conn.execute("DELETE FROM $registry WHERE \"schema_name\" = $1", arrayOf(name)).close()
       conn.execute("DROP SCHEMA IF EXISTS ${quoteIdent(name)} CASCADE").close()
     }
   }
@@ -557,7 +546,7 @@ SELECT basics.*, procs.* FROM basics, procs;
   /**
    * Create a collection's physical root table, partitions, and indexes if the root does not exist.
    *
-   * Shared Kotlin creates a RANGE (nv) root, restricted HEAD and optional fn leaves. Permanent storage is currently supported, with HEAD/history fillfactors 50/100. History-OFF has no registry entry. Initial history coverage uses the greater of the server UTC date and installed allocator watermark, without allocating a version. Explicit manual/import coverage is prepared separately through [collection_maintain_partitions].
+   * Shared Kotlin creates a RANGE (nv) root, restricted HEAD and optional fn leaves. Permanent storage is currently supported, with initial HEAD/history fillfactors 50/100. Creation synchronously maintains initial coverage using the supplied options before the metadata row is published. Later sweeps discover committed collections from metadata and read physical settings from PostgreSQL catalogs. Initial coverage uses the greater of the server UTC date and installed allocator watermark, without allocating a version.
    * An existing root with the same logical owner is left unchanged; unrelated or unowned relations are rejected. The caller must roll back on failure, including failures after partial DDL.
    * A shared catalog guard and exclusive collection lock allow unrelated collections to proceed concurrently; maintenance skips this busy collection.
    *
@@ -574,8 +563,8 @@ SELECT basics.*, procs.* FROM basics, procs;
    */
   internal fun collection_create_table_if_not_exists(
     conn: PgConnection,
-    schema: String,
-    table: String,
+    schema: PgSchemaName,
+    table: PgTableName,
     columns: Array<PgColumn>,
     indices: Array<PgIndex>,
     options: PgCollectionCreateOptions,
@@ -585,9 +574,6 @@ SELECT basics.*, procs.* FROM basics, procs;
     execute_sql(schema = schema, table = table) {
       if (conn.autoCommit) throw illegalState("Collection creation requires a caller-owned transaction")
       if (options.storageClass != PgStorageClass.Consistent) throw unsupportedOp("Only permanent collection creation is implemented")
-      for ((name, budget) in arrayOf(schema to PG_IDENTIFIER_BYTES, table to PG_ROOT_NAME_BYTES)) {
-        if (name.isEmpty() || '\u0000' in name || name.encodeToByteArray().size > budget) throw illegalId("Physical collection name exceeds its identifier budget")
-      }
       val names = HashSet<String>()
       val definitions = StringBuilder()
       for (column in columns) {
@@ -628,68 +614,47 @@ SELECT basics.*, procs.* FROM basics, procs;
         PgPartitions.head(conn, schema, table, options.partitions, options.toastTupleTarget, 50, options.tablespace)
         return@execute_sql
       }
-      collection_register_partitions(conn, schema, table, options.shift, options.partitions, options.toastTupleTarget, 50, 100, options.tablespace)
-      collection_maintain_partitions(conn, schema, table, PgPartitions.currentVersion(conn))
+      // Metadata is published later in this transaction. Initialize synchronously from the creation descriptor, never wait for the background sweep.
+      PgPartitions.maintain(conn, schema, table, PgPartitions.currentVersion(conn), options)
     }
   }
 
   /**
-   * Register an existing permanent collection root with explicit, immutable partition/storage settings. Does not create the root or select durability/fillfactor policy. A null [tablespace] resolves the root/database tablespace once at registration.
-   *
-   * Requires a caller-owned transaction. Shared Kotlin validates names, keys, settings and root identity before registration. History-OFF collections must not be registered. No commit or connection closure occurs here.
-   * @since 3.0
-   */
-  internal fun collection_register_partitions(
-    conn: PgConnection, schema: String, table: String, shift: Int, partitions: Int,
-    toastTupleTarget: Int, headFillfactor: Int, historyFillfactor: Int, tablespace: String?
-  ) {
-    execute_sql(schema = schema, table = table) {
-      PgPartitions.register(conn, schema, table, shift, partitions, toastTupleTarget, headFillfactor, historyFillfactor, tablespace)
-    }
-  }
-
-  /**
-   * Provision HEAD, the range containing [version], and up to three future finite ranges; repair missing leaves on retained ranges. Requires a registered root and a finite version, including explicit manual/imported versions. Never allocates versions or recreates missing roots.
+   * Provision HEAD, the range containing [version], and up to three future finite ranges; repair missing leaves on retained ranges. Uses active collection metadata unless explicit creation options are provided. Never allocates versions or recreates missing roots.
    *
    * Requires a caller-owned transaction; advisory and DDL locks last until its completion. The caller must provision coverage before writing finite next-versions outside existing ranges. Automatic allocator/scheduler selection is separate from this core. No commit, rollback, retention or connection closure occurs here.
    * @since 3.0
    */
-  internal fun collection_maintain_partitions(conn: PgConnection, schema: String, table: String, version: Long) {
+  internal fun collection_maintain_partitions(conn: PgConnection, schema: PgSchemaName, table: PgTableName, version: Long, options: PgCollectionCreateOptions? = null) {
     execute_sql(schema = schema, table = table) {
-      PgPartitions.maintain(conn, schema, table, version)
+      val resolved = options ?: (PgMaintenance.find(this, conn, schema, table)
+        ?: throw collectionNotFound("Collection $schema.$table has no active metadata")).creationOptions(storage.config, maxTupleSize)
+      PgPartitions.maintain(conn, schema, table, version, resolved)
     }
   }
 
   /**
-   * Maintain registered roots in deterministic order at the server-date/allocator watermark. Returns the count of completed roots, skipping busy catalogs/collections, nonblocking SQL lock conflicts (SQLSTATE 55P03), and registrations removed by cooperative drops. Each skipped attempt rolls back its guards; successful root locks remain held until transaction completion. Requires one caller-owned READ COMMITTED transaction; all other errors fail fast and require whole-sweep rollback. Never allocates a logical version or commits.
+   * Discover active collections and reserved descriptors from uncached metadata and maintain them in deterministic physical-name order. Busy metadata/roots are skipped without waiting. No-op attempts release all attempt-local guards without requesting exclusive table locks; only DDL attempts retain exclusive locks. Requires a caller-owned READ COMMITTED transaction; errors other than contention require caller rollback. Never allocates a logical version or commits.
    * @since 3.0
    */
   internal fun maintain_partitions(conn: PgConnection): Int = execute_sql_notnull {
-    PgPartitions.maintainAll(conn)
+    PgMaintenance.maintainAll(this, conn)
   }
 
   /**
    * Drops the table cascading, if it exists. Does not fail, if the table does not exist.
    *
-   * Removes the physical root and dependent HEAD/history leaves and indexes, together with its exact partition registry entry, including an orphaned entry. A missing registry is not installed. Logical collection metadata and owner comments are not consulted or modified.
+   * Removes the physical root and dependent HEAD/history leaves and indexes. Logical collection metadata and owner comments are not consulted or modified; the higher-level writer owns metadata deletion in the same transaction.
    * A shared catalog guard and exclusive collection lock allow unrelated collections to proceed concurrently; maintenance skips this busy collection.
    * @param conn the caller-owned connection; requires autoCommit false and does not commit, roll back or close it.
    * @param schema the unquoted schema name; may be absent and must contain 1..63 UTF-8 bytes without NUL.
    * @param table the unquoted root table name; may be absent and must contain 1..29 UTF-8 bytes without NUL.
    * @since 3.0
    */
-  internal fun collection_drop_if_exists(conn: PgConnection, schema: String, table: String) {
+  internal fun collection_drop_if_exists(conn: PgConnection, schema: PgSchemaName, table: PgTableName) {
     execute_sql(schema = schema, table = table) {
       if (conn.autoCommit) throw illegalState("Collection drop requires a caller-owned transaction")
-      for ((name, budget) in arrayOf(schema to PG_IDENTIFIER_BYTES, table to PG_ROOT_NAME_BYTES)) {
-        if (name.isEmpty() || '\u0000' in name || name.encodeToByteArray().size > budget) throw illegalId("Physical collection name exceeds its identifier budget")
-      }
       PgPartitions.lockCollection(conn, schema, table)
-      val registry = "$ADMIN_CATALOG_QUOTED.\"naksha_partman\""
-      val installed = conn.execute("SELECT pg_catalog.to_regclass($1)::text AS name", arrayOf(registry)).fetch().use { cursor ->
-        cursor.column("name") != null
-      }
-      if (installed) conn.execute("DELETE FROM $registry WHERE \"schema_name\" = $1 AND \"table_name\" = $2", arrayOf(schema, table)).close()
       conn.execute("DROP TABLE IF EXISTS ${quoteIdent(schema)}.${quoteIdent(table)} CASCADE").close()
     }
   }
@@ -710,20 +675,15 @@ SELECT basics.*, procs.* FROM basics, procs;
    * @throws NakshaException if index validation or DDL fails.
    * @since 3.0
    */
-  internal fun collection_create_index(conn: PgConnection, schema: String, table: String, index: PgIndex) {
+  internal fun collection_create_index(conn: PgConnection, schema: PgSchemaName, table: PgTableName, index: PgIndex) {
     execute_sql(schema = schema, table = table) {
       val definition = index.definition()
       val indexName = index.id.indexName(table)
-      for (name in arrayOf(schema, table, indexName)) {
-        if (name.isEmpty() || '\u0000' in name || name.encodeToByteArray().size > 63) {
-          throw illegalId("Physical index/schema/table names must contain 1..63 UTF-8 bytes without NUL")
-        }
-      }
-       PgPartitions.lockCollection(conn, schema, table)
-       // A parent index covers existing partitions and is inherited by future PARTITION OF children.
-       conn.execute("CREATE INDEX ${quoteIdent(indexName)} ON ${quoteIdent(schema)}.${quoteIdent(table)} $definition").close()
-     }
-   }
+      PgPartitions.lockCollection(conn, schema, table)
+      // A parent index covers existing partitions and is inherited by future PARTITION OF children.
+      conn.execute("CREATE INDEX ${quoteIdent(indexName)} ON ${quoteIdent(schema)}.${quoteIdent(table)} $definition").close()
+    }
+  }
 
   /**
    * Drop a custom root index, its attached child indexes, and its future-partition configuration.
@@ -736,14 +696,9 @@ SELECT basics.*, procs.* FROM basics, procs;
    * @throws NakshaException if the DDL fails.
    * @since 3.0
    */
-  internal fun collection_drop_index(conn: PgConnection, schema: String, table: String, index: PgIndex) {
+  internal fun collection_drop_index(conn: PgConnection, schema: PgSchemaName, table: PgTableName, index: PgIndex) {
     execute_sql(schema = schema, table = table) {
       val indexName = index.id.indexName(table)
-      for (name in arrayOf(schema, table, indexName)) {
-        if (name.isEmpty() || '\u0000' in name || name.encodeToByteArray().size > 63) {
-          throw illegalId("Physical index/schema/table names must contain 1..63 UTF-8 bytes without NUL")
-        }
-      }
       PgPartitions.lockCollection(conn, schema, table)
       conn.execute("DROP INDEX IF EXISTS ${quoteIdent(schema)}.${quoteIdent(indexName)}").close()
     }
@@ -787,7 +742,7 @@ SELECT basics.*, procs.* FROM basics, procs;
    */
   internal fun rows_insert(
     conn: PgConnection, schema: Id, table: Id, tuples: List<NewTuple>, storeHistory: Boolean, columns: Array<PgColumn>
-  ): List<Tuple> = execute_sql_notnull(schema.catalogName(), table.collectionName()) {
+  ): List<Tuple> = execute_sql_notnull(schema.schemaName(), table.tableName()) {
     try {
       if (conn.autoCommit) throw illegalState("Row insertion requires a caller-owned transaction")
       val head = Version.HEAD.number
@@ -829,7 +784,7 @@ SELECT basics.*, procs.* FROM basics, procs;
       val rows = PgRows().addColumns(columns)
         .withDatabaseNumber(databaseNumber).withCatalogNumber(catalogNumber).withCollectionNumber(collectionNumber)
       rows.size = 1
-      val target = "${quoteIdent(schema.catalogName())}.${quoteIdent(table.collectionName())}"
+      val target = "${quoteIdent(schema.schemaName())}.${quoteIdent(table.tableName())}"
       val source = "SELECT ${rows.decodedColumns()} FROM UNNEST(${rows.placeholders()}) AS t(${rows.aliases()})"
       val select = "SELECT version::text AS version FROM $target WHERE fn = $1::text::bigint AND nv = $head FOR UPDATE"
       val insert = "INSERT INTO $target (${rows.aliases()}) $source ON CONFLICT (fn, nv) DO NOTHING RETURNING version::text AS version"
@@ -935,7 +890,7 @@ SELECT basics.*, procs.* FROM basics, procs;
    */
   internal fun rows_upsert(
     conn: PgConnection, schema: Id, table: Id, tuples: List<NewTuple>, storeHistory: Boolean, columns: Array<PgColumn>
-  ): List<NewTuple> = execute_sql_notnull(schema.catalogName(), table.collectionName()) {
+  ): List<NewTuple> = execute_sql_notnull(schema.schemaName(), table.tableName()) {
     try {
       if (conn.autoCommit) throw illegalState("Row upsert requires a caller-owned transaction")
       val head = Version.HEAD.number
@@ -969,7 +924,7 @@ SELECT basics.*, procs.* FROM basics, procs;
       val rows = PgRows().addColumns(columns)
         .withDatabaseNumber(databaseNumber).withCatalogNumber(catalogNumber).withCollectionNumber(collectionNumber)
       rows.size = 1
-      val target = "${quoteIdent(schema.catalogName())}.${quoteIdent(table.collectionName())}"
+      val target = "${quoteIdent(schema.schemaName())}.${quoteIdent(table.tableName())}"
       val source = "SELECT ${rows.decodedColumns()} FROM UNNEST(${rows.placeholders()}) AS t(${rows.aliases()})"
       val ccColumn = rows.getColumn(ChangeCount.name)?.pgColumn
       val hasCc = ccColumn != null
@@ -1102,7 +1057,7 @@ SELECT basics.*, procs.* FROM basics, procs;
    */
   internal fun rows_update(
     conn: PgConnection, schema: Id, table: Id, tuples: List<NewTuple>, storeHistory: Boolean, columns: Array<PgColumn>
-  ): List<NewTuple> = execute_sql_notnull(schema.catalogName(), table.collectionName()) {
+  ): List<NewTuple> = execute_sql_notnull(schema.schemaName(), table.tableName()) {
     try {
       if (conn.autoCommit) throw illegalState("Row update requires a caller-owned transaction")
       val head = Version.HEAD.number
@@ -1136,7 +1091,7 @@ SELECT basics.*, procs.* FROM basics, procs;
       val rows = PgRows().addColumns(columns)
         .withDatabaseNumber(databaseNumber).withCatalogNumber(catalogNumber).withCollectionNumber(collectionNumber)
       rows.size = 1
-      val target = "${quoteIdent(schema.catalogName())}.${quoteIdent(table.collectionName())}"
+      val target = "${quoteIdent(schema.schemaName())}.${quoteIdent(table.tableName())}"
       val source = "SELECT ${rows.decodedColumns()} FROM UNNEST(${rows.placeholders()}) AS t(${rows.aliases()})"
       val select = "SELECT version::text AS version FROM $target WHERE fn = $1::text::bigint AND nv = $head FOR UPDATE"
       val insert = "INSERT INTO $target (${rows.aliases()}) $source RETURNING version::text AS version"
@@ -1232,7 +1187,7 @@ SELECT basics.*, procs.* FROM basics, procs;
     */
    internal fun rows_purge(
      conn: PgConnection, collection: PgCollection, version: Long, featureIds: List<Id>
-   ): List<Guid?> = execute_sql_notnull(collection.catalogId.catalogName(), collection.id.collectionName()) {
+   ): List<Guid?> = execute_sql_notnull(collection.catalogId.schemaName(), collection.id.tableName()) {
      try {
        if (conn.autoCommit) throw illegalState("Row purge requires a caller-owned transaction")
        val head = Version.HEAD.number
@@ -1290,7 +1245,7 @@ SELECT basics.*, procs.* FROM basics, procs;
    internal fun rows_delete_by_id_without_result(
      conn: PgConnection, collection: PgCollection, version: Long,
      featureIds: List<Id>, emptyTombstone: Boolean = false
-   ): List<Guid> = execute_sql_notnull(collection.catalogId.catalogName(), collection.id.collectionName()) {
+   ): List<Guid> = execute_sql_notnull(collection.catalogId.schemaName(), collection.id.tableName()) {
      try {
        if (conn.autoCommit) throw illegalState("Row delete requires a caller-owned transaction")
        val head = Version.HEAD.number
@@ -1333,7 +1288,7 @@ SELECT basics.*, procs.* FROM basics, procs;
     */
    internal fun rows_delete_by_id_with_result(
      conn: PgConnection, collection: PgCollection, version: Long, featureIds: List<Id>
-   ): List<NewTuple> = execute_sql_notnull(collection.catalogId.catalogName(), collection.id.collectionName()) {
+   ): List<NewTuple> = execute_sql_notnull(collection.catalogId.schemaName(), collection.id.tableName()) {
      try {
        if (conn.autoCommit) throw illegalState("Row delete requires a caller-owned transaction")
        val head = Version.HEAD.number
@@ -1380,7 +1335,7 @@ SELECT basics.*, procs.* FROM basics, procs;
    internal fun rows_delete_by_guid_without_result(
      conn: PgConnection, collection: PgCollection, version: Long,
      guids: List<Guid>, emptyTombstone: Boolean = false
-   ): List<Guid> = execute_sql_notnull(collection.catalogId.catalogName(), collection.id.collectionName()) {
+   ): List<Guid> = execute_sql_notnull(collection.catalogId.schemaName(), collection.id.tableName()) {
      try {
        if (conn.autoCommit) throw illegalState("Row delete requires a caller-owned transaction")
        val head = Version.HEAD.number
@@ -1425,7 +1380,7 @@ SELECT basics.*, procs.* FROM basics, procs;
     */
    internal fun rows_delete_by_guid_with_result(
      conn: PgConnection, collection: PgCollection, version: Long, guids: List<Guid>
-   ): List<NewTuple> = execute_sql_notnull(collection.catalogId.catalogName(), collection.id.collectionName()) {
+   ): List<NewTuple> = execute_sql_notnull(collection.catalogId.schemaName(), collection.id.tableName()) {
      try {
        if (conn.autoCommit) throw illegalState("Row delete requires a caller-owned transaction")
        val head = Version.HEAD.number
@@ -1469,7 +1424,7 @@ SELECT basics.*, procs.* FROM basics, procs;
     */
    internal fun rows_delete_with_new_state(
      conn: PgConnection, collection: PgCollection, version: Long, tuples: List<NewTuple>
-   ): List<NewTuple> = execute_sql_notnull(collection.catalogId.catalogName(), collection.id.collectionName()) {
+   ): List<NewTuple> = execute_sql_notnull(collection.catalogId.schemaName(), collection.id.tableName()) {
      try {
        if (conn.autoCommit) throw illegalState("Row delete requires a caller-owned transaction")
        val head = Version.HEAD.number
@@ -1571,7 +1526,10 @@ SELECT basics.*, procs.* FROM basics, procs;
     ).apply { expectedVersion = expected; actualVersion = actual })
   }
 
-  /** Route the exact stored state through the root, avoiding inherited HEAD checks during partition-key updates. The caller already holds its row lock. @since 3.0 */
+  /**
+   * Archives the exact stored state through the root using DELETE RETURNING followed by INSERT. The caller already holds the row lock and has ensured finite partition coverage.
+   * @since 3.0
+   */
   private fun archiveHead(conn: PgConnection, target: String, fnOrd: String, toVersion: Long, columns: Array<PgColumn>) {
     val names = columns.joinToString(", ") { it.ident }
     val values = columns.joinToString(", ") {
@@ -1708,7 +1666,7 @@ SELECT basics.*, procs.* FROM basics, procs;
            .withCollectionNumber(collection.id.intValue)
            .addColumns(collection.columns)
            .withCollection(collection)
-         val target = "${quoteIdent(collection.catalogId.catalogName())}.${quoteIdent(collection.id.collectionName())}"
+         val target = "${quoteIdent(collection.catalogId.schemaName())}.${quoteIdent(collection.id.tableName())}"
          val source = "SELECT ${rows.decodedColumns()} FROM UNNEST(${rows.placeholders()}) AS t(${rows.aliases()})"
          val select = "SELECT * FROM $target WHERE fn = \$1::text::bigint AND nv = $head FOR UPDATE"
          val insertPlan = conn.prepare(
@@ -1750,7 +1708,7 @@ SELECT basics.*, procs.* FROM basics, procs;
    * @since 3.0
    */
   internal fun rows_query(
-    conn: PgConnection, schema: String, table: String, sql: String, argTypes: Array<String>
+    conn: PgConnection, schema: PgSchemaName, table: PgTableName, sql: String, argTypes: Array<String>
   ): PgPlan = TODO("db-09: prepare physical row query")
 }
 
@@ -1762,9 +1720,7 @@ SELECT basics.*, procs.* FROM basics, procs;
  * @since 3.0
  * @throws NakshaException with error [ILLEGAL_ID][NakshaError.ILLEGAL_ID], if the identifier text is illegal.
  */
-internal fun Id.databaseName(): String {
-  return textAlias(IdTextType.UNSAFE, 42, "d")
-}
+internal fun Id.databaseName(): PgDatabaseName = PgDatabaseName.of(this)
 
 /**
  * Extract the `lib-psql` name of the catalog from the given identifier.
@@ -1773,10 +1729,7 @@ internal fun Id.databaseName(): String {
  * @return the identifier to be used in the database.
  * @since 3.0
  */
-internal fun Id.catalogName(): String {
-  return if (textType === IdTextType.RESERVED) text
-  else textAlias(IdTextType.URL_SAFE, 25, "s")
-}
+internal fun Id.schemaName(): PgSchemaName = PgSchemaName.of(this)
 
 /**
  * Extract the `lib-psql` name of the collection from the given identifier.
@@ -1785,9 +1738,7 @@ internal fun Id.catalogName(): String {
  * @return the identifier to be used in the database.
  * @since 3.0
  */
-internal fun Id.collectionName(): String {
-  return textAlias(if (textType === IdTextType.RESERVED) IdTextType.RESERVED else IdTextType.URL_SAFE, PG_ROOT_NAME_BYTES, "t")
-}
+internal fun Id.tableName(): PgTableName = PgTableName.of(this)
 
 /**
  * Extract the `lib-psql` name of the database from the given identifier.
@@ -1819,25 +1770,17 @@ internal const val PG_ROOT_NAME_BYTES = PG_IDENTIFIER_BYTES - PG_HISTORY_SUFFIX_
  * Returns a SAFE index alias within the fixed 13-byte budget, using prefix `i` for fallback. The worst-case alias is `i$_2147483648`; a full index identifier needs one additional dollar separator byte.
  * @since 3.0
  */
-internal fun Id.indexName(): String = textAlias(IdTextType.SAFE, PG_INDEX_ALIAS_BYTES, "i")
+internal fun Id.indexName(): String = PgIndexName.of(this).name
 
 /**
  * Appends [indexName] to the physical [table] name with a dollar separator. Uses the same alias on roots and leaves and rejects oversized final names rather than truncating them.
  * @since 3.0
  */
-internal fun Id.indexName(table: String): String {
-  val name = "$table\$${indexName()}"
-  if (table.isEmpty() || '\u0000' in table || name.encodeToByteArray().size > PG_IDENTIFIER_BYTES) throw illegalId("Physical index name exceeds its identifier budget")
-  return name
-}
+internal fun Id.indexName(table: PgTableName): String = PgIndexName.of(this).onTable(table)
 
 /**
  * Names a finite history child as `{root}${version >> shift}${partitionIndex}` with dollar separators and optional performance index. Reserves 16 bytes for the history suffix and four for the performance suffix, including separators. Dated versions extract their year at shift 41.
  * @since 3.0
  */
-internal fun historyTableName(root: String, version: Long, shift: Int, partitionIndex: Int? = null): String {
-  if (version < 0 || version >= Version.HEAD.number || shift !in 12..41) throw illegalArg("Invalid finite history version or shift")
-  if (root.isEmpty() || '\u0000' in root || root.encodeToByteArray().size > PG_ROOT_NAME_BYTES) throw illegalId("Collection root exceeds its identifier budget")
-  if (partitionIndex != null && partitionIndex !in 0..255) throw illegalArg("Invalid performance partition index")
-  return "$root\$${version shr shift}" + if (partitionIndex == null) "" else "\$$partitionIndex"
-}
+internal fun historyTableName(root: PgTableName, version: Long, shift: Int, partitionIndex: Int? = null): String =
+  root.historyName(version, shift, partitionIndex)

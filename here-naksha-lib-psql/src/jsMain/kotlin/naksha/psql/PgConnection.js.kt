@@ -20,7 +20,7 @@ actual class PgConnection internal actual constructor(id: Long, instance: PgInst
         = if (showPassword) instance.url else instance.toString()
 
     actual fun execute(sql: String, args: Array<Any?>?): PgCursor {
-        val result = if (args != null) plv8.execute(sql, args) else plv8.execute(sql)
+        val result = if (args != null) plv8.execute(sql, pgNameArguments(args).unsafeCast<Array<dynamic>>()) else plv8.execute(sql)
         if (result is Number) return PgCursor(result.toInt())
         if (result is Array<*>) return PgCursor(result as Array<dynamic>)
         return PgCursor(arrayOf(result))

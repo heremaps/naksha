@@ -9,7 +9,6 @@ import naksha.model.Tuple
 import naksha.model.objects.NakshaCatalog
 import naksha.model.objects.NakshaCatalogCollection
 import naksha.model.objects.NakshaCollection
-import naksha.psql.PgUtil.PgUtilCompanion.quoteIdent
 import kotlin.js.JsExport
 import kotlin.jvm.JvmField
 import kotlin.jvm.JvmOverloads
@@ -79,20 +78,20 @@ open class PgCatalog @JvmOverloads constructor(
     val id: Id = tuple.id
 
     /**
-     * The unquoted physical schema name, derived from [id] through the shared alias policy. The original logical name remains [Id.text].
+     * The verified physical schema name, derived from [id] through the shared alias policy. The original logical name remains [Id.text].
      * @since 3.0
      * @see quotedName
      */
     @JvmField
-    val name: String = id.catalogName()
+    val schema: PgSchemaName = id.schemaName()
 
     /**
      * The quoted name of the schema, in double quotes _(if necessary)_.
      * @since 3.0
-     * @see name
+     * @see schema
      */
     @JvmField
-    val quotedName: String = quoteIdent(name)
+    val quotedName: String = schema.quotedName
 
     /**
      * The SQL command to be executed to set the `search_path`, so that this schema _(catalog)_ is on the top, followed by `naksha~admin`, `topology`, `hint_plan`, `public`.

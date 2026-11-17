@@ -94,14 +94,14 @@ class PgBootstrapTest {
           database.pgAdminCatalogs,
           database.pgAdminBooks
         )) {
-          statement.setString(1, database.pgAdmin.name)
-          statement.setString(2, collection.name)
+          statement.setString(1, database.pgAdmin.schema.name)
+          statement.setString(2, collection.table.name)
           statement.executeQuery().use { rows ->
-            assertTrue(rows.next(), "Missing committed admin root ${collection.name}")
-            assertEquals("p", rows.getString("relkind"), collection.name)
-            assertFalse(rows.getBoolean("relispartition"), collection.name)
-            assertTrue(rows.getBoolean("has_primary_key"), collection.name)
-            assertFalse(rows.next(), collection.name)
+            assertTrue(rows.next(), "Missing committed admin root ${collection.table.name}")
+            assertEquals("p", rows.getString("relkind"), collection.table.name)
+            assertFalse(rows.getBoolean("relispartition"), collection.table.name)
+            assertTrue(rows.getBoolean("has_primary_key"), collection.table.name)
+            assertFalse(rows.next(), collection.table.name)
           }
         }
       }

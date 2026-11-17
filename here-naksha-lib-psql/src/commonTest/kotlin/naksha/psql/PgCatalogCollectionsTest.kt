@@ -38,7 +38,7 @@ class PgCatalogCollectionsTest {
     assertEquals("foo", descriptor.naksha.catalogId)
     assertEquals(databaseId.text, descriptor.naksha.databaseId)
     assertEquals(Id.COLLECTIONS_COL_ID, descriptor.id)
-    assertEquals(Id.COLLECTIONS_COL_ID.collectionName(), descriptor.name)
+    assertEquals(Id.COLLECTIONS_COL_ID.tableName(), descriptor.table)
     assertEquals("${pgCatalog.quotedName}.${descriptor.quotedName}", descriptor.qualifiedName)
     assertEquals(0L, descriptor.tuple.version)
     assertEquals(databaseId.number, descriptor.tupleNumber.databaseNumber)

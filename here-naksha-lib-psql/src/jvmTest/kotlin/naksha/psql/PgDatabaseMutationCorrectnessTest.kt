@@ -157,7 +157,8 @@ class PgDatabaseMutationCorrectnessTest {
       insert(db, conn, col, listOf(encode(col, id, version)))
       val deleted = db.rows_delete_by_id_with_result(conn, col, version + 4, listOf(Id(id))).single().tuple
       val purgeVersion = ((version shr 12) + 32) shl 12
-      if (col.storeHistory) db.collection_maintain_partitions(conn, col.catalogId.catalogName(), col.name, purgeVersion)
+      if (col.storeHistory) db.collection_maintain_partitions(conn, col.schema, col.table, purgeVersion,
+        col.creationOptions(db.storage.config, db.maxTupleSize))
       val before = oracle(conn, col)
       val savepoint = conn.jdbc.setSavepoint()
       assertEquals(deleted.tupleNumber, db.rows_purge(conn, col, purgeVersion, listOf(Id(id))).single()?.tupleNumber)
@@ -524,7 +525,7 @@ class PgDatabaseMutationCorrectnessTest {
       conn.autoCommit = false
       try {
         conn.execute("SET LOCAL lock_timeout = '5s'; SET LOCAL statement_timeout = '60s'").close()
-        db.catalog_get_or_create_schema(conn, catalog.name, catalog.id.text)
+        db.catalog_get_or_create_schema(conn, catalog.schema, catalog.id.text)
         for (history in listOf(false, true)) {
           val definition = NakshaCollection("features_$history", catalog.id.text).apply {
             databaseId = storage.id.text
@@ -538,21 +539,21 @@ class PgDatabaseMutationCorrectnessTest {
           PgCollection.resolveLayout(definition)
           val col = PgCollection(catalog.id, Tuple.encodeRaw(definition, db.id.number, catalog.id.intValue,
             Id.COLLECTIONS_COL_ID.intValue, db.pgAdminCollections.naksha.validatedMembers, 1L, requestedAction = Action.CREATE).tuple)
-          db.collection_create_table_if_not_exists(conn, catalog.name, col.name, col.columns, col.indices,
+          db.collection_create_table_if_not_exists(conn, catalog.schema, col.table, col.columns, col.indices,
             col.creationOptions(config, db.maxTupleSize), catalog.id.text, col.id.text)
           val version = (PgPartitions.currentVersion(conn) and -4L) + 4L
-          if (history) db.collection_maintain_partitions(conn, catalog.name, col.name, version)
+          if (history) db.collection_maintain_partitions(conn, catalog.schema, col.table, version, col.creationOptions(config, db.maxTupleSize))
           if (committed) conn.commit()
           test(db, conn, col, version)
         }
       } finally {
         conn.rollback()
         if (committed) {
-          db.catalog_drop_schema(conn, catalog.name)
+          db.catalog_drop_schema(conn, catalog.schema)
           conn.commit()
         }
       }
-      assertEquals(emptyList(), strings(conn, "SELECT nspname AS value FROM pg_namespace WHERE nspname = ${PgUtil.quoteLiteral(catalog.name)}"))
+      assertEquals(emptyList(), strings(conn, "SELECT nspname AS value FROM pg_namespace WHERE nspname = ${PgUtil.quoteLiteral(catalog.schema.name)}"))
     }
   }
 
