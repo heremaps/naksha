@@ -58,7 +58,7 @@ class CollectionIndexPolicyTest {
     assertEquals("source_collection", source.getId());
     assertEquals("source_catalog", source.getCatalogId());
     assertNull(source.getDatabaseId());
-    assertEquals(new NakshaCollection().withXyzMembers().getMembers(), source.getMembers());
+    assertEquals(new NakshaCollection().withXyzMembers().getMembers().verify(), source.getMembers());
     assertIndexNames(source, "tags", "geo", "fn_nv");
   }
 
@@ -143,7 +143,7 @@ class CollectionIndexPolicyTest {
     assertEquals("target_collection", first.getId());
     assertEquals("target_catalog", first.getCatalogId());
     assertNull(first.getDatabaseId());
-    assertEquals(new NakshaCollection().withXyzMembers().getMembers(), first.getMembers());
+    assertEquals(new NakshaCollection().withXyzMembers().getMembers().verify(), first.getMembers());
     assertIndexNames(first, "tags", "geo", "fn_nv");
     assertNotSame(first, second);
     assertNotSame(first.getMembers(), second.getMembers());

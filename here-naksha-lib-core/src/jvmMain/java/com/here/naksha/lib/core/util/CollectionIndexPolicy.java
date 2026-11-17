@@ -37,6 +37,7 @@ public final class CollectionIndexPolicy {
     if (collection.getIndices() == null) {
       final MemberList members = new MemberList();
       for (Member member : XyzMembers.ALL) members.add(member.copy(true));
+      members.verify();
       collection.setMembers(members);
       collection.setIndices(hubSlimIndices());
     }
