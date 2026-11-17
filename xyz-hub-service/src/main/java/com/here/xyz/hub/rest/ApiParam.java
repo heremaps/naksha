@@ -19,6 +19,8 @@
 
 package com.here.xyz.hub.rest;
 
+import static io.netty.handler.codec.http.HttpResponseStatus.BAD_REQUEST;
+
 import com.amazonaws.util.StringUtils;
 import com.here.xyz.events.PropertiesQuery;
 import com.here.xyz.events.PropertyQuery;
@@ -39,6 +41,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 public class ApiParam {
@@ -111,6 +114,10 @@ public class ApiParam {
   }
 
   public static class Query {
+
+    private static final Pattern ALLOWED_IDENTIFIER = Pattern.compile("[a-zA-Z0-9@:._-]+");
+    private static final Pattern TIMESTAMP = Pattern.compile("[0-9]+");
+    private static final int MAX_OWNER_LENGTH = 50;
 
     public static final String ACCESS_TOKEN = "access_token";
     static final String FEATURE_ID = "id";
@@ -221,6 +228,62 @@ public class ApiParam {
       return queryParam(param, context).get(0);
     }
 
+    static String getOwner(RoutingContext context) throws HttpException {
+      String rawQuery = context.request().query();
+      if (rawQuery != null) {
+        for (String parameter : rawQuery.split("&")) {
+          if (parameter.equalsIgnoreCase(OWNER) || parameter.equalsIgnoreCase(OWNER + "="))
+            throw new HttpException(BAD_REQUEST, "Invalid owner parameter.");
+        }
+      }
+      String owner = getString(context, OWNER, "me");
+      if (!"*".equals(owner) && (owner.length() > MAX_OWNER_LENGTH || !ALLOWED_IDENTIFIER.matcher(owner).matches()))
+        throw new HttpException(BAD_REQUEST, "Invalid owner parameter.");
+      return owner;
+    }
+
+    private static void validatePath(String path, String message) throws HttpException {
+      if (path == null)
+        throw new HttpException(BAD_REQUEST, message);
+      for (String segment : path.split("\\.", -1)) {
+        if (!ALLOWED_IDENTIFIER.matcher(segment).matches())
+          throw new HttpException(BAD_REQUEST, message);
+      }
+    }
+
+    private static void validatePropertiesQuery(PropertiesQuery propertiesQuery) throws HttpException {
+      if (propertiesQuery == null)
+        return;
+      for (PropertyQueryList conjunction : propertiesQuery) {
+        for (PropertyQuery property : conjunction)
+          validatePath(property.getKey(), "Invalid property key.");
+      }
+    }
+
+    private static void validateTimestamps(PropertiesQuery propertiesQuery) throws HttpException {
+      if (propertiesQuery == null)
+        return;
+      for (PropertyQueryList conjunction : propertiesQuery) {
+        for (PropertyQuery property : conjunction) {
+          if (property.getOperation() == QueryOperation.CONTAINS)
+            throw new HttpException(BAD_REQUEST, "Invalid contentUpdatedAt parameter.");
+          for (Object value : property.getValues()) {
+            String timestamp = value == null ? "" : value.toString();
+            // An encoded comma is a literal part of one value, not a list separator.
+            for (String part : timestamp.split(",", -1)) {
+              if (!TIMESTAMP.matcher(part).matches())
+                throw new HttpException(BAD_REQUEST, "Invalid contentUpdatedAt parameter.");
+              try {
+                Long.parseLong(part);
+              } catch (NumberFormatException e) {
+                throw new HttpException(BAD_REQUEST, "Invalid contentUpdatedAt parameter.");
+              }
+            }
+          }
+        }
+      }
+    }
+
     /**
      * Returns the first value for a query parameter, if such exists and can be parsed as an integer, or the provided alternative value
      * otherwise.
@@ -313,15 +376,17 @@ public class ApiParam {
       return new ArrayList<String>(selection);
     }
 
-    public static List<String> getSort(RoutingContext context) {
+    public static List<String> getSort(RoutingContext context) throws HttpException {
       if (Query.getString(context, Query.SORT, null) == null) return null;
 
       List<String> sort = new ArrayList<>();
-      for (String s : Query.queryParam(Query.SORT, context))
+      for (String s : Query.queryParam(Query.SORT, context)) {
+        validatePath(s.replaceAll("(?i):(asc|desc)$", ""), "Invalid sort property.");
         if (s.startsWith("p.") || s.startsWith("f."))
          sort.add( s.replaceFirst("^p\\.", "properties.") );
         else
           sort.add(s);
+      }
 
       return sort;
     }
@@ -347,24 +412,26 @@ public class ApiParam {
     /**
      * Retures the parsed query parameter for space
      */
-    static PropertiesQuery getSpacePropertiesQuery(RoutingContext context, String param) {
+    static PropertiesQuery getSpacePropertiesQuery(RoutingContext context, String param) throws HttpException {
       PropertiesQuery propertyQuery = context.get("propertyQuery");
       if (propertyQuery == null) {
         propertyQuery = parsePropertiesQuery(context.request().query(), param, true);
         context.put("propertyQuery", propertyQuery);
       }
+      validateTimestamps(propertyQuery);
       return propertyQuery;
     }
 
     /**
      * Returns the parsed tags parameter
      */
-    static PropertiesQuery getPropertiesQuery(RoutingContext context) {
+    static PropertiesQuery getPropertiesQuery(RoutingContext context) throws HttpException {
       PropertiesQuery propertyQuery = context.get("propertyQuery");
       if (propertyQuery == null) {
         propertyQuery = parsePropertiesQuery(context.request().query(), "", false);
         context.put("propertyQuery", propertyQuery);
       }
+      validatePropertiesQuery(propertyQuery);
       return propertyQuery;
     }
 
