@@ -28,6 +28,10 @@ public class HttpXyzErrorResponse extends XyzResponse {
   }
 
   public void setErrorCode(String errorCode) {
+    if (NakshaError.FEATURE_EXISTS.equals(errorCode) || NakshaError.COLLECTION_EXISTS.equals(errorCode)
+        || NakshaError.CATALOG_EXISTS.equals(errorCode)) {
+      errorCode = NakshaError.CONFLICT;
+    }
     setRaw(ERROR_CODE_KEY, errorCode);
   }
 
@@ -44,9 +48,16 @@ public class HttpXyzErrorResponse extends XyzResponse {
   }
 
   private @NotNull HttpResponseStatus getHttpStatus() {
-    String errorCode = getErrorCode();
+    return mapErrorCodeToHttpStatus(getErrorCode());
+  }
+
+  /**
+   * Maps internal storage errors to HTTP status without changing the original error or losing the public conflict contract.
+   * @since 3.0
+   */
+  public static @NotNull HttpResponseStatus mapErrorCodeToHttpStatus(@NotNull String errorCode) {
     switch (errorCode) {
-      case NakshaError.EXCEPTION -> {
+      case NakshaError.EXCEPTION, NakshaError.ILLEGAL_STATE -> {
         return HttpResponseStatus.INTERNAL_SERVER_ERROR;
       }
       case NakshaError.NOT_IMPLEMENTED -> {
@@ -61,7 +72,7 @@ public class HttpXyzErrorResponse extends XyzResponse {
       case NakshaError.BAD_GATEWAY -> {
         return HttpResponseStatus.BAD_GATEWAY;
       }
-      case NakshaError.CONFLICT -> {
+      case NakshaError.CONFLICT, NakshaError.FEATURE_EXISTS, NakshaError.COLLECTION_EXISTS, NakshaError.CATALOG_EXISTS -> {
         return HttpResponseStatus.CONFLICT;
       }
       case NakshaError.UNAUTHORIZED -> {
@@ -76,7 +87,7 @@ public class HttpXyzErrorResponse extends XyzResponse {
       case NakshaError.TIMEOUT -> {
         return HttpResponseStatus.GATEWAY_TIMEOUT;
       }
-      case NakshaError.NOT_FOUND -> {
+      case NakshaError.NOT_FOUND, NakshaError.FEATURE_NOT_FOUND -> {
         return NOT_FOUND;
       }
     }

@@ -213,7 +213,7 @@ class IterateFeaturesTest extends ApiTest {
     ResponseAssertions.assertThat(response)
         .hasStatus(200)
         .hasStreamIdHeader(firstStreamId);
-    assertIteratePage(response, firstExpectedBodyPart, expectedFeatures, new HashSet<>());
+    assertIteratePage(response, firstExpectedBodyPart, expectedFeatures, new HashSet<>(), JSONCompareMode.STRICT);
 
     // Given: iterate parameters for second request
     final String handleQueryParam = "handle=" + urlEncoded(parseJson(response.body(), XyzFeatureCollection.class).getNextPageToken());
@@ -262,6 +262,15 @@ class IterateFeaturesTest extends ApiTest {
       String expectedPage,
       Map<String, JSONObject> expectedFeatures,
       Set<String> returnedIds) throws JSONException {
+    assertIteratePage(response, expectedPage, expectedFeatures, returnedIds, JSONCompareMode.LENIENT);
+  }
+
+  private static void assertIteratePage(
+      HttpResponse<String> response,
+      String expectedPage,
+      Map<String, JSONObject> expectedFeatures,
+      Set<String> returnedIds,
+      JSONCompareMode featureComparison) throws JSONException {
     final JSONObject expected = new JSONObject(expectedPage);
     final int expectedCount = expected.getJSONArray("features").length();
     expected.remove("features");
@@ -274,7 +283,7 @@ class IterateFeaturesTest extends ApiTest {
       final JSONObject expectedFeature = expectedFeatures.get(id);
       assertNotNull(expectedFeature, "Unexpected feature returned: " + id);
       assertTrue(returnedIds.add(id), "Feature returned more than once: " + id);
-      JSONAssert.assertEquals("Feature " + id + " doesn't match", expectedFeature, actualFeature, JSONCompareMode.LENIENT);
+      JSONAssert.assertEquals("Feature " + id + " doesn't match", expectedFeature, actualFeature, featureComparison);
     }
   }
 

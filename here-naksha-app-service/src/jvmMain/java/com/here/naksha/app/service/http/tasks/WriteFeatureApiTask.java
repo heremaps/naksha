@@ -43,9 +43,12 @@ import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.models.payload.XyzResponse;
 import com.here.naksha.lib.core.models.payload.events.QueryParameterList;
 import com.here.naksha.lib.core.models.storage.ReadFeaturesProxyWrapper;
+import com.here.naksha.lib.view.ViewSuccessResult;
 import io.vertx.ext.web.RoutingContext;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 import naksha.base.MapProxy;
 import naksha.diff.Difference;
 import naksha.diff.DifferenceCalculator;
@@ -327,18 +330,30 @@ public class WriteFeatureApiTask extends AbstractApiTask<XyzResponse> {
 
     // Prepare WriteRequest - separating insert from updates and keeping the order of the features from the request
     WriteRequest insertsAndUpdates = new WriteRequest();
+    final Set<String> inheritedIds = existingFeaturesResp instanceof ViewSuccessResult viewResult
+        ? viewResult.getInheritedFeatureIds() : Set.of();
+    final Set<String> createIds = new HashSet<>();
     for (NakshaFeature featureFromRequest : featuresFromRequest) {
       NakshaFeature correspondingExistingFeature = (NakshaFeature) existingFeaturesById.getPath(featureFromRequest.getId());
       if (correspondingExistingFeature == null) {
         // Feature not yet persisted - just insert
         preProcessor.preProcess(featureFromRequest);
         insertsAndUpdates.add(new Write().createFeature(null, spaceId, featureFromRequest));
+        createIds.add(featureFromRequest.getId());
       } else {
-        // Feature exists - prepare patch for update (atomic == true, we want version validation)
-        // that means, if no UUID in feature JSON in request, currently always accept the request, regardless of concurrency issue
+        final boolean inherited = inheritedIds.contains(featureFromRequest.getId());
+        if (inherited) {
+          final String requestedUuid = featureFromRequest.getProperties().getXyz().getUuid();
+          final String sourceUuid = correspondingExistingFeature.getProperties().getXyz().getUuid();
+          if (requestedUuid != null && !requestedUuid.equals(sourceUuid)) {
+            return verticle.sendErrorResponse(routingContext,
+                new NakshaError(NakshaError.CONFLICT, "The base feature does not match the requested version"));
+          }
+        }
         NakshaFeature patchedFeature = patchedFeature(featureFromRequest, correspondingExistingFeature);
-        preProcessor.preProcess(featureFromRequest);
-        insertsAndUpdates.add(new Write().updateFeature(null, spaceId, patchedFeature, true));
+        preProcessor.preProcess(patchedFeature);
+        insertsAndUpdates.add(preparePatchedWrite(spaceId, patchedFeature, inherited));
+        if (inherited) createIds.add(featureFromRequest.getId());
       }
     }
 
@@ -355,11 +370,11 @@ public class WriteFeatureApiTask extends AbstractApiTask<XyzResponse> {
         writer.close();
         final NakshaError error = er.getError();
         // If the error was due to CONFLICT we assume concurrent modification and retry
-        if (NakshaError.CONFLICT.equals(error.getCode())) {
+        if (shouldRetryPatch(error, createIds)) {
           if (retry >= MAX_RETRY_ATTEMPT) {
             String msg = "Max retry attempt for PATCH REST API reached, too many concurrent modification, error: " + error.getMsg();
             logger.error(msg, error.getCause());
-            return verticle.sendErrorResponse(routingContext, new NakshaError(error.getCode(), msg, error.getCause()));
+            return verticle.sendErrorResponse(routingContext, new NakshaError(NakshaError.CONFLICT, msg, error.getCause()));
           }
           return patchAndPreProcess(spaceId, featuresFromRequest, responseType, preProcessor, retry + 1);
         } else {
@@ -375,6 +390,24 @@ public class WriteFeatureApiTask extends AbstractApiTask<XyzResponse> {
         return transformWriteResultToXyzCollectionResponse(wrResponse, false, MOM_10_POST_PROCESSOR);
       }
     });
+  }
+
+  /**
+   * A base-only view feature has no writable-layer predecessor: CREATE asserts absence atomically. Ordinary updates retain their UUID/version requirement, including rejection of an unresolved atomic version.
+   * @since 3.0
+   */
+  static Write preparePatchedWrite(String spaceId, NakshaFeature patchedFeature, boolean inherited) {
+    if (inherited) return new Write().createFeature(null, spaceId, patchedFeature);
+    return new Write().updateFeature(null, spaceId, patchedFeature, true);
+  }
+
+  /**
+   * Includes the race where another request creates a delta after the PATCH read snapshot. Retrying rereads and merges that delta rather than overwriting it with stale base data.
+   * @since 3.0
+   */
+  static boolean shouldRetryPatch(NakshaError error, Set<String> createIds) {
+    return NakshaError.CONFLICT.equals(error.getCode())
+        || NakshaError.FEATURE_EXISTS.equals(error.getCode()) && createIds.contains(error.getId());
   }
 
   private NakshaFeature patchedFeature(

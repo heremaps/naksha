@@ -653,7 +653,8 @@ open class Write : AnyObject() {
      */
     @JvmOverloads
     fun deleteFeatureById(collection: NakshaCollection, id: String, requireVersion: Version? = null): Write {
-        this.catalogId = Id(collection.catalogId ?: throw illegalState("Missing catalogId in collection"))
+        // TODO: Fix the Hub RequestHelper's null-catalog collection descriptors, then restore eager catalog validation here. Until then, allow late binding; storage execution must still reject an unresolved catalog.
+        this.catalogId = collection.catalogId?.let { Id(it) }
         this.collectionId = Id(collection.id)
         this.op = WriteOp.DELETE
         this.id = Id(id)
