@@ -6,6 +6,52 @@ description: Use ONLY when asked to run tests for the Naksha project. Do NOT use
 # General
 Database-backed tests need either a local PostgreSQL instance or their supported container setup. The psql library can start a container when no master is configured, but app-service defaults to an existing local database. When unclear, ask which database to use. Prefer a fresh disposable local test database; do not clear existing schemas or restart the database server. See `ai/test.md` for the full JVM procedure and the isolated integration suites.
 
+# Mandatory verification order
+
+Run the following gates from the repository root, in order, before claiming a successful test campaign. Use Java 25 (`export JAVA_HOME=$(/usr/libexec/java_home -v 25)` on macOS), record the tested commit and any uncommitted changes, and preserve each gate's command, exit status and log separately. Database setup is not needed for the compilation gates.
+
+`jvmTest` and `jvmMainClasses` do not cover standalone common-metadata compilation. Platform compilation can succeed because it sees the `actual` implementations while the common `expect` declarations still fail metadata compilation and IntelliJ analysis. Neither passing JVM tests nor a warm Gradle build proves the multiplatform build is valid.
+
+## Gate 1: compile common metadata
+
+Compile common metadata across all projects, not just the changed module:
+
+```bash
+./gradlew compileCommonMainKotlinMetadata --rerun-tasks --no-build-cache --continue --console=plain
+```
+
+This must detect invalid common declarations such as an `expect` class that does not declare inherited abstract interface members. If this gate fails, report the actual compiler error before proceeding. Do not dismiss it as an IDE/cache issue merely because a platform build passes.
+
+## Gate 2: compile production and test code
+
+After metadata compilation succeeds, force fresh JVM production compilation:
+
+```bash
+./gradlew jvmMainClasses --rerun-tasks --no-build-cache --continue --console=plain
+```
+
+Then force fresh JVM test-source compilation without executing tests:
+
+```bash
+./gradlew jvmTestClasses --rerun-tasks --no-build-cache --continue --console=plain
+```
+
+Also compile/link JS production artifacts and compile JS test sources across the configured JS projects, even when JS runtime tests are disabled:
+
+```bash
+./gradlew jsNodeProductionLibraryDistribution compileTestKotlinJs --rerun-tasks --no-build-cache --continue --console=plain
+```
+
+This catches JS-incompatible references in shared sources, including JVM-only `java`, `System` or `Thread` usage in `commonTest`. `jvmCompile` is not a task in this repository; use `jvmMainClasses` to compile both JVM Kotlin and Java production sources.
+
+`--rerun-tasks --no-build-cache` is required for these compilation gates: `--rerun` on a test invocation only forces the selected test tasks to execute and does not establish that their compilation dependencies were rebuilt. Do not substitute `clean`, cached outputs or an earlier compilation result for these gates.
+
+## Gate 3: execute tests
+
+Only after the compilation gates pass, configure the requested local database and execute the test commands below. A focused test request may narrow runtime test selection, but must not silently omit the metadata/compilation checks. Any explicitly agreed narrower verification must be disclosed in the results.
+
+Stop between gates on failure. `--continue` collects independent failures within a gate; it does not authorize treating a failed gate as successful. If further test execution is explicitly requested for diagnosis despite a compilation failure, label it supplemental verification and retain the original blocker in the final report. Do not fix code, suppress tests, weaken assertions or disable a failing task just to obtain a successful result without user authorization.
+
 # Environment Variables
 All environment variables contain some placeholders that need to be replaced:
 
@@ -43,36 +89,47 @@ Important: `TestStorageConfig` checks URL files in the working directory / `~/.c
 
 # Commands
 
+These are Gate 3 execution commands, not substitutes for Gates 1 and 2.
+
 ## All non-service JVM tests:
 Includes base/auth and the remaining modules as well as model/psql/jbon/geo. Set the local database override to avoid the psql library's container fallback:
 
 ```bash
-./gradlew jvmTest -x :here-naksha-app-service:jvmTest --rerun --continue --console=plain
+./gradlew jvmTest -x :here-naksha-app-service:jvmTest --rerun --no-build-cache --continue --console=plain
 ```
 
 ## All ordinary JVM tests (includes the self-starting service tests):
 Set the local database variables above and use Java 25. `--rerun` forces test execution; `--continue` collects independent task failures. A failing test is not necessarily a setup error: inspect the XML's first cause before changing configuration.
 
 ```bash
-./gradlew jvmTest --rerun --continue --console=plain
+./gradlew jvmTest --rerun --no-build-cache --continue --console=plain
 ```
 
 This does not enable the 75 opt-in psql integration tests. Their 16 suites require fresh, separate databases and matching `NAKSHA_TEST_PSQL_DB_URL` plus suite-specific URL variables. Never export every suite variable to the same database and run all of them together. Follow the isolated-suite recipe in `ai/test.md`. One explicitly ignored partitioning test also remains ignored. Performance tests run unless `NAKSHA_SUPPRESS_PERF_TEST=true`; disclose this exclusion if used.
 
 ## All library tests (JS):
 ```bash
-./gradlew :here-naksha-lib-model:jsTest :here-naksha-lib-jbon:jsTest :here-naksha-lib-geo:jsTest
+./gradlew jsTest --rerun --no-build-cache --continue --console=plain
 ```
+
+Check the task outcomes: the build configuration disables some `jsNodeTest` tasks. A successful `jsTest` lifecycle task with skipped runtime tasks is not evidence that JS tests executed. Report disabled/skipped runtime tasks separately from successful JS compilation and actual test results.
 
 ## Server tests
 Run when requested explicitly or as part of the full JVM suite. JUnit starts the service; only the PostgreSQL instance must already be running:
 
 ```bash
-./gradlew :here-naksha-app-service:jvmTest
+./gradlew :here-naksha-app-service:jvmTest --rerun --no-build-cache --continue --console=plain
 ```
 
+# Reporting verification
+
+- Report metadata compilation, JVM production compilation, JVM test-source compilation, JS production/test-source compilation and runtime tests as separate results. Never summarize them all as successful if any requested gate failed or did not run.
+- State the exact commands and JDK/toolchain used. Distinguish compiler failures, failed assertions, infrastructure/resource failures and intentionally skipped/disabled tests. A known or pre-existing failure is still a failure, not a pass.
+- Include performance-test exclusions, service-test exclusions and opt-in integration coverage explicitly. Preserve per-run XML reports before later runs overwrite them. When opt-in cases pass in separate runs, replace their earlier skipped status rather than counting them twice; preserve unsuccessful attempts and rerun outcomes.
+- Do not infer standalone metadata, JS or clean compilation success from passing JVM tests. If the task name is invalid, report a task-selection failure rather than a source-compilation error.
+
 # Common Issues
-- Kotlintest discovery errors: If `here-naksha-lib-psql:jvmTest` fails with test discovery errors, try `./gradlew clean` first
+- Kotlintest discovery errors: Inspect the first discovery/initialization cause and the compilation-gate logs. Do not use `clean` as routine setup or assume a cache problem without evidence.
 - Docker not available: Configure `NAKSHA_TEST_PSQL_DB_URL` for the local PostgreSQL instance instead of the library's container fallback.
 - Port conflicts: The Docker container uses host port 15432. If this port is in use, the container will fail to start
 - Service tests fail with ConnectException: Inspect the earlier test-context/bootstrap failure or a port-8080 conflict. These tests normally start their own server; absence of a separately started server is not itself the cause.
