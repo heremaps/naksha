@@ -123,8 +123,7 @@ public class PropertySearchUtil {
     for (final String segment : propPath) {
       if (!ALLOWED_PROPERTY_NAME.matcher(segment).matches()) {
         throw new XyzErrorException(
-            XyzError.ILLEGAL_ARGUMENT,
-            "Invalid key %s, allowed characters: [a-zA-Z0-9@:._-]".formatted(propKey));
+            XyzError.ILLEGAL_ARGUMENT, "Unsupported prop key supplied: %s".formatted(propKey));
       }
     }
 

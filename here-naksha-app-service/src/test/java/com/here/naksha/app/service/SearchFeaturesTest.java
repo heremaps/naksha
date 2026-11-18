@@ -30,7 +30,6 @@ import java.io.IOException;
 import java.net.URISyntaxException;
 import java.net.http.HttpResponse;
 import java.util.UUID;
-import org.json.JSONException;
 import org.json.JSONObject;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -271,7 +270,7 @@ class SearchFeaturesTest extends ApiTest {
             {"type":"ErrorResponse", "error":"IllegalArgument"}
             """);
     assertEquals(
-            "Invalid key p.a.b\\.) IS NULL AND (? IS NOT NULL) AND (1=1))-- , allowed characters: [a-zA-Z0-9@:._-]",
+            "Unsupported prop key supplied: p.a.b\\.) IS NULL AND (? IS NOT NULL) AND (1=1))-- ",
             new JSONObject(response.body()).getString("errorMessage"));
   }
 
