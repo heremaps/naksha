@@ -44,7 +44,8 @@ class StreamCommandsTest {
     void providerListShowsBuiltInProviders() {
         Run r = run("", "provider", "list");
         assertEquals(0, r.exitCode());
-        assertTrue(r.out().contains("null") && r.out().contains("random"), r.out());
+        String providerList = r.out();
+        assertTrue(providerList.contains("naksha-v2") && providerList.contains("null") && providerList.contains("random"), providerList);
     }
 
     @Test
@@ -52,7 +53,7 @@ class StreamCommandsTest {
         Run r = run("gen\nv9\nrandom\n", "config", "create");
 
         assertEquals(0, r.exitCode(), r.out() + r.err());
-        assertTrue(r.out().contains("Please answer one of: null, random"), r.out());
+        assertTrue(r.out().contains("Please answer one of: naksha-v2, null, random"), r.out());
         assertTrue(r.out().contains("Saved gen."), r.out());
         assertTrue(Files.isRegularFile(home.resolve("config/gen.json")));
         Run list = run("", "config", "list");
