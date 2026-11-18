@@ -22,12 +22,7 @@ public class PropertySearchSamples {
             ),
             Pair.of("properties.long_or=1,2,3,4,4,4,3,2,1,true,false", "properties.long_or=1,2,3,4,4,4,3,2,1,true,false"),
             Pair.of("properties.very.very.very.nested.even.more=1", "properties.very.very.very.nested.even.more=1"),
-            Pair.of(
-                    // Naksha does not interpret encoded %3E (">" sign) as a gt operation and passes it as properties.prop_> path with "=" operation
-                    "properties.prop%3E=value_2,value_22",
-                    // Http storege actually sends request with ">" reencoded to %3E, but Wiremock expects decoded string in verify matcher
-                    "properties.prop>=value_2,value_22"
-            ),
+            Pair.of("properties.prop=gte=2,22", "properties.prop=gte=2,22"),
             Pair.of("properties.prop=lte=1", "properties.prop=lte=1"),
             Pair.of("properties.prop=.null", "properties.prop=.null"),
             Pair.of("properties.prop=null", "properties.prop=null"),

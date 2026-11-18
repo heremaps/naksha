@@ -229,7 +229,14 @@ public class PropertySearchUtilTest {
             propQuerySpec("p.prop_1=gt=false", "Exception for invalid boolean operation =gt="),
             propQuerySpec("p.prop_1=lt=false", "Exception for invalid boolean operation =lt="),
             propQuerySpec("p.prop_1=gte=false", "Exception for invalid boolean operation =gte="),
-            propQuerySpec("p.prop_1=lte=false", "Exception for invalid boolean operation =lte=")
+            propQuerySpec("p.prop_1=lte=false", "Exception for invalid boolean operation =lte="),
+            // SQL injection attempts in property key
+            propQuerySpec(urlEncoded("p.a.b\\.) IS NULL AND (? IS NOT NULL) AND (1=1))-- ") + "=1",
+                    "Exception for SQL injection payload in key"),
+            propQuerySpec(urlEncoded("p.a') OR 1=1--") + "=1", "Exception for quote and parenthesis in key"),
+            propQuerySpec("p.a%20b=1", "Exception for space in key"),
+            propQuerySpec(urlEncoded("f.a;DROP TABLE x") + "=1", "Exception for semicolon in xyz key"),
+            propQuerySpec(urlEncoded("properties.a\"b") + "=1", "Exception for double quote in full key")
         );
     }
 
