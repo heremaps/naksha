@@ -1,3 +1,6 @@
+## Naksha_2.2.30
+- Added `UnprocessableEntity` error-code mapping to HTTP 422.
+
 ## Naksha_2.2.29
 - Fixed SQL injection via property names in property search by whitelisting allowed characters.
 

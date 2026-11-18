@@ -100,6 +100,13 @@ public class XyzError extends JsonEnum {
   public static final XyzError ILLEGAL_ARGUMENT = defIgnoreCase(XyzError.class, "IllegalArgument");
 
   /**
+   * The request is syntactically valid, but its instructions cannot be processed.
+   *
+   * <p>This will result in a HTTP 422 Unprocessable Entity response.
+   */
+  public static final XyzError UNPROCESSABLE_ENTITY = defIgnoreCase(XyzError.class, "UnprocessableEntity");
+
+  /**
    * Any service or remote function required to process the request was not reachable.
    *
    * <p>This will result in a 502 Bad Gateway response.

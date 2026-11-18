@@ -12,7 +12,7 @@ servers:
 info:
   title: "Naksha Hub-API"
   description: "Naksha Hub-API is a REST API to provide simple access to geo data."
-  version: "2.2.29"
+  version: "2.2.30"
 
 security:
   - AccessToken: [ ]
@@ -1536,6 +1536,12 @@ components:
             error: "Conflict"
             errorMessage: "Request conflicts with present state of resource on server side."
             streamId: "d5b2edaa-2c6b-44e1-b794-feea6fa0e15b"
+    ErrorResponse422:
+      description: The request is syntactically valid, but its instructions cannot be processed.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
     ErrorResponse429:
       description: Indicates request limit breach.
       content:
