@@ -97,7 +97,7 @@ public class HttpStorage extends AbstractStorage<NakshaStorage> {
             ));
     return new HttpStorageReadSession(
             NakshaContext.currentContext(), this, requestSender, httpStorageProperties.getProtocol(),
-            circuitBreaker, getId(), httpStorageProperties.getCircuitBreakerConfig());
+            circuitBreaker, getId().text(), httpStorageProperties.getCircuitBreakerConfig());
   }
 
   @NotNull
@@ -120,7 +120,7 @@ public class HttpStorage extends AbstractStorage<NakshaStorage> {
             ));
     return new HttpStorageWriteSession(
             NakshaContext.currentContext(), this, requestSender, httpStorageProperties.getProtocol(),
-            circuitBreaker, getId(), httpStorageProperties.getCircuitBreakerConfig());
+            circuitBreaker, getId().text(), httpStorageProperties.getCircuitBreakerConfig());
   }
 
   @NotNull

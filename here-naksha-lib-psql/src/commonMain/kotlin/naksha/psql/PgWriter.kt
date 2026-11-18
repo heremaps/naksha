@@ -47,10 +47,11 @@ open class PgWriter internal constructor(
 ) : PgReaderWriterBase(session) {
   companion object PgWriterCompanion {
     /**
-     * Resolve storage defaults before encoding, preserving ordered immutability for explicitly supplied layouts.
+     * Normalize the incoming layout before checking its resolved members, indices and physical settings against the stored layout. Never normalize the stored layout, whose member order describes existing physical columns.
      * @since 3.0
      */
     internal fun prepareCollectionLayout(collection: NakshaCollection, existing: NakshaCollection? = null) {
+      PgCollection.resolveLayout(collection)
       if (existing != null) {
         val previousClass = existing.storageClass
         val nextClass = collection.storageClass
@@ -61,9 +62,6 @@ open class PgWriter internal constructor(
           throw illegalArg("Collection partition and storage settings are immutable after creation")
         }
       }
-      collection.validateLayoutDeclarations()
-      if (existing != null && collection.members != null) validateCollectionSchemaUnchanged(existing, collection)
-      PgCollection.resolveLayout(collection)
       if (existing != null) validateCollectionSchemaUnchanged(existing, collection)
     }
 
@@ -80,10 +78,11 @@ open class PgWriter internal constructor(
     }
 
     /**
-     * Requires the same declared members and indices in the same order. Compares corresponding fields directly and stops at the first difference without copying, serializing or sorting declarations. An absent declaration differs from an explicitly empty one; storage-maintained member positions are ignored.
+     * Requires the same resolved members and indices in the same order. Normalize the incoming declaration before calling this method. Read a snapshot of the stored metadata because default-valued accessors can materialize properties; never sort or otherwise modify the cached stored layout. Compares corresponding fields directly and stops at the first difference; storage-maintained member positions are ignored.
      * @since 3.0
      */
-    internal fun validateCollectionSchemaUnchanged(existing: NakshaCollection, incoming: NakshaCollection) {
+    internal fun validateCollectionSchemaUnchanged(stored: NakshaCollection, incoming: NakshaCollection) {
+      val existing = stored.copy<NakshaCollection>(recursive = true)
       val existingMembers = existing.members
       val incomingMembers = incoming.members
       if (existingMembers == null || incomingMembers == null) {

@@ -13,6 +13,7 @@ import naksha.model.Naksha;
 import naksha.model.NakshaContext;
 import naksha.model.SessionOptions;
 import naksha.model.objects.NakshaProperties;
+import naksha.model.objects.NakshaDatabase;
 import naksha.model.objects.NakshaStorage;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -51,6 +52,11 @@ public abstract class StreamOnlyStorage extends AbstractStorage<NakshaStorage> {
     }
 
     @Override
+    public @NotNull NakshaDatabase getDatabase() {
+        throw unsupportedOp("StreamOnlyStorage.getDatabase");
+    }
+
+    @Override
     public @NotNull IWriteSession newWriteSession(@Nullable SessionOptions options) {
         throw unsupportedOp("newWriteSession");
     }
@@ -66,7 +72,7 @@ public abstract class StreamOnlyStorage extends AbstractStorage<NakshaStorage> {
     }
 
     @Override
-    protected void initStorage(@NotNull NakshaStorage config, @Nullable Boolean create, @Nullable Boolean upgrade) {
+    public void initStorage(@NotNull NakshaStorage config, @Nullable Boolean create, @Nullable Boolean upgrade) {
         init(config);
     }
 

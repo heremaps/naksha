@@ -243,32 +243,84 @@ class PgCollectionLayoutTest {
   }
 
   @Test
-  fun explicitReorderingIsRejectedBeforeNormalization() {
+  fun reorderedMemberDeclarationsNormalizeToTheStoredLayout() {
     val existing = customCollection()
     prepareCollectionLayout(existing)
     val stored = persist(existing).naksha
-    for (reorderMembers in listOf(true, false)) {
-      val incoming = stored.copy<NakshaCollection>(recursive = true)
-      if (reorderMembers) {
-        incoming.members = MemberList().apply {
-          for (member in assertNotNull(stored.members).reversed()) add(member?.copy<Member>(recursive = true))
-        }
-      } else {
-        incoming.indices = IndexList().apply {
-          for (index in assertNotNull(stored.indices).reversed()) add(index?.copy<Index>(recursive = true))
-        }
-      }
-      validateCollectionSchemaUnchanged(incoming, incoming)
-      val before = Platform.toJSON(incoming)
-      val members = incoming.members
-      val indices = incoming.indices
-      assertEquals(ILLEGAL_ARGUMENT, assertFailsWith<NakshaException> {
-        prepareCollectionLayout(incoming, stored)
-      }.error.code)
-      assertSame(members, incoming.members)
-      assertSame(indices, incoming.indices)
-      assertEquals(before, Platform.toJSON(incoming))
+    val before = Platform.toJSON(stored)
+    val incoming = stored.copy<NakshaCollection>(recursive = true)
+    incoming.members = MemberList().apply {
+      for (member in assertNotNull(stored.members).reversed()) add(member?.copy<Member>(recursive = true))
     }
+    prepareCollectionLayout(incoming, stored)
+    validateCollectionSchemaUnchanged(stored, incoming)
+    assertEquals(before, Platform.toJSON(stored))
+  }
+
+  @Test
+  fun indexDeclarationOrderIsStillComparedExactly() {
+    val existing = customCollection()
+    prepareCollectionLayout(existing)
+    val stored = persist(existing).naksha
+    val before = Platform.toJSON(stored)
+    val incoming = stored.copy<NakshaCollection>(recursive = true)
+    incoming.indices = IndexList().apply {
+      for (index in assertNotNull(stored.indices).reversed()) add(index?.copy<Index>(recursive = true))
+    }
+    assertEquals(ILLEGAL_ARGUMENT, assertFailsWith<NakshaException> {
+      prepareCollectionLayout(incoming, stored)
+    }.error.code)
+    assertEquals(before, Platform.toJSON(stored))
+  }
+
+  @Test
+  fun originalCustomDeclarationMatchesItsPersistedResolvedLayout() {
+    val existing = customCollection()
+    prepareCollectionLayout(existing)
+    val stored = persist(existing).naksha
+    val before = Platform.toJSON(stored)
+    val incoming = customCollection()
+    prepareCollectionLayout(incoming, stored)
+    validateCollectionSchemaUnchanged(stored, incoming)
+    assertEquals(before, Platform.toJSON(stored))
+  }
+
+  @Test
+  fun equalAlignmentMembersHaveTheSamePhysicalOrderForEitherDeclaration() {
+    val existing = NakshaCollection("equal_alignment").withMembers(
+      Member("zulu", MemberType.INT32), Member("alpha", MemberType.INT32)
+    ).withIndices()
+    prepareCollectionLayout(existing)
+    val stored = persist(existing)
+    val incoming = NakshaCollection(existing.id).withMembers(
+      Member("alpha", MemberType.INT32), Member("zulu", MemberType.INT32)
+    ).withIndices()
+    prepareCollectionLayout(incoming, stored.naksha)
+    val candidate = persist(incoming)
+    assertEquals(stored.columns.map { it.name }, candidate.columns.map { it.name })
+    assertEquals(listOf("alpha", "zulu"), assertNotNull(incoming.members).takeLast(2).map { it!!.name })
+  }
+
+  @Test
+  fun storedNonCanonicalOrderIsNotSilentlyRewritten() {
+    val existing = NakshaCollection("legacy_order").withMembers(
+      Member("alpha", MemberType.INT32), Member("zulu", MemberType.INT32)
+    ).withIndices()
+    prepareCollectionLayout(existing)
+    val stored = persist(existing).naksha
+    val members = assertNotNull(stored.members)
+    // Simulate an existing physical layout created with the former alignment-only ordering.
+    val alpha = assertNotNull(members.removeAt(members.size - 2))
+    members.add(alpha)
+    for (i in members.indices) assertNotNull(members[i]).setRaw("index", i)
+    val before = Platform.toJSON(stored)
+    val incoming = NakshaCollection(existing.id).withMembers(
+      Member("zulu", MemberType.INT32), Member("alpha", MemberType.INT32)
+    ).withIndices()
+    assertEquals(ILLEGAL_ARGUMENT, assertFailsWith<NakshaException> {
+      prepareCollectionLayout(incoming, stored)
+    }.error.code)
+    assertEquals(before, Platform.toJSON(stored))
   }
 
   @Test

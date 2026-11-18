@@ -1,5 +1,6 @@
 package naksha.psql
 
+import naksha.base.Id
 import naksha.model.RandomFeatures.RandomFeatures_C.randomFeatures
 import naksha.model.objects.NakshaFeature
 import naksha.model.request.Write
@@ -32,7 +33,7 @@ class PsqlStreamSessionTest : PgTestBase(collection = null) {
         executeWrite(WriteRequest().apply { add(Write().deleteFeatureById(collection, features.last().id)) })
     }
 
-    private fun request(): StreamRequestBuilder = StreamRequestBuilder(storage.id, catalog.id, collection.id).withChunkSize(7)
+    private fun request(): StreamRequestBuilder = StreamRequestBuilder(storage.id, Id(catalog.id), Id(collection.id)).withChunkSize(7)
 
     private fun readAll(stream: Stream, limit: Int = Int.MAX_VALUE): List<StreamChunk> {
         val chunks = ArrayList<StreamChunk>()

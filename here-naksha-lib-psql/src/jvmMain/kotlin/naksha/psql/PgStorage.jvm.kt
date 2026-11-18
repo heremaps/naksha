@@ -150,7 +150,8 @@ actual open class PgStorage() : AbstractStorage<PgConfig>() {
         = newSession(options ?: SessionOptions(), readOnly = true)
 
     actual override fun newStreamSession(options: SessionOptions?): IStreamSession {
-        throw unsupportedOp("newStreamSession")
+        useInitialized()
+        return PsqlStreamSession(this, options ?: SessionOptions())
     }
 
     actual open fun newSession(options: SessionOptions, readOnly: Boolean): PgSession {

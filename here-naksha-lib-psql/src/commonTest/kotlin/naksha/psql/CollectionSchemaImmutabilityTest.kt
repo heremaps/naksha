@@ -1,6 +1,7 @@
 package naksha.psql
 
 import naksha.base.NakshaError
+import naksha.base.Id
 import naksha.model.objects.Index
 import naksha.model.objects.IndexList
 import naksha.model.objects.JsonPath
@@ -13,7 +14,7 @@ import naksha.model.request.WriteRequest
 import kotlin.test.*
 
 /**
- * Verifies [PgCollection.verifyNewHeadState]: the schema of an existing collection must not change on UPSERT.
+ * Verifies that collection UPSERT compares normalized layouts and rejects actual schema changes.
  */
 class CollectionSchemaImmutabilityTest : PgTestBase(collection = null, catalogId = "") {
 
@@ -49,8 +50,55 @@ class CollectionSchemaImmutabilityTest : PgTestBase(collection = null, catalogId
         )
         for ((field, changed) in changes) {
             val error = executeWriteErrorResponse(upsert(changed)).error
-            assertEquals(NakshaError.CONFLICT, error.code, field)
-            assertContains(error.msg, "'$field'")
+            assertEquals(NakshaError.ILLEGAL_ARGUMENT, error.code, field)
+            val category = if (field == "members" || field == "indices") field else "partition and storage"
+            assertContains(error.msg, category)
         }
+    }
+
+  @Test
+  fun shouldNormalizeDeclarationsToTheSamePhysicalColumnOrder() {
+    val original = alignmentDefinition(false)
+    executeWrite(WriteRequest().add(Write().createCollection(original)))
+    val before = physicalLayout(original.id)
+    executeWrite(upsert(alignmentDefinition(true)))
+    assertEquals(before, physicalLayout(original.id))
+    executeWrite(upsert(alignmentDefinition(false)))
+    assertEquals(before, physicalLayout(original.id))
+  }
+
+  private fun alignmentDefinition(reverse: Boolean): NakshaCollection {
+    val members = listOf(
+      Member("zulu", MemberType.INT32), Member("alpha", MemberType.INT32),
+      Member("wide", MemberType.INT64), Member("small", MemberType.INT8)
+    )
+    return NakshaCollection("schema_alignment_test", catalog.id)
+      .withMembers(if (reverse) members.reversed() else members)
+      .withIndices(Index("alpha_idx", "alpha", "zulu"))
+  }
+
+  private fun physicalLayout(id: String): Pair<List<String>, List<String>> =
+    storage.newConnection(newSessionOptions(), true).use { conn ->
+      val collection = assertNotNull(storage.database.getPgCollection(Id(catalog.id).intValue, Id(id).intValue, conn))
+      assertEquals(listOf("wide", "alpha", "zulu", "small"),
+        assertNotNull(collection.naksha.members).takeLast(4).map { assertNotNull(it).name })
+      val columns = ArrayList<String>()
+      conn.execute("SELECT attname FROM pg_attribute WHERE attrelid = $1::regclass AND attnum > 0 AND NOT attisdropped ORDER BY attnum",
+        arrayOf(collection.qualifiedName)).fetch().use { cursor ->
+        while (cursor.isRow()) {
+          columns.add(cursor.get<String>("attname"))
+          cursor.next()
+        }
+      }
+      assertEquals(collection.columns.map { it.columnName }, columns)
+      val indices = ArrayList<String>()
+      conn.execute("SELECT pg_get_indexdef(indexrelid) AS definition FROM pg_index WHERE indrelid = $1::regclass ORDER BY indexrelid",
+        arrayOf(collection.qualifiedName)).fetch().use { cursor ->
+        while (cursor.isRow()) {
+          indices.add(cursor.get<String>("definition"))
+          cursor.next()
+        }
+      }
+      Pair(columns, indices)
     }
 }

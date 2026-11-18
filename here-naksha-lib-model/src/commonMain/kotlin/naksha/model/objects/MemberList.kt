@@ -198,7 +198,7 @@ class MemberList() : ListProxy<Member>(Member::class) {
   }
 
   /**
-   * Sort this list by the [byte-alignment][MemberType.byteAlignment] of the [MemberType] and updates the [index][Member.index] of all members. This method will sort the [mandatory members][StandardMembers.MANDATORY] first, if those members are not yet in the member list, it will inject them.
+   * Sort this list by descending [byte-alignment][MemberType.byteAlignment], then ascending member name, and update the [index][Member.index] of all members. The [mandatory members][StandardMembers.MANDATORY] always lead in their fixed storage order and are injected when missing. Existing index values do not override the canonical order.
    *
    * This method is normally called by storages before creating internal structures.
    * @return this.
@@ -216,6 +216,7 @@ class MemberList() : ListProxy<Member>(Member::class) {
     // Keep track if there are any missing mandatories.
     var isOrdered = true
     var mandatoriesMissing = MANDATORY.size
+    var previous: Member? = null
     // Test if the members are already sorted, and all mandatory members are at place.
     for (i in 0 until size) {
       val member = this[i] ?: throw illegalState("Member at $i is null or of invalid type")
@@ -245,6 +246,9 @@ class MemberList() : ListProxy<Member>(Member::class) {
         isOrdered = isOrdered && member.index == i
         memberIndexByName[name] = i
       }
+      val preceding = previous
+      if (preceding != null && compareMembers(preceding, member) > 0) isOrdered = false
+      previous = member
     }
     if (isOrdered && mandatoriesMissing == 0) return this
 
@@ -260,7 +264,7 @@ class MemberList() : ListProxy<Member>(Member::class) {
     // Sort.
     // Reorder without invoking duplicate-checking setters on transient positions.
     val sorted = toTypedArray()
-    sorted.sortByDescending(this::sortByDescFunction)
+    sorted.sortWith { left, right -> compareMembers(left, right) }
     for (i in sorted.indices) super.set(i, sorted[i])
 
     // Clear index cache (the sort invalidated it, by intention).
@@ -275,8 +279,13 @@ class MemberList() : ListProxy<Member>(Member::class) {
     return this
   }
 
-  private fun sortByDescFunction(member: Member?): Int {
-    if (member == null) return 1
+  private fun compareMembers(left: Member?, right: Member?): Int {
+    if (left == null || right == null) throw illegalState("Members cannot be null")
+    val priority = sortPriority(right) - sortPriority(left)
+    return if (priority != 0) priority else left.name.compareTo(right.name)
+  }
+
+  private fun sortPriority(member: Member): Int {
     val mandatories = MANDATORY
     for (i in 0 until mandatories.size) {
       val mandatory = MANDATORY[i]
