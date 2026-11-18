@@ -13,6 +13,7 @@ private val Descriptions = mapOf(
     //"here-naksha-lib-auth-naksha" to "TBD",
     "here-naksha-lib-base" to "Naksha library, providing basic cross-platform capabilities (extending the raw Kotlin features).",
     "here-naksha-lib-core" to "Naksha library, core parts of Naksha-Hub.",
+    "here-naksha-lib-circuit-breaker" to "Naksha Circuit Breaker Library",
     "here-naksha-lib-diff" to "Naksha library, provide tools to calculate differences, patched, and to apply them.",
     "here-naksha-lib-ext-manager" to "Naksha library, the Extension-Manager library to be included in applications to load extensions.",
     //"here-naksha-lib-extension" to "TBD",

@@ -17,8 +17,9 @@ public record TestStorageConfig(String mapId, PgConfig pgConfig) {
   }
 
   /**
-   * Reads the configuration from a configuration file from user home directory ({@code ~/.config/naksha/filename}) or from the environment
-   * variable, if none is possible, a default localhost configuration is used.
+   * Reads the configuration from a configuration file from user home directory ({@code ~/.config/naksha/filename}), or from the
+   * {@code envName} environment variable, or from the shared {@code NAKSHA_TEST_DB_URL} environment variable; if none is set, a
+   * default localhost configuration is used.
    *
    * @param filename The filename to search for in {@code ~/.config/naksha/}.
    * @param envName  The environment variable to check.
@@ -43,7 +44,7 @@ public record TestStorageConfig(String mapId, PgConfig pgConfig) {
       PgConfig pgConfig = new PgConfig(NakshaHubAdminStorageIdentifiers.getHubAdminStorageId()).withMasterUri(url);
       return new TestStorageConfig(mapId, pgConfig);
     }
-    url = System.getenv("TEST_NAKSHA_PSQL_URL");
+    url = System.getenv("NAKSHA_TEST_DB_URL");
     if (url != null && url.startsWith("jdbc:postgresql://")) {
       PgConfig pgConfig = new PgConfig(NakshaHubAdminStorageIdentifiers.getHubAdminStorageId()).withMasterUri(url);
       return new TestStorageConfig(mapId, pgConfig);

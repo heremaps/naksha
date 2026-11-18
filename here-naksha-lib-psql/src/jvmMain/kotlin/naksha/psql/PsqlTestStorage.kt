@@ -13,7 +13,8 @@ import java.util.concurrent.atomic.AtomicReference
  * The class to be used as `className` when running local tests.
  *
  * If the given configuration contains a `master` configuration, it behaves exactly as [PsqlStorage]. However, if this is not the case, it will perform the following steps in order:
- * - If there is an environment variables `NAKSHA_TEST_PSQL_DB_URL` set, it reads the master-URI from this.
+ * - If there is an environment variable `NAKSHA_TEST_PSQL_DB_URL` set, it reads the master-URI from this.
+ * - Otherwise, if there is an environment variable `NAKSHA_TEST_DB_URL` set, it reads the master-URI from this.
  * - If there is a system property `naksha.test.psql.db.url` set _(`-Dnaksha.test.psql.db.url=...`)_, then it reads the master-URI from this.
  * - If neither is available, it will start a docker container, and use this with database `postgres`, user `postgres`, and password `password` _(which is automatically shutdown when the JVM goes down via shutdown hook)_.
  *
@@ -97,7 +98,7 @@ class PsqlTestStorage : PsqlStorage() {
         var master = config.getMasterOrNull()
         if (master == null) {
             // - read from environment
-            var uri = System.getenv("NAKSHA_TEST_PSQL_DB_URL")
+            var uri = System.getenv("NAKSHA_TEST_PSQL_DB_URL") ?: System.getenv("NAKSHA_TEST_DB_URL")
             // - read from system (for Storage-API support)
             if (uri == null || uri.isEmpty()) {
                 uri = System.getProperty("naksha.test.psql.db.url")
@@ -113,6 +114,7 @@ class PsqlTestStorage : PsqlStorage() {
         // Use the original URI string (from env var or docker) to avoid ssl=true being appended by masterUri.
         try {
             val jdbcUrl = System.getenv("NAKSHA_TEST_PSQL_DB_URL")
+                ?: System.getenv("NAKSHA_TEST_DB_URL")
                 ?: System.getProperty("naksha.test.psql.db.url")
                 ?: config.masterUri
             // Only perform the destructive schema drop once per JVM lifetime.

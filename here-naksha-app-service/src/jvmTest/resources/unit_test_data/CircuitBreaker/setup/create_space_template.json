@@ -1,0 +1,15 @@
+{
+  "id": "{{spaceId}}",
+  "type": "Space",
+  "title": "Circuit breaker test space",
+  "description": "Space for circuit breaker API tests",
+  "eventHandlerIds": [
+    "{{handlerId}}"
+  ],
+  "properties": {
+    "collection": {
+      "id": "my_env/my_storage/my_feat_type",
+      "type": "NakshaCollection"
+    }
+  }
+}

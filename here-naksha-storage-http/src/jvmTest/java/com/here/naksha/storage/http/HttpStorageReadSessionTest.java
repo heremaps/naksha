@@ -184,6 +184,7 @@ class HttpStorageReadSessionTest {
     }
 
     private static HttpStorageReadSession session() {
-        return new HttpStorageReadSession(null, storage, mock(RequestSender.class), HttpInterface.ffwAdapter);
+        return new HttpStorageReadSession(null, storage, mock(RequestSender.class), HttpInterface.ffwAdapter,
+                null, STORAGE_ID, null);
     }
 }

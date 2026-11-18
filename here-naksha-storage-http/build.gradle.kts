@@ -12,6 +12,7 @@ kotlin {
                 api(project(":here-naksha-lib-jbon"))
                 api(project(":here-naksha-lib-core"))
                 api(project(":here-naksha-common-http"))
+                implementation(project(":here-naksha-lib-circuit-breaker"))
 
                 implementation(libs.commons.lang3)
                 implementation(libs.bundles.jackson)
