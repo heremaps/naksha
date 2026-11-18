@@ -14,6 +14,22 @@ import java.util.function.Function
 actual class AttributeMap private constructor(private val backing: JvmAtomicMap<String, Attribute>) : AtomicMap<String, Attribute> by backing {
   actual constructor() : this(JvmAtomicMap())
 
+  actual override val size: Int get() = backing.size
+  actual override val entries: MutableSet<MutableMap.MutableEntry<String, Attribute>> get() = backing.entries
+  actual override val keys: MutableSet<String> get() = backing.keys
+  actual override val values: MutableCollection<Attribute> get() = backing.values
+  actual override fun isEmpty(): Boolean = backing.isEmpty()
+  actual override fun containsKey(key: String): Boolean = backing.containsKey(key)
+  actual override fun containsValue(value: Attribute): Boolean = backing.containsValue(value)
+  actual override fun get(key: String): Attribute? = backing[key]
+  actual override fun put(key: String, value: Attribute): Attribute? = backing.put(key, value)
+  actual override fun putAll(from: Map<out String, Attribute>) = backing.putAll(from)
+  actual override fun remove(key: String): Attribute? = backing.remove(key)
+  actual override fun clear() = backing.clear()
+  actual override fun putIfAbsent(key: String, value: Attribute): Attribute? = backing.putIfAbsent(key, value)
+  actual override fun remove(key: String, value: Attribute): Boolean = backing.remove(key, value)
+  actual override fun replace(key: String, oldValue: Attribute, newValue: Attribute): Boolean = backing.replace(key, oldValue, newValue)
+
   @Suppress("UNCHECKED_CAST")
   actual fun <T : Attribute> getOrCreate(key: String, constructor: Fn1<T, String>): T {
     val existing = backing[key]

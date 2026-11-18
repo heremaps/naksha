@@ -13,6 +13,20 @@ actual class AttributeMap private constructor(private val backing: JsAtomicMap<S
   @JsName("newAttributeMap")
   actual constructor() : this(JsAtomicMap())
 
+  actual override val size: Int get() = backing.size
+  actual override val entries: MutableSet<MutableMap.MutableEntry<String, Attribute>> get() = backing.entries
+  actual override val keys: MutableSet<String> get() = backing.keys
+  actual override val values: MutableCollection<Attribute> get() = backing.values
+  actual override fun isEmpty(): Boolean = backing.isEmpty()
+  actual override fun containsKey(key: String): Boolean = backing.containsKey(key)
+  actual override fun containsValue(value: Attribute): Boolean = backing.containsValue(value)
+  actual override fun get(key: String): Attribute? = backing[key]
+  actual override fun put(key: String, value: Attribute): Attribute? = backing.put(key, value)
+  actual override fun putAll(from: Map<out String, Attribute>) = backing.putAll(from)
+  actual override fun remove(key: String): Attribute? = backing.remove(key)
+  actual override fun clear() = backing.clear()
+  actual override fun putIfAbsent(key: String, value: Attribute): Attribute? = backing.putIfAbsent(key, value)
+
   actual fun <T : Attribute> getOrCreate(key: String, constructor: Fn1<T, String>): T {
     val existing = backing[key]
     if (existing != null) return existing as T
@@ -40,13 +54,13 @@ actual class AttributeMap private constructor(private val backing: JsAtomicMap<S
   }
 
   // JsAtomicMap currently uses reference equality here. AttributeMap deliberately follows the JVM/value-equality contract instead.
-  override fun remove(key: String, value: Attribute): Boolean {
+  actual override fun remove(key: String, value: Attribute): Boolean {
     if (backing[key] != value) return false
     backing.remove(key)
     return true
   }
 
-  override fun replace(key: String, oldValue: Attribute, newValue: Attribute): Boolean {
+  actual override fun replace(key: String, oldValue: Attribute, newValue: Attribute): Boolean {
     if (backing[key] != oldValue) return false
     backing[key] = newValue
     return true

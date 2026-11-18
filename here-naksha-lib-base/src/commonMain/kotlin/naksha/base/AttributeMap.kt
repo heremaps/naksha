@@ -19,6 +19,22 @@ expect class AttributeMap : AtomicMap<String, Attribute> {
   @JsName("newAttributeMap")
   constructor()
 
+  override val size: Int
+  override val entries: MutableSet<MutableMap.MutableEntry<String, Attribute>>
+  override val keys: MutableSet<String>
+  override val values: MutableCollection<Attribute>
+  override fun isEmpty(): Boolean
+  override fun containsKey(key: String): Boolean
+  override fun containsValue(value: Attribute): Boolean
+  override fun get(key: String): Attribute?
+  override fun put(key: String, value: Attribute): Attribute?
+  override fun putAll(from: Map<out String, Attribute>)
+  override fun remove(key: String): Attribute?
+  override fun clear()
+  override fun putIfAbsent(key: String, value: Attribute): Attribute?
+  override fun remove(key: String, value: Attribute): Boolean
+  override fun replace(key: String, oldValue: Attribute, newValue: Attribute): Boolean
+
   /**
    * Returns the installed value, or constructs and atomically installs one using the requested key.
    * @since 3.0

@@ -11,10 +11,7 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 
 /**
- * End-to-end coverage for the tuple-cache fix: after the cache is cleared a read reloads the tuple
- * from storage and re-warms the cache, and a write response carries its tuples by hard reference
- * (independent of the cache). These are deterministic — soft-reference GC survival is intentionally
- * not asserted, as it is non-deterministic.
+ * End-to-end coverage for the tuple-cache fix: after the cache is cleared a read reloads the tuple from storage and re-warms the cache, and a write response carries its tuples by hard reference independent of the cache. JVM-specific garbage-collection coverage lives in TupleCacheGcReadPathTest.
  */
 class TupleCacheReadPathTest : PgTestBase(collection = null, catalogId = "") {
 
@@ -23,19 +20,6 @@ class TupleCacheReadPathTest : PgTestBase(collection = null, catalogId = "") {
         val writeOp = Write().createFeature(collection, RandomFeatures.randomFeature())
         val response = executeWrite(WriteRequest().add(writeOp))
         return assertNotNull(response.featureTupleList[0]).tupleNumber
-    }
-
-    /** Forces a full GC and waits until it reclaims a reachable object. */
-    private fun forceGc() {
-        val sentinel = java.lang.ref.WeakReference(Any())
-        var spins = 0
-        while (sentinel.get() != null && spins < 1_000) {
-            System.gc()
-            @Suppress("UNUSED_VARIABLE")
-            val pressure = ByteArray(2 * 1024 * 1024)
-            Thread.sleep(2)
-            spins++
-        }
     }
 
     @Test
@@ -54,16 +38,15 @@ class TupleCacheReadPathTest : PgTestBase(collection = null, catalogId = "") {
     }
 
     @Test
-    fun writeResponseRetainsTuplesAcrossGc() {
-        testWithCollection("cacheHardRefTest")
+    fun writeResponseRetainsTuplesAfterCacheClear() {
+        testWithCollection("cacheHardRefPortableTest")
         val writeOp = Write().createFeature(collection, RandomFeatures.randomFeature())
         val response = executeWrite(WriteRequest().add(writeOp))
 
         Naksha.cache.clear()
-        forceGc()
 
         val featureTuple = assertNotNull(response.featureTupleList[0])
         assertNotNull(featureTuple.tuple, "the write response must carry the tuple by hard reference, not via the cache")
-        assertNotNull(response.features[0], "the response must still convert to a feature after the cache is cleared and GC runs")
+        assertNotNull(response.features[0], "the response must still convert to a feature after the cache is cleared")
     }
 }

@@ -18,6 +18,38 @@ class AttributeMapTest {
   }
 
   @Test
+  fun commonMapContractForwardsQueriesMutationsAndLiveViews() {
+    val map: MutableMap<String, Attribute> = AttributeMap()
+    val first = Value("first", "one")
+    val replacement = Value("first", "two")
+    val second = Value("second", "three")
+    val keys = map.keys
+    val values = map.values
+    val entries = map.entries
+    assertTrue(map.isEmpty())
+    assertEquals(0, map.size)
+    assertNull(map["missing"])
+    assertFalse(map.containsKey("missing"))
+    assertFalse(map.containsValue(first))
+    assertNull(map.put("first", first))
+    assertSame(first, map.put("first", replacement))
+    map.putAll(mapOf("second" to second))
+    assertEquals(2, map.size)
+    assertTrue(map.containsKey("first"))
+    assertTrue(map.containsValue(Value("first", "two")))
+    assertTrue(keys.contains("second"))
+    assertTrue(values.contains(second))
+    assertEquals(2, entries.size)
+    assertSame(replacement, map.remove("first"))
+    assertFalse(keys.contains("first"))
+    map.clear()
+    assertTrue(keys.isEmpty())
+    assertTrue(values.isEmpty())
+    assertTrue(entries.isEmpty())
+    assertTrue(map.isEmpty())
+  }
+
+  @Test
   fun constructorsRunOnlyForAbsentEntriesAndReceiveTheRequestedKey() {
     val map = AttributeMap()
     var calls = 0
