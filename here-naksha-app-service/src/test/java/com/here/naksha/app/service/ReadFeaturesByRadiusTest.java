@@ -353,7 +353,7 @@ class ReadFeaturesByRadiusTest extends ApiTest {
     // Given: Request parameters
     String urlQueryParams = "";
     if (queryParamList!=null && !queryParamList.isEmpty()) {
-      urlQueryParams += String.join("&", queryParamList);
+      urlQueryParams = "?" + String.join("&", queryParamList);
     }
     final String streamId = UUID.randomUUID().toString();
 
@@ -363,7 +363,7 @@ class ReadFeaturesByRadiusTest extends ApiTest {
 
     // When: Get Features By Radius request is submitted to NakshaHub
     final HttpResponse<String> response = nakshaClient
-            .get("hub/spaces/" + SPACE_ID + "/spatial?" + urlQueryParams, streamId);
+            .get("hub/spaces/" + SPACE_ID + "/spatial" + urlQueryParams, streamId);
 
     // Then: Perform standard assertions
     assertThat(response)

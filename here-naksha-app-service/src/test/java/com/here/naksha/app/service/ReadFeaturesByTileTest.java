@@ -418,7 +418,7 @@ class ReadFeaturesByTileTest extends ApiTest {
     // Given: Request parameters
     String urlQueryParams = "";
     if (queryParamList!=null && !queryParamList.isEmpty()) {
-      urlQueryParams += String.join("&", queryParamList);
+      urlQueryParams = "?" + String.join("&", queryParamList);
     }
     final String streamId = UUID.randomUUID().toString();
 
@@ -428,7 +428,7 @@ class ReadFeaturesByTileTest extends ApiTest {
 
     // When: Get Features By Tile request is submitted to NakshaHub
     final HttpResponse<String> response = nakshaClient
-            .get("hub/spaces/" + SPACE_ID + "/tile/"+ tileType +"/"+ tileId +"?" + urlQueryParams, streamId);
+            .get("hub/spaces/" + SPACE_ID + "/tile/"+ tileType +"/"+ tileId + urlQueryParams, streamId);
 
     // Then: Perform standard assertions
     assertThat(response)

@@ -227,7 +227,7 @@ class ReadFeaturesByRadiusPostTest extends ApiTest {
         // Given: Request parameters
         String urlQueryParams = "";
         if (queryParamList!=null && !queryParamList.isEmpty()) {
-            urlQueryParams += String.join("&", queryParamList);
+            urlQueryParams = "?" + String.join("&", queryParamList);
         }
         final String streamId = UUID.randomUUID().toString();
 
@@ -239,7 +239,7 @@ class ReadFeaturesByRadiusPostTest extends ApiTest {
         final String expectedBodyPart = (strictChecking) ? loadedString.replaceAll("\\{\\{streamId}}",streamId) : loadedString;
         // When: Get Features By Radius request is submitted to NakshaHub
         final HttpResponse<String> response = nakshaClient
-                .post("hub/spaces/" + SPACE_ID + "/spatial?" + urlQueryParams, requestBody, streamId);
+                .post("hub/spaces/" + SPACE_ID + "/spatial" + urlQueryParams, requestBody, streamId);
 
         // Then: Perform standard assertions
         assertThat(response)
