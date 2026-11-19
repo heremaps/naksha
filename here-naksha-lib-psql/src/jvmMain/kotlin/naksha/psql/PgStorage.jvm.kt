@@ -91,7 +91,8 @@ actual open class PgStorage() : AbstractStorage<PgConfig>() {
      * - If there is a config available in the environment _(TBD)_, reads this and uses it.
      * - If there is an environment variables `NAKSHA_TEST_PSQL_DB_URL` set, reads the master-URI from this.
      * - If there is no enviornment variable, but a system property `naksha.test.psql.db.url` set _(`-Dnaksha.test.psql.db.url=...`)_, then reads the master-URI from this.
-     * - Finally, if the config does not contain a master-URI and [runDocker] is _true_, starts a docker container and patches the config to use this docker.
+     * - If the config does not contain a master-URI and [runDocker] is _true_, reads the master-URI from the shared test environment variable `NAKSHA_TEST_DB_URL`.
+     * - Finally, if the config still does not contain a master-URI and [runDocker] is _true_, starts a docker container and patches the config to use this docker.
      *
      * Therefore, when [runDocker] is _true_, an empyt configuration can be provided.
      *
@@ -110,7 +111,9 @@ actual open class PgStorage() : AbstractStorage<PgConfig>() {
 
             val _config = getPgConfigFromEnv() ?: config
             getPgInstanceConfigFromEnv(_config)
-            if (runDocker && _config.getMasterOrNull() == null) getOrStartDocker(_config)
+            if (runDocker && _config.getMasterOrNull() == null) {
+                getSharedTestPgInstanceConfigFromEnv(_config) ?: getOrStartDocker(_config)
+            }
 
             if (_config.getMasterOrNull() == null) {
                 throw illegalArg("Invalid configuration, neither master is specified nor provided in environment variables")
@@ -308,6 +311,30 @@ actual open class PgStorage() : AbstractStorage<PgConfig>() {
                 }
             }
             return null
+        }
+
+        /**
+         * Tries to read the **master** instance configuration from the shared test environment variable `NAKSHA_TEST_DB_URL`, which is shared by all test suites.
+         * @param config if not `null` and an instance was detected, it is set as master into the given configuration, replicas are cleared.
+         * @return if the environment configures a shared test instance; `null` otherwise.
+         * @since 3.0
+         */
+        @JvmOverloads
+        @JvmStatic
+        fun getSharedTestPgInstanceConfigFromEnv(config: PgConfig? = null): PgInstanceConfig? {
+            val uri = System.getenv("NAKSHA_TEST_DB_URL")
+            if (uri.isNullOrEmpty()) return null
+            return try {
+                val instance = PgInstanceConfig.fromUri(uri)
+                if (config != null) {
+                    config.master = instance
+                    config.replicas.clear()
+                }
+                instance
+            } catch (e: Exception) {
+                logger.warn("The URI for the shared test database in the environment is invalid: $uri", e)
+                null
+            }
         }
 
         /**

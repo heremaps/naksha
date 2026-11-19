@@ -18,7 +18,6 @@ import naksha.model.request.WriteRequest;
 import naksha.psql.PgConfig;
 import naksha.psql.PgInstanceConfig;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import picocli.CommandLine;
@@ -35,7 +34,6 @@ import static naksha.model.RandomFeatures.randomFeatures;
 import static org.junit.jupiter.api.Assertions.*;
 
 /** End-to-end: sync a v3 collection into the null storage through the CLI commands. */
-@Disabled
 class V3StreamSmokeTest {
     private static final int CREATED = 30;
     private static final int UPDATED = 5;
