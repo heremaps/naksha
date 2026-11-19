@@ -1,11 +1,17 @@
 # Running JVM tests against local PostgreSQL
 
+## Latest verification checkpoint — 2026-11-19
+
+The beta.54 bootstrap-locking checkpoint passed all forced common-metadata, JVM production/test and JS production/test-source compilation gates, then the full ordinary JVM run and all 76 opt-in PostgreSQL tests across 17 separate fresh databases. Unique combined JVM totals are **1,905 passed, zero failures/errors and six intentional skips**, with performance tests enabled. The ordinary run's 82 skips include the 76 subsequently executed opt-in cases and must not be double-counted. The six remaining skips are three service data-ingest cases, one partitioning case and two deliberately disabled streaming smoke cases.
+
+The user-recreated PostgreSQL 18.6 container has 1 GiB shared memory; earlier shared-memory exhaustion failures no longer reproduce in the successful campaign. Configured JS runtime tests still report **nine passed and 14 diff/patch failures**; disabled Node tasks are not passes. See [the full bootstrap-locking verification note](NAKSHA-33-bootstrap-locking.md#verification) for exact commands, final focused rerun evidence, review coverage and limitations. Historical results below remain historical, not the latest totals.
+
 ## What “all JVM tests” means
 
 There are two stages:
 
 1. `./gradlew jvmTest` selects every project's ordinary JVM test task, including app-service API tests. It does not automatically enable opt-in integration suites.
-2. The 16 opt-in PostgreSQL suites (75 tests in the 2026-11-17 snapshot) each require their own fresh database and their specific environment variable. They cannot all share the database from stage 1. One separately ignored partitioning test remains ignored.
+2. The opt-in PostgreSQL suites each require their own fresh database and their specific environment variable. There were 16 suites/75 tests in the 2026-11-17 snapshot; the independent-client bootstrap-lock regression adds another suite. They cannot all share the database from stage 1. One separately ignored partitioning test remains ignored.
 
 No separately started Naksha service is needed: the app-service JUnit extension starts and stops it. PostgreSQL must already be running, and port 8080 must be free. The earlier guidance saying a running external Naksha server was required was incorrect.
 
@@ -106,6 +112,7 @@ Run each row separately with a newly created database. Set both `NAKSHA_TEST_PSQ
 | Suite variable suffix | Test class (`naksha.psql.` prefix) |
 | --- | --- |
 | `BOOTSTRAP` | `PgBootstrapTest` |
+| `BOOTSTRAP_LOCK` | `PgBootstrapConcurrencyTest` |
 | `CATALOG` | `PgCatalogCreationTest` |
 | `CREATE` | `PgCreateFlowTest` |
 | `DROP` | `PgDatabaseDropTest` |
@@ -135,7 +142,7 @@ NAKSHA_TEST_PLV8_DB_URL="$suite_url" \
   --tests 'naksha.psql.PgPlv8MaintenanceTest' --rerun --console=plain
 ```
 
-Repeat with each row's class and `NAKSHA_TEST_<SUFFIX>_DB_URL` variable. These tests are executed by Gradle/JUnit; `createdb` is just the disposable setup. Provisioning all 16 fresh databases and creating separate Test tasks per suite is not currently automated by the ordinary `jvmTest` task. A single native Gradle lifecycle task for both stages would require additional build wiring, not more exports. Record these results separately from stage 1, replacing skipped cases rather than double-counting them.
+Repeat with each row's class and `NAKSHA_TEST_<SUFFIX>_DB_URL` variable. These tests are executed by Gradle/JUnit; `createdb` is just the disposable setup. Provisioning all fresh suite databases and creating separate Test tasks per suite is not currently automated by the ordinary `jvmTest` task. A single native Gradle lifecycle task for both stages would require additional build wiring, not more exports. Record these results separately from stage 1, replacing skipped cases rather than double-counting them.
 
 ## Reports and diagnosing failure
 

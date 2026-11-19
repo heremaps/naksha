@@ -105,7 +105,7 @@ Set the local database variables above and use Java 25. `--rerun` forces test ex
 ./gradlew jvmTest --rerun --no-build-cache --continue --console=plain
 ```
 
-This does not enable the 75 opt-in psql integration tests. Their 16 suites require fresh, separate databases and matching `NAKSHA_TEST_PSQL_DB_URL` plus suite-specific URL variables. Never export every suite variable to the same database and run all of them together. Follow the isolated-suite recipe in `ai/test.md`. One explicitly ignored partitioning test also remains ignored. Performance tests run unless `NAKSHA_SUPPRESS_PERF_TEST=true`; disclose this exclusion if used.
+This does not enable the opt-in psql integration tests. Each suite requires a fresh, separate database and matching `NAKSHA_TEST_PSQL_DB_URL` plus its suite-specific URL variable. The independent-client bootstrap regression uses `NAKSHA_TEST_BOOTSTRAP_LOCK_DB_URL` and must run separately from `PgBootstrapTest`. Never export every suite variable to the same database and run all of them together. Follow the isolated-suite recipe in `ai/test.md`. One explicitly ignored partitioning test also remains ignored. Performance tests run unless `NAKSHA_SUPPRESS_PERF_TEST=true`; disclose this exclusion if used.
 
 ## All library tests (JS):
 ```bash

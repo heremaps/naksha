@@ -2,6 +2,12 @@
 
 [JIRA: NAKSHA-33](https://here-technologies.atlassian.net/browse/NAKSHA-33)
 
+## Concurrent bootstrap review checkpoint — 2026-11-19
+
+Release/admin runtime **3.0.0-beta.54** adds database-scoped transaction advisory coordination only when the optimistic probe detects a permitted installation or upgrade. Current installations remain advisory-lock-free. The initializer ends its read-only probe before waiting, rechecks identity/version/policy under a fresh READ COMMITTED snapshot, and retains the lock through installation commit or rollback. Existing PLV8 attachment does not lock or complete the caller's transaction. Minimum compatible admin remains beta.53; no on-disk schema migration is introduced by this coordination fix.
+
+Verification: all forced common-metadata, JVM production/test and JS production/test-source compilation gates passed. The full JVM campaign plus all 76 opt-in PostgreSQL tests across 17 isolated suites yields **1,905 passed, zero failures/errors, six intentional skips**. The strengthened four-backend regression additionally verifies persistent REPEATABLE READ defaults, exactly one upgrade, identity rechecks, and real installer DDL rollback/recovery. Independent correctness/security reviews found no introduced blockers. JS runtime remains non-green with 14 diff/patch failures; existing whole-branch review findings, phase-2 scheduling and db-11 remain outside this checkpoint. See [the bootstrap locking review note](NAKSHA-33-bootstrap-locking.md) for the contract, exact results, commands, limitations and local evidence.
+
 ## Goal and working rules
 
 Make `PgDatabase` the entry point for physical PostgreSQL operations used by

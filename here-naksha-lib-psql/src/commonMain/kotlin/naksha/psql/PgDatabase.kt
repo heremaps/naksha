@@ -24,6 +24,10 @@ import naksha.psql.PgUtil.PgUtilCompanion.quoteIdent
 import kotlin.js.JsExport
 import kotlin.time.Instant
 
+// Two-int advisory keys use a separate namespace from the bigint collection/feature guards. PostgreSQL scopes these keys to the current database, independently of client storage IDs and versions.
+internal const val PG_ADMIN_INSTALL_LOCK_CLASS = 0x4e414b53
+internal const val PG_ADMIN_INSTALL_LOCK_KEY = 0x41444d49
+
 /**
  * A database is a logical concept in Naksha, see [NakshaDatabase].
  *
@@ -160,8 +164,6 @@ abstract class PgDatabase(
     attachExisting: Boolean = false
   ) {
     if (attachExisting && (doOverride || doCreate || doUpgrade)) throw illegalArg("Existing database attachment cannot install or upgrade objects")
-    val id = this.id.text
-    val number = this.id.number
     val config = storage.config
     val config_version = config.version
     val psql_version = if (config_version != null) NakshaVersion.of(config_version) else adminVersion
@@ -184,126 +186,151 @@ abstract class PgDatabase(
       logger.info("Start initStorage of database {}", conn.toUri())
       conn.autoCommit = false
 
-      logger.info("Query basic database information")
-      val has_naksha_version: Boolean?
-      val has_naksha_storage_id: Boolean?
-      val has_naksha_storage_number: Boolean?
-      val admin_schema_oid: Int?
-      conn.execute(
-        """
-WITH basics AS (SELECT 
-  current_setting('block_size')::int4 AS bs, 
+      if (!initializeAdmin(conn, psql_version, doOverride, doCreate, doUpgrade, attachExisting, install = false)) {
+        // The optimistic probe did not mutate the database. End its transaction before waiting, releasing all read locks while preserving the connection's SET SESSION options.
+        conn.commit()
+        // The lock query itself may wait. A READ COMMITTED statement snapshot is essential so the subsequent probe sees the preceding installer's commit, even if the connection default is REPEATABLE READ.
+        conn.execute("SET TRANSACTION ISOLATION LEVEL READ COMMITTED").close()
+        conn.execute("SELECT pg_catalog.pg_advisory_xact_lock($1::int4, $2::int4)",
+          arrayOf(PG_ADMIN_INSTALL_LOCK_CLASS, PG_ADMIN_INSTALL_LOCK_KEY)).close()
+        initializeAdmin(conn, psql_version, doOverride, doCreate, doUpgrade, attachExisting, install = true)
+      }
+      if (!attachExisting) conn.execute("SET search_path = $ADMIN_CATALOG_QUOTED, topology, hint_plan, public").close()
+      logger.info("Load OID of '$NAKSHA_VERSION_SEQ' from admin schema (schema-oid=$schemaOid)")
+      val SQL = "SELECT oid FROM pg_catalog.pg_class WHERE relnamespace = $schemaOid AND relname = '$NAKSHA_VERSION_SEQ'"
+      conn.execute(SQL).fetch().use { cursor -> _versionSequenceOid = cursor["oid"] }
+      logger.info("Storage ${config.id} / ${config.databaseNumber} initialized, version-seq-oid=$versionSequenceOid, commit")
+      if (!attachExisting) conn.commit()
+    }
+  }
+
+  /**
+   * Probe the installed admin state, validating identity, permissions and compatibility on every call. Return false when installation is required but not yet authorized by the database advisory lock. The locked call re-reads all state before executing DDL; the unlocked call is read-only. Existing PLV8 attachment never acquires the lock or ends its caller's transaction.
+   * @since 3.0
+   */
+  private fun initializeAdmin(
+    conn: PgConnection,
+    psql_version: NakshaVersion,
+    doOverride: Boolean,
+    doCreate: Boolean,
+    doUpgrade: Boolean,
+    attachExisting: Boolean,
+    install: Boolean
+  ): Boolean {
+    val id = this.id.text
+    val number = this.id.number
+    logger.info("Query basic database information")
+    val has_naksha_version: Boolean?
+    val has_naksha_storage_id: Boolean?
+    val has_naksha_storage_number: Boolean?
+    val admin_schema_oid: Int?
+    conn.execute(
+      """
+WITH basics AS (SELECT
+  current_setting('block_size')::int4 AS bs,
   (SELECT oid FROM pg_catalog.pg_namespace WHERE nspname = 'naksha~admin') AS admin_oid,
   (SELECT oid FROM pg_catalog.pg_extension WHERE extname = 'gzip') AS gzip_oid,
   version() AS version
-), procs AS (SELECT 
+), procs AS (SELECT
   (SELECT true FROM pg_catalog.pg_proc, basics WHERE pronamespace = basics.admin_oid AND proname = 'naksha_version') AS has_naksha_version,
   (SELECT true FROM pg_catalog.pg_proc, basics WHERE pronamespace = basics.admin_oid AND proname = 'naksha_storage_id') AS has_naksha_storage_id,
   (SELECT true FROM pg_catalog.pg_proc, basics WHERE pronamespace = basics.admin_oid AND proname = 'naksha_storage_number') AS has_naksha_storage_number
 )
 SELECT basics.*, procs.* FROM basics, procs;
 """
-      ).fetch().use { cursor ->
-        _pageSize = cursor["bs"]
-        val tupleSize = pageSize - 32
-        _maxTupleSize = if (tupleSize > MAX_POSTGRES_TOAST_TUPLE_TARGET) {
-          MAX_POSTGRES_TOAST_TUPLE_TARGET
-        } else if (tupleSize < MIN_POSTGRES_TOAST_TUPLE_TARGET) {
-          MIN_POSTGRES_TOAST_TUPLE_TARGET
-        } else {
-          tupleSize
-        }
-        _gzipExtension = cursor.column("gzip_oid") is Int
-        // "PostgreSQL 15.5 on aarch64-unknown-linux-gnu, compiled by gcc (GCC) 7.3.1 20180712 (Red Hat 7.3.1-6), 64-bit"
-        // "PostgreSQL 16.2 on aarch64-unknown-linux-gnu, compiled by gcc (GCC) 11.4.1 20230605 (Red Hat 11.4.1-2), 64-bit"
-        val v: String = cursor["version"]
-        val start = v.indexOf(' ') + 1
-        val end = v.indexOf(' ', start)
-        _postgresVersion = NakshaVersion.of(v.substring(start, end))
-
-        admin_schema_oid = cursor.column("admin_oid") as Int?
-        has_naksha_version = cursor.column("has_naksha_version") as Boolean?
-        has_naksha_storage_id = cursor.column("has_naksha_storage_id") as Boolean?
-        has_naksha_storage_number = cursor.column("has_naksha_storage_number") as Boolean?
-      }
-
-      if (admin_schema_oid == null) {
-        if (!doCreate) throw forbidden("Creation of 'naksha~admin' needed, but forbidden by config")
-        logger.info("Install Naksha admin-map in version $psql_version for storage $id / $number")
-        _schemaOid = upsert_naksha_admin(conn, this.id,  psql_version, null, null)
+    ).fetch().use { cursor ->
+      _pageSize = cursor["bs"]
+      val tupleSize = pageSize - 32
+      _maxTupleSize = if (tupleSize > MAX_POSTGRES_TOAST_TUPLE_TARGET) {
+        MAX_POSTGRES_TOAST_TUPLE_TARGET
+      } else if (tupleSize < MIN_POSTGRES_TOAST_TUPLE_TARGET) {
+        MIN_POSTGRES_TOAST_TUPLE_TARGET
       } else {
-        _schemaOid = admin_schema_oid
-        if (has_naksha_version != true) {
-          throw illegalState("The storage '$id' does have a schema 'naksha~admin', but it is broken, because function `naksha_version` is missing")
-        }
-        if (has_naksha_storage_id != true) {
-          throw illegalState("The storage '$id' does have a schema 'naksha~admin', but it is broken, because function `naksha_storage_id` is missing")
-        }
-        if (has_naksha_storage_number != true) {
-          throw illegalState("The storage '$id' does have a schema 'naksha~admin', but it is broken, because function `naksha_storage_number` is missing")
-        }
-        var installed_version: NakshaVersion
-        var installed_storage_id: String
-        var installed_storage_number: Long
-        conn.execute("SELECT $ADMIN_CATALOG_QUOTED.naksha_version() AS v, $ADMIN_CATALOG_QUOTED.naksha_storage_id() AS id, $ADMIN_CATALOG_QUOTED.naksha_storage_number() AS n").fetch().use { cursor ->
-          try {
-            val v: Long = cursor["v"]
-            installed_version = NakshaVersion(v)
-            installed_storage_id = cursor["id"]
-            installed_storage_number = cursor["n"]
-          } catch (pe: Exception) {
-            throw illegalState(
-              "The storage '$id' does have an admin schema, but it is broken, because reading storage version, id, and/or number failed",
-              pe
-            )
-          }
-        }
-        if (installed_storage_id != id) {
-          throw NakshaException(
-            STORAGE_ID_MISMATCH,
-            "Failed to initialize storage, the 'naksha_storage_id()' is '$installed_storage_id', but was expected to be '$id'"
-          )
-        }
-        if (installed_storage_number != number) {
-          throw NakshaException(
-            STORAGE_ID_MISMATCH,
-            "Failed to initialize the storage, the 'naksha_storage_number()' is '$installed_storage_number', but was expected to be '$number'"
-          )
-        }
-        if (installed_version != psql_version) {
-          if (attachExisting) throw illegalState("Installed admin version does not match the attached runtime")
-          logger.info("The admin-map of '$id' is in version $installed_version, this library uses version $psql_version")
-          if (doOverride) {
-            logger.warn("Forcefully upgrade storage '$id' admin-map (current=$installed_version, new=$psql_version)")
-            upsert_naksha_admin(conn, this.id, psql_version, admin_schema_oid, installed_version)
-          } else {
-            if (installed_version > psql_version) {
-              throw illegalState("The storage '$id' is in a newer version ($installed_version) than this library ($psql_version), access denied (otherwise we risk damaging the storage)")
-            }
-            if (installed_version < minAdminVersion) {
-              if (!doUpgrade) {
-                throw illegalState("The storage '$id' uses admin version $installed_version, but this library requires at least $minAdminVersion; enable upgrade before accessing the storage")
-              }
-              logger.info("Upgrade Naksha admin-map from $installed_version to $psql_version for storage $id")
-              upsert_naksha_admin(conn, this.id, psql_version, admin_schema_oid, installed_version)
-            } else if (doUpgrade){
-              logger.info("Upgrade Naksha admin-map from $installed_version to $psql_version for storage $id")
-              upsert_naksha_admin(conn, this.id, psql_version, admin_schema_oid, installed_version)
-            } else {
-              logger.info("In storage '$id' admin-map is in version $installed_version, this library is version $psql_version, but we should not upgrade the storage, and are okay working with the older version")
-            }
-          }
-        } else {
-          logger.info("The admin-map of '$id' is up-to-date: $psql_version")
-        }
+        tupleSize
       }
-      if (!attachExisting) conn.execute("SET search_path = $ADMIN_CATALOG_QUOTED, topology, hint_plan, public").close()
-      logger.info("Load OID of '$NAKSHA_VERSION_SEQ' from admin schema (schema-oid=$schemaOid)")
-      val SQL = "SELECT oid FROM pg_class WHERE relnamespace = $schemaOid AND relname = '$NAKSHA_VERSION_SEQ'"
-      conn.execute(SQL).fetch().use { cursor -> _versionSequenceOid = cursor["oid"] }
-      logger.info("Storage ${config.id} / ${config.databaseNumber} initialized, version-seq-oid=$versionSequenceOid, commit")
-      if (!attachExisting) conn.commit()
+      _gzipExtension = cursor.column("gzip_oid") is Int
+      val v: String = cursor["version"]
+      val start = v.indexOf(' ') + 1
+      val end = v.indexOf(' ', start)
+      _postgresVersion = NakshaVersion.of(v.substring(start, end))
+
+      admin_schema_oid = cursor.column("admin_oid") as Int?
+      has_naksha_version = cursor.column("has_naksha_version") as Boolean?
+      has_naksha_storage_id = cursor.column("has_naksha_storage_id") as Boolean?
+      has_naksha_storage_number = cursor.column("has_naksha_storage_number") as Boolean?
     }
+
+    if (admin_schema_oid == null) {
+      if (!doCreate) throw forbidden("Creation of 'naksha~admin' needed, but forbidden by config")
+      if (!install) return false
+      logger.info("Install Naksha admin-map in version $psql_version for storage $id / $number")
+      _schemaOid = upsert_naksha_admin(conn, this.id, psql_version, null, null)
+      return true
+    }
+    _schemaOid = admin_schema_oid
+    if (has_naksha_version != true) {
+      throw illegalState("The storage '$id' does have a schema 'naksha~admin', but it is broken, because function `naksha_version` is missing")
+    }
+    if (has_naksha_storage_id != true) {
+      throw illegalState("The storage '$id' does have a schema 'naksha~admin', but it is broken, because function `naksha_storage_id` is missing")
+    }
+    if (has_naksha_storage_number != true) {
+      throw illegalState("The storage '$id' does have a schema 'naksha~admin', but it is broken, because function `naksha_storage_number` is missing")
+    }
+    val installed_version: NakshaVersion
+    val installed_storage_id: String
+    val installed_storage_number: Long
+    conn.execute("SELECT $ADMIN_CATALOG_QUOTED.naksha_version() AS v, $ADMIN_CATALOG_QUOTED.naksha_storage_id() AS id, $ADMIN_CATALOG_QUOTED.naksha_storage_number() AS n").fetch().use { cursor ->
+      try {
+        val v: Long = cursor["v"]
+        installed_version = NakshaVersion(v)
+        installed_storage_id = cursor["id"]
+        installed_storage_number = cursor["n"]
+      } catch (pe: Exception) {
+        throw illegalState(
+          "The storage '$id' does have an admin schema, but it is broken, because reading storage version, id, and/or number failed",
+          pe
+        )
+      }
+    }
+    if (installed_storage_id != id) {
+      throw NakshaException(
+        STORAGE_ID_MISMATCH,
+        "Failed to initialize storage, the 'naksha_storage_id()' is '$installed_storage_id', but was expected to be '$id'"
+      )
+    }
+    if (installed_storage_number != number) {
+      throw NakshaException(
+        STORAGE_ID_MISMATCH,
+        "Failed to initialize the storage, the 'naksha_storage_number()' is '$installed_storage_number', but was expected to be '$number'"
+      )
+    }
+    if (installed_version == psql_version) {
+      logger.info("The admin-map of '$id' is up-to-date: $psql_version")
+      return true
+    }
+    if (attachExisting) throw illegalState("Installed admin version does not match the attached runtime")
+    logger.info("The admin-map of '$id' is in version $installed_version, this library uses version $psql_version")
+    if (doOverride) {
+      if (!install) return false
+      logger.warn("Forcefully upgrade storage '$id' admin-map (current=$installed_version, new=$psql_version)")
+      upsert_naksha_admin(conn, this.id, psql_version, admin_schema_oid, installed_version)
+      return true
+    }
+    if (installed_version > psql_version) {
+      throw illegalState("The storage '$id' is in a newer version ($installed_version) than this library ($psql_version), access denied (otherwise we risk damaging the storage)")
+    }
+    if (installed_version < minAdminVersion && !doUpgrade) {
+      throw illegalState("The storage '$id' uses admin version $installed_version, but this library requires at least $minAdminVersion; enable upgrade before accessing the storage")
+    }
+    if (doUpgrade) {
+      if (!install) return false
+      logger.info("Upgrade Naksha admin-map from $installed_version to $psql_version for storage $id")
+      upsert_naksha_admin(conn, this.id, psql_version, admin_schema_oid, installed_version)
+    } else {
+      logger.info("In storage '$id' admin-map is in version $installed_version, this library is version $psql_version, but we should not upgrade the storage, and are okay working with the older version")
+    }
+    return true
   }
 
   // ——————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————
