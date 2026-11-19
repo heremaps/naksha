@@ -1,3 +1,6 @@
+## Naksha_2.2.30
+- Updated the test HTTP client to use Vert.x.
+
 ## Naksha_2.2.29
 - Fixed SQL injection via property names in property search by whitelisting allowed characters.
 
