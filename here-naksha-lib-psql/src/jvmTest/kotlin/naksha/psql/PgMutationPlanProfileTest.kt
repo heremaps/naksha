@@ -2,6 +2,7 @@ package naksha.psql
 
 import java.nio.file.Files
 import java.nio.file.Path
+import com.fasterxml.jackson.databind.ObjectMapper
 import naksha.base.Action
 import naksha.base.Id
 import naksha.base.NakshaException
@@ -96,25 +97,52 @@ class PgMutationPlanProfileTest {
             val sql = assertNotNull(capturedSql)
             val types = assertNotNull(capturedTypes)
             val arguments = assertNotNull(capturedArguments)
-            for (sample in 0 until 2) {
-              val started = System.nanoTime()
-              var json: String? = null
-              assertTrue(!conn.tryBatch {
-                conn.prepare("EXPLAIN (ANALYZE, BUFFERS, WAL, SETTINGS, FORMAT JSON) $sql", types).use { plan ->
-                  plan.executeMutation(arguments).use { cursor ->
-                    assertTrue(cursor.next())
-                    json = cursor.column("QUERY PLAN") as String
-                  }
+            val baseline = baselineShape(sql)
+            for ((shape, statement) in listOf("keyed" to sql, "baseline" to baseline)) {
+              for (allowSortAndSeqscan in listOf(false, true)) {
+                val variant = "${shape}_${if (allowSortAndSeqscan) "sort_seq_on" else "current"}"
+                for (sample in 0 until 2) {
+                  val started = System.nanoTime()
+                  var json: String? = null
+                  assertTrue(!conn.tryBatch {
+                    if (allowSortAndSeqscan) conn.execute("SET LOCAL enable_sort = on; SET LOCAL enable_seqscan = on").close()
+                    conn.prepare("EXPLAIN (ANALYZE, BUFFERS, WAL, SETTINGS, FORMAT JSON) $statement", types).use { plan ->
+                      plan.executeMutation(arguments).use { cursor ->
+                        assertTrue(cursor.next())
+                        json = cursor.column("QUERY PLAN") as String
+                      }
+                    }
+                    false
+                  })
+                  val result = assertNotNull(json)
+                  val plan = ObjectMapper().readTree(result)[0]["Plan"]
+                  var changedRows: Int? = null
+                  for (node in plan["Plans"]) if (node["Subplan Name"]?.asText() == "CTE changed") changedRows = node["Actual Rows"].asInt()
+                  assertEquals(size, changedRows, "Every plan variant must mutate all requested existing HEADs")
+                  Files.writeString(directory.resolve("${operation.lowercase()}_${population}_${size}_${variant}_$sample.json"), result)
+                  println("MUTATION_PLAN_PROFILE operation=$operation population=$population rows=$size variant=$variant sample=$sample total_ms=${(System.nanoTime() - started) / 1e6} rolled_back=true")
                 }
-                false
-              })
-              Files.writeString(directory.resolve("${operation.lowercase()}_${population}_${size}_$sample.json"), assertNotNull(json))
-              println("MUTATION_PLAN_PROFILE operation=$operation population=$population rows=$size sample=$sample total_ms=${(System.nanoTime() - started) / 1e6} rolled_back=true")
+              }
             }
           }
         }
       }
     }
+  }
+
+  /** Reconstructs only the approved checkpoint's HEAD/ordinal join shape for a same-data diagnostic comparison, never for production execution. @since 3.0 */
+  private fun baselineShape(sql: String): String {
+    val order = assertNotNull(Regex("SELECT c\\.(\"[^\"]+\")::int AS ").find(sql)).groupValues[1]
+    var keyedLine: String? = null
+    for (line in sql.split('\n')) if (line.startsWith(" SELECT h.* FROM ")) keyedLine = line
+    val keyed = assertNotNull(keyedLine)
+    assertTrue(keyed.contains(" WHERE h.fn = ANY("))
+    val original = keyed.substringBefore(" WHERE h.fn = ANY(")
+      .replace(" SELECT h.* FROM ", " SELECT h.*, i.$order FROM ") + " JOIN input i ON h.fn = i.fn"
+    return sql.replace(keyed, original)
+      .replace("l.fn = i.fn", "l.$order = i.$order")
+      .replace("l.fn = e.fn", "l.$order = e.$order")
+      .replace("l.fn = c.fn", "l.$order = c.$order")
   }
 
   private fun write(storage: PgStorage, request: WriteRequest) {

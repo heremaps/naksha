@@ -179,6 +179,39 @@ class PgBatchMutationTest : PgTestBase(collection = null) {
   }
 
   @Test
+  fun headKeyFilterUsesTheActualFeatureOrdinalParameterPosition() {
+    setup("batch_key_parameter")
+    insertFeatures(NakshaFeature("0"), NakshaFeature("keyed_hashed"))
+    storage.newWriteSession(newSessionOptions()).use { raw ->
+      val session = raw as PgSession
+      session.useTransaction()
+      session.useConnNonNull(false) { conn ->
+        val p = physical(conn)
+        val inputs = listOf(NewTuple(encode(session, "0")), NewTuple(encode(session, "keyed_hashed")))
+        val columns = p.columns.reversedArray()
+        val observed = Mockito.spy(conn)
+        Mockito.doAnswer { call ->
+          val sql = call.getArgument<String>(0)
+          if (sql.contains("FOR UPDATE OF h")) {
+            assertTrue(sql.contains("WHERE h.fn = ANY(${'$'}${columns.size}::bigint[])"))
+            assertFalse(sql.contains("JOIN input i ON h.fn = i.fn"))
+          }
+          conn.prepare(sql, call.getArgument(1))
+        }.`when`(observed).prepare(Mockito.anyString(), Mockito.nullable(Array<String>::class.java))
+        val saved = storage.database.rows_upsert(observed, p.catalogId, p.id, inputs, true, columns)
+        assertEquals(inputs.size, saved.size)
+        for (i in inputs.indices) {
+          assertEquals(inputs[i].tuple.id.text, saved[i].tuple.id.text)
+          assertEquals(Action.UPDATE, saved[i].tuple.action)
+          assertNotNull(saved[i].previousTupleNumber)
+        }
+        assertEquals(2L, count(conn, p.qualifiedName, "nv = ${Version.HEAD.number}"))
+        assertEquals(2L, count(conn, p.qualifiedName, "nv <> ${Version.HEAD.number}"))
+      }
+    }
+  }
+
+  @Test
   fun duplicateCreateRetainsErrorPriorityOverCandidateConstraints() {
     setup("batch_constraint_priority")
     val existing = insertFeatures(NakshaFeature("existing").apply { properties.setRaw("name", "valid") })

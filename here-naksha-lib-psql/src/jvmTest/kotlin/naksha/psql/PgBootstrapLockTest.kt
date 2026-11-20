@@ -168,7 +168,8 @@ class PgBootstrapLockTest {
 
   @Test
   fun newerVersionAfterWaitingIsNotDowngraded() {
-    val fixture = Fixture(State(version = previousVersion), State(version = NakshaVersion.of("3.0.0-beta.55")))
+    val newerVersion = NakshaVersion(adminVersion.major, adminVersion.minor, adminVersion.revision + 1)
+    val fixture = Fixture(State(version = previousVersion), State(version = newerVersion))
     assertFailsWith<NakshaException> { fixture.database.init(doUpgrade = true) }
     fixture.assertRechecked()
     assertEquals(0, fixture.installs)

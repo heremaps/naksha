@@ -54,6 +54,7 @@ internal class PgBatchMutation(
   private val rows = PgRows().addColumns(columns)
     .withDatabaseNumber(databaseNumber).withCatalogNumber(schema.intValue).withCollectionNumber(table.intValue)
   private val names = columns.joinToString(", ") { it.ident }
+  private val featureOrdinalParameter = "${'$'}${(rows.getColumn("fn") ?: throw illegalState("Missing feature ordinal column")).index + 1}"
   private val cc = columns.firstOrNull { it.name == StandardMembers.ChangeCount.name }?.ident
   private val used = columns.map { it.columnName }.toMutableSet()
   private fun field(name: String): String {
@@ -262,11 +263,11 @@ internal class PgBatchMutation(
 WITH input AS (
  ${inputSql()}
 ), locked AS MATERIALIZED (
- SELECT h.*, i.$order FROM $headTable h JOIN input i ON h.fn = i.fn
+ SELECT h.* FROM $headTable h WHERE h.fn = ANY($featureOrdinalParameter::bigint[])
  ORDER BY h.fn FOR UPDATE OF h
 ), classified AS MATERIALIZED (
  SELECT i.*, $oldVersion AS $old, $finalVersion AS $ver, $conflictCode AS $err, $changeNeeded AS $change
- FROM input i LEFT JOIN locked l ON l.$order = i.$order
+ FROM input i LEFT JOIN locked l ON l.fn = i.fn
 ), first_error AS (
  SELECT min($order) FILTER (WHERE $err <> 0) AS $stop FROM classified
 ), eligible AS (
@@ -274,7 +275,7 @@ WITH input AS (
  WHERE c.$err = 0 AND (b.$stop IS NULL OR c.$order < b.$stop)
 ), changed AS (
  UPDATE $root h SET ($names) = ($replacement)
- FROM eligible e JOIN locked l ON l.$order = e.$order
+ FROM eligible e JOIN locked l ON l.fn = e.fn
  WHERE h.fn = e.fn AND h.nv = $head AND e.$change AND e.$op <> 4
  RETURNING h.*
 ), removed AS (
@@ -283,7 +284,7 @@ WITH input AS (
  RETURNING h.fn
 ), archived AS (
  INSERT INTO $root ($names)
- SELECT $archival FROM eligible e JOIN locked l ON l.$order = e.$order
+ SELECT $archival FROM eligible e JOIN locked l ON l.fn = e.fn
  JOIN (SELECT fn FROM changed UNION ALL SELECT fn FROM removed) affected ON affected.fn = e.fn
  WHERE ${if (history) "TRUE" else "FALSE"}
  RETURNING fn
@@ -297,7 +298,7 @@ SELECT c.$order::int AS ${q(ordinal)}, c.fn::text AS ${q(rawFn)}, c.$old::text A
  (u.fn IS NOT NULL OR r.fn IS NOT NULL OR a.fn IS NOT NULL) AS ${q(applied)},
  coalesce(u.version, a.version, c.$old)::text AS ${q(returnedVersion)}, $newCc AS ${q(returnedCc)}, $outputColumns
 FROM classified c CROSS JOIN first_error b
-LEFT JOIN locked l ON l.$order = c.$order
+LEFT JOIN locked l ON l.fn = c.fn
 LEFT JOIN changed u ON u.fn = c.fn LEFT JOIN removed r ON r.fn = c.fn LEFT JOIN inserted a ON a.fn = c.fn
 ORDER BY c.$order
 """.trimIndent()

@@ -136,6 +136,8 @@ For the local four-operation end-to-end benchmark, run `naksha.psql.PgMutationTh
 
 For exact mutation-plan diagnostics, run `naksha.psql.PgMutationPlanProfileTest` separately on another **fresh disposable database**, with matching `NAKSHA_TEST_THROUGHPUT_DB_URL`/`NAKSHA_TEST_PSQL_DB_URL` and `NAKSHA_TEST_MUTATION_PROFILE_DIR` pointing to a private output directory. It commits its own catalog/collection and 8,000/32,000-row seed fixtures, captures generated SQL/typed arguments, then rolls back each EXPLAIN ANALYZE mutation attempt. Rollback preserves logical seed state, not pristine physical/WAL/cache state. Do not use `PgTestBase` to attach to retained fixtures: its initialization resets the shared test catalog. Inspect captured SETTINGS and inclusive node times when interpreting the plans; this fixture does not benchmark the full request or commit path.
 
+The HEAD-discovery follow-up adds a four-way same-data matrix: keyed versus test-only reconstructed baseline HEAD/ordinal-join SQL, each with current planner settings versus transaction-local sorts/sequential scans enabled. Every plan asserts the requested mutation row count and is rolled back with its local settings. This is a SQL-shape comparison, not a separately compiled baseline binary or proof of full semantic equivalence; use the mutation regression suites for history, errors, identity, no-op and rollback semantics. The successful matrix and repeated throughput results, including the lower 1,000-row INSERT measurement and remaining limitations, are recorded in the batch checkpoint.
+
 For example, to run the PLV8 suite (same local client variables as above):
 
 ```bash
