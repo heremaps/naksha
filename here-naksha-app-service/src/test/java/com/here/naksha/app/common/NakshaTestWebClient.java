@@ -19,19 +19,33 @@
 package com.here.naksha.app.common;
 
 import static com.here.naksha.app.common.TestUtil.HDR_STREAM_ID;
-import static java.net.http.HttpClient.Version.HTTP_1_1;
 import static org.apache.hc.core5.http.HttpHeaders.AUTHORIZATION;
 
+import io.vertx.core.Vertx;
+import io.vertx.core.buffer.Buffer;
+import io.vertx.core.http.HttpClient;
+import io.vertx.core.http.HttpClientOptions;
+import io.vertx.core.http.HttpClientResponse;
+import io.vertx.core.http.HttpMethod;
+import io.vertx.core.http.PoolOptions;
+import io.vertx.core.http.RequestOptions;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.net.http.HttpClient;
 import java.net.http.HttpClient.Version;
+import java.net.http.HttpHeaders;
 import java.net.http.HttpRequest;
-import java.net.http.HttpRequest.BodyPublishers;
-import java.net.http.HttpRequest.Builder;
 import java.net.http.HttpResponse;
+import java.net.http.HttpTimeoutException;
 import java.time.Duration;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import javax.net.ssl.SSLSession;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -47,17 +61,29 @@ public class NakshaTestWebClient {
 
   private static final long DEFAULT_NON_DEBUG_SOCKET_TIMEOUT_SEC = 5;
 
-  private final String NAKSHA_HTTP_URI;
+  private static final int MAX_CONNECTIONS = 50;
+
+  private static Vertx vertx;
+
   private final Duration SOCKET_TIMEOUT;
+  private final String host;
+  private final int port;
+  private final String basePath;
   private final HttpClient httpClient;
 
   public NakshaTestWebClient(final @NotNull String nhUrl, final long connectTimeoutSec, final long socketTimeoutSec) {
-    NAKSHA_HTTP_URI = nhUrl;
     SOCKET_TIMEOUT = Duration.ofSeconds(socketTimeoutSec);
-    httpClient = HttpClient.newBuilder()
-        .version(HTTP_1_1)
-        .connectTimeout(Duration.ofSeconds(connectTimeoutSec))
-        .build();
+    final URI baseUri = URI.create(nhUrl);
+    final boolean ssl = "https".equalsIgnoreCase(baseUri.getScheme());
+    host = baseUri.getHost();
+    port = baseUri.getPort() != -1 ? baseUri.getPort() : (ssl ? 443 : 80);
+    basePath = (baseUri.getRawPath() == null || baseUri.getRawPath().isEmpty()) ? "/" : baseUri.getRawPath();
+    final HttpClientOptions clientOptions = new HttpClientOptions()
+        .setSsl(ssl)
+        .setConnectTimeout((int) TimeUnit.SECONDS.toMillis(connectTimeoutSec))
+        .setMaxHeaderSize(32 * 1024);
+    final PoolOptions poolOptions = new PoolOptions().setHttp1MaxSize(MAX_CONNECTIONS);
+    httpClient = sharedVertx().createHttpClient(clientOptions, poolOptions);
   }
 
   public NakshaTestWebClient(long socketTimeoutSec) {
@@ -70,14 +96,9 @@ public class NakshaTestWebClient {
 
   public HttpResponse<String> get(String subPath, String streamId, Duration timeout, @Nullable String jwt)
           throws URISyntaxException, IOException, InterruptedException {
-    Builder requestBuilder = requestBuilder(timeout)
-            .uri(nakshaPath(subPath))
-            .GET()
-            .header(HDR_STREAM_ID, streamId);
-    if (jwt != null) {
-      requestBuilder.header(AUTHORIZATION,jwt);
-    }
-    return sendOnce(requestBuilder.build());
+    final RequestOptions request = request(HttpMethod.GET, subPath).addHeader(HDR_STREAM_ID, streamId);
+    addJwt(request, jwt);
+    return sendOnce(request, null, timeout);
   }
 
   public HttpResponse<String> get(String subPath, String streamId)
@@ -92,15 +113,11 @@ public class NakshaTestWebClient {
 
   public HttpResponse<String> post(String subPath, String jsonBody, String streamId, Duration timeout, @Nullable String jwt)
           throws URISyntaxException, IOException, InterruptedException {
-    Builder requestBuilder = requestBuilder(timeout)
-            .uri(nakshaPath(subPath))
-            .POST(BodyPublishers.ofString(jsonBody))
-            .header("Content-Type", "application/json")
-            .header(HDR_STREAM_ID, streamId);
-    if (jwt != null) {
-      requestBuilder.header(AUTHORIZATION,jwt);
-    }
-    return sendOnce(requestBuilder.build());
+    final RequestOptions request = request(HttpMethod.POST, subPath)
+        .addHeader("Content-Type", "application/json")
+        .addHeader(HDR_STREAM_ID, streamId);
+    addJwt(request, jwt);
+    return sendOnce(request, jsonBody, timeout);
   }
 
   public HttpResponse<String> post(String subPath, String jsonBody, String streamId)
@@ -125,38 +142,28 @@ public class NakshaTestWebClient {
 
   public HttpResponse<String> put(String subPath, String jsonBody, String streamId, @Nullable String jwt)
       throws URISyntaxException, IOException, InterruptedException {
-    Builder requestBuilder = requestBuilder(SOCKET_TIMEOUT)
-        .uri(nakshaPath(subPath))
-        .PUT(BodyPublishers.ofString(jsonBody))
-        .header("Content-Type", "application/json")
-        .header(HDR_STREAM_ID, streamId);
-    if (jwt != null) {
-      requestBuilder.header(AUTHORIZATION, jwt);
-    }
-    return sendOnce(requestBuilder.build());
+    final RequestOptions request = request(HttpMethod.PUT, subPath)
+        .addHeader("Content-Type", "application/json")
+        .addHeader(HDR_STREAM_ID, streamId);
+    addJwt(request, jwt);
+    return sendOnce(request, jsonBody, SOCKET_TIMEOUT);
   }
 
   public HttpResponse<String> options(String subPath, String originHeader, String requestMethod, String reqHeaderKeys)
           throws URISyntaxException, IOException, InterruptedException {
-    HttpRequest optionsRequest = requestBuilder(SOCKET_TIMEOUT)
-            .uri(nakshaPath(subPath))
-            .method("OPTIONS", HttpRequest.BodyPublishers.noBody())
-            .header("Origin", originHeader)
-            .header("Access-Control-Request-Method", requestMethod)
-            .header("Access-Control-Request-Headers", reqHeaderKeys)
-            .build();
-    return sendOnce(optionsRequest);
+    final RequestOptions request = request(HttpMethod.OPTIONS, subPath)
+        .addHeader("Origin", originHeader)
+        .addHeader("Access-Control-Request-Method", requestMethod)
+        .addHeader("Access-Control-Request-Headers", reqHeaderKeys);
+    return sendOnce(request, null, SOCKET_TIMEOUT);
   }
 
   public HttpResponse<String> patch(String subPath, String jsonBody, String streamId)
           throws URISyntaxException, IOException, InterruptedException {
-    HttpRequest patchRequest = requestBuilder(SOCKET_TIMEOUT)
-            .uri(nakshaPath(subPath))
-            .method("PATCH",BodyPublishers.ofString(jsonBody))
-            .header("Content-Type", "application/json")
-            .header(HDR_STREAM_ID, streamId)
-            .build();
-    return sendOnce(patchRequest);
+    final RequestOptions request = request(HttpMethod.PATCH, subPath)
+        .addHeader("Content-Type", "application/json")
+        .addHeader(HDR_STREAM_ID, streamId);
+    return sendOnce(request, jsonBody, SOCKET_TIMEOUT);
   }
 
   public HttpResponse<String> delete(String subPath, String streamId)
@@ -166,28 +173,66 @@ public class NakshaTestWebClient {
 
   public HttpResponse<String> delete(String subPath, String streamId, @Nullable String jwt)
       throws URISyntaxException, IOException, InterruptedException {
-    Builder requestBuilder = requestBuilder(SOCKET_TIMEOUT)
-        .uri(nakshaPath(subPath))
-        .DELETE()
-        .header("Content-Type", "application/json")
-        .header(HDR_STREAM_ID, streamId);
+    final RequestOptions request = request(HttpMethod.DELETE, subPath)
+        .addHeader("Content-Type", "application/json")
+        .addHeader(HDR_STREAM_ID, streamId);
+    addJwt(request, jwt);
+    return sendOnce(request, null, SOCKET_TIMEOUT);
+  }
+
+  /**
+   * Creates request options for the given sub-path. The path is passed to Vert.x as a raw string, so it is sent
+   * without any encoding (e.g. {@code >=} stays {@code >=} and is not turned into {@code %3E=}).
+   */
+  private RequestOptions request(HttpMethod method, String subPath) {
+    return new RequestOptions()
+        .setMethod(method)
+        .setHost(host)
+        .setPort(port)
+        .setURI(basePath + subPath);
+  }
+
+  private static void addJwt(RequestOptions request, @Nullable String jwt) {
     if (jwt != null) {
-      requestBuilder.header(AUTHORIZATION, jwt);
+      request.addHeader(AUTHORIZATION, jwt);
     }
-    return sendOnce(requestBuilder.build());
   }
 
-  private HttpResponse<String> sendOnce(HttpRequest request) throws IOException, InterruptedException {
-    logger.info("Sending {} request to {}", request.method(), request.uri());
-    return httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+  private HttpResponse<String> sendOnce(RequestOptions request, @Nullable String body, Duration timeout)
+      throws IOException, InterruptedException {
+    logger.info("Sending {} request to {}", request.getMethod(), request.getURI());
+    request.setIdleTimeout(timeout.toMillis());
+    try {
+      return httpClient
+          .request(request)
+          .compose(req -> body == null ? req.send() : req.send(Buffer.buffer(body)))
+          .compose(resp -> resp.body().map(respBody -> toHttpResponse(resp, respBody)))
+          .toCompletionStage()
+          .toCompletableFuture()
+          // the idle timeout above should fire first, this is only a safety net
+          .get(timeout.toMillis() + 1000, TimeUnit.MILLISECONDS);
+    } catch (TimeoutException e) {
+      throw new HttpTimeoutException("Request timed out: " + request.getMethod() + " " + request.getURI());
+    } catch (ExecutionException e) {
+      throw new IOException("Request failed: " + request.getMethod() + " " + request.getURI(), e.getCause());
+    }
   }
 
-  private HttpRequest.Builder requestBuilder(Duration soTimeout) {
-    return HttpRequest.newBuilder().version(Version.HTTP_1_1).timeout(soTimeout);
+  private static HttpResponse<String> toHttpResponse(HttpClientResponse resp, Buffer body) {
+    final Map<String, List<String>> headers = new LinkedHashMap<>();
+    for (String name : resp.headers().names()) {
+      headers.put(name, resp.headers().getAll(name));
+    }
+    return new StringResponse(resp.statusCode(), HttpHeaders.of(headers, (name, value) -> true), body.toString());
   }
 
-  private URI nakshaPath(String subPath) throws URISyntaxException {
-    return new URI(NAKSHA_HTTP_URI + subPath);
+  private static synchronized Vertx sharedVertx() {
+    if (vertx == null) {
+      final Vertx created = Vertx.vertx();
+      Runtime.getRuntime().addShutdownHook(new Thread(created::close, "naksha-test-web-client-shutdown"));
+      vertx = created;
+    }
+    return vertx;
   }
 
   private static long chooseSocketTimeout(){
@@ -195,5 +240,37 @@ public class NakshaTestWebClient {
       return DEBUG_SOCKET_TIMEOUT_SEC;
     }
     return DEFAULT_NON_DEBUG_SOCKET_TIMEOUT_SEC;
+  }
+
+  /**
+   * Minimal {@link HttpResponse} holding what tests use: status code, headers and body. The request and URI are not
+   * available, because the raw request path might not be a valid {@link URI}.
+   */
+  private record StringResponse(int statusCode, HttpHeaders headers, String body) implements HttpResponse<String> {
+
+    @Override
+    public HttpRequest request() {
+      throw new UnsupportedOperationException("request() is not available in NakshaTestWebClient responses");
+    }
+
+    @Override
+    public Optional<HttpResponse<String>> previousResponse() {
+      return Optional.empty();
+    }
+
+    @Override
+    public Optional<SSLSession> sslSession() {
+      return Optional.empty();
+    }
+
+    @Override
+    public URI uri() {
+      throw new UnsupportedOperationException("uri() is not available in NakshaTestWebClient responses");
+    }
+
+    @Override
+    public Version version() {
+      return Version.HTTP_1_1;
+    }
   }
 }

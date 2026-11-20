@@ -924,4 +924,27 @@ class ReadFeaturesByBBoxTest extends ApiTest {
             .hasJsonBody(expectedBodyPart, "Get Feature response body doesn't match");
   }
 
+  @Test
+  void tc0736_testBBox2WithSearchOnNumberRawGTE() throws Exception {
+    // Test API : GET /hub/spaces/{spaceId}/bbox
+    // Validate that a raw (not url-encoded) ">=" operator, as sent e.g. by curl, is interpreted as "greater than or equal to"
+    // and returns the same features as the "=gte=" operator in tc0720
+
+    // Given: Features By BBox request (against configured space)
+    final String bboxQueryParam = "west=8.6476&south=50.1175&east=8.6729&north=50.1248";
+    final String propQueryParam = "p.length>=10.5";
+    final String expectedBodyPart =
+            loadFileOrFail("ReadFeatures/ByBBox/TC0720_BBox2_PropNumGTE/feature_response_part.json");
+    String streamId = UUID.randomUUID().toString();
+
+    // When: Get Features By BBox request is submitted to NakshaHub
+    HttpResponse<String> response = nakshaClient
+            .get("hub/spaces/" + SPACE_ID + "/bbox?" + bboxQueryParam + "&" + propQueryParam, streamId);
+
+    // Then: Perform assertions
+    assertThat(response)
+            .hasStatus(200)
+            .hasStreamIdHeader(streamId)
+            .hasJsonBody(expectedBodyPart, "Get Feature response body doesn't match");
+  }
 }
