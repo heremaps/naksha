@@ -10,6 +10,8 @@ Verification: all forced common-metadata, JVM production/test and JS production/
 
 ## Goal and working rules
 
+Current performance follow-up: [the compact batched-mutation plan](NAKSHA-33-batched-mutations.md) records the UNNEST/CTE pipeline and implementation order. The agreed connection defaults are 512MB `work_mem` for writes and 128MB for reads; true multirow mutation SQL remains planned, not completed.
+
 Make `PgDatabase` the entry point for physical PostgreSQL operations used by
 `PgWriter` and its operation writers. Implement the single-root/pg_partman design
 in [partman.md](partman.md), with the custom-maintainer decision below superseding
