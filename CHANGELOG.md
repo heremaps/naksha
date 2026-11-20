@@ -1,3 +1,6 @@
+## Naksha_2.2.31
+Added `UnprocessableEntity` error-code mapping to HTTP 422.
+
 ## Naksha_2.2.30
 - Updated the test HTTP client to use Vert.x.
 

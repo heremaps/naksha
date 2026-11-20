@@ -12,7 +12,7 @@ servers:
 info:
   title: "Naksha Hub-API"
   description: "Naksha Hub-API is a REST API to provide simple access to geo data."
-  version: "2.2.30"
+  version: "2.2.31"
 
 security:
   - AccessToken: [ ]
@@ -90,6 +90,8 @@ paths:
           $ref: '#/components/responses/ErrorResponse403'
         '409':
           $ref: '#/components/responses/ErrorResponse409'
+        '422':
+          $ref: '#/components/responses/ErrorResponse422'
         '429':
           $ref: '#/components/responses/ErrorResponse429'
         '500':
@@ -152,6 +154,8 @@ paths:
           $ref: '#/components/responses/ErrorResponse404'
         '409':
           $ref: '#/components/responses/ErrorResponse409'
+        '422':
+          $ref: '#/components/responses/ErrorResponse422'
         '429':
           $ref: '#/components/responses/ErrorResponse429'
         '500':
@@ -235,6 +239,8 @@ paths:
           $ref: '#/components/responses/ErrorResponse403'
         '409':
           $ref: '#/components/responses/ErrorResponse409'
+        '422':
+          $ref: '#/components/responses/ErrorResponse422'
         '429':
           $ref: '#/components/responses/ErrorResponse429'
         '500':
@@ -292,6 +298,8 @@ paths:
           $ref: '#/components/responses/ErrorResponse404'
         '409':
           $ref: '#/components/responses/ErrorResponse409'
+        '422':
+          $ref: '#/components/responses/ErrorResponse422'
         '429':
           $ref: '#/components/responses/ErrorResponse429'
         '500':
@@ -375,6 +383,8 @@ paths:
           $ref: '#/components/responses/ErrorResponse403'
         '409':
           $ref: '#/components/responses/ErrorResponse409'
+        '422':
+          $ref: '#/components/responses/ErrorResponse422'
         '429':
           $ref: '#/components/responses/ErrorResponse429'
         '500':
@@ -432,6 +442,8 @@ paths:
           $ref: '#/components/responses/ErrorResponse404'
         '409':
           $ref: '#/components/responses/ErrorResponse409'
+        '422':
+          $ref: '#/components/responses/ErrorResponse422'
         '429':
           $ref: '#/components/responses/ErrorResponse429'
         '500':
@@ -542,6 +554,8 @@ paths:
           $ref: '#/components/responses/ErrorResponse404'
         '409':
           $ref: '#/components/responses/ErrorResponse409'
+        '422':
+          $ref: '#/components/responses/ErrorResponse422'
         '429':
           $ref: '#/components/responses/ErrorResponse429'
         '500':
@@ -584,6 +598,8 @@ paths:
           $ref: '#/components/responses/ErrorResponse404'
         '409':
           $ref: '#/components/responses/ErrorResponse409'
+        '422':
+          $ref: '#/components/responses/ErrorResponse422'
         '429':
           $ref: '#/components/responses/ErrorResponse429'
         '500':
@@ -680,6 +696,8 @@ paths:
           $ref: '#/components/responses/ErrorResponse404'
         '409':
           $ref: '#/components/responses/ErrorResponse409'
+        '422':
+          $ref: '#/components/responses/ErrorResponse422'
         '429':
           $ref: '#/components/responses/ErrorResponse429'
         '500':
@@ -718,6 +736,8 @@ paths:
           $ref: '#/components/responses/ErrorResponse404'
         '409':
           $ref: '#/components/responses/ErrorResponse409'
+        '422':
+          $ref: '#/components/responses/ErrorResponse422'
         '429':
           $ref: '#/components/responses/ErrorResponse429'
         '500':
@@ -911,6 +931,8 @@ paths:
           $ref: '#/components/responses/ErrorResponse403'
         '404':
           $ref: '#/components/responses/ErrorResponse404'
+        '422':
+          $ref: '#/components/responses/ErrorResponse422'
         '429':
           $ref: '#/components/responses/ErrorResponse429'
         '500':
@@ -1536,6 +1558,12 @@ components:
             error: "Conflict"
             errorMessage: "Request conflicts with present state of resource on server side."
             streamId: "d5b2edaa-2c6b-44e1-b794-feea6fa0e15b"
+    ErrorResponse422:
+      description: The API request is well-formed, but its content cannot be processed due to semantic errors.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
     ErrorResponse429:
       description: Indicates request limit breach.
       content:

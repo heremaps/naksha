@@ -524,13 +524,15 @@ public final class NakshaHttpVerticle extends AbstractNakshaHubVerticle {
     }
   }
 
-  private @NotNull HttpResponseStatus mapErrorToHttpStatus(final @NotNull XyzError xyzError) {
+  static @NotNull HttpResponseStatus mapErrorToHttpStatus(final @NotNull XyzError xyzError) {
     if (xyzError.equals(XyzError.EXCEPTION)) {
       return HttpResponseStatus.INTERNAL_SERVER_ERROR;
     } else if (xyzError.equals(XyzError.NOT_IMPLEMENTED)) {
       return HttpResponseStatus.NOT_IMPLEMENTED;
     } else if (xyzError.equals(ILLEGAL_ARGUMENT)) {
       return HttpResponseStatus.BAD_REQUEST;
+    } else if (xyzError.equals(XyzError.UNPROCESSABLE_ENTITY)) {
+      return HttpResponseStatus.UNPROCESSABLE_ENTITY;
     } else if (xyzError.equals(XyzError.PAYLOAD_TOO_LARGE)) {
       return HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE;
     } else if (xyzError.equals(XyzError.BAD_GATEWAY)) {
