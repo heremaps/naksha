@@ -34,7 +34,10 @@ actual class PgPlan private actual constructor(): AutoCloseable {
     } catch (throwable: Throwable) {
       throw PgExceptionMapper.map(throwable)
     }
+
   }
+
+  internal actual fun executeMutation(args: Array<Any?>?): PgCursor = execute(args)
 
   actual fun addBatch(args: Array<Any?>?) {
     check(!closed)

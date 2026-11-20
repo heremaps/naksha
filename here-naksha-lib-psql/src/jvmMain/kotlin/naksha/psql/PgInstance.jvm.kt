@@ -161,7 +161,7 @@ actual class PgInstance private actual constructor(private val config: PgInstanc
             }
             // We need to ensure that, when reusing session, we fall back to defaults for most commonly modified session properties!
             val query = """SET SESSION $search_path TO "naksha~admin", hint_plan, public, topology;
-SET SESSION $work_mem = '128MB';
+SET SESSION $work_mem = '${if (readOnly) "128MB" else "512MB"}';
 SET SESSION $idle_session_timeout = '600s';
 SET SESSION $statement_timeout = '${toSeconds(options.stmtTimeout)}s';
 SET SESSION $lock_timeout = '${toSeconds(options.lockTimeout, 0)}s';

@@ -11,15 +11,12 @@ import naksha.base.NakshaError.NakshaErrorCompanion.STORAGE_ID_MISMATCH
 import naksha.base.Platform.PlatformCompanion.logger
 import naksha.base.fn.Fn0
 import naksha.base.fn.Fx0
-import naksha.jbon.HeapBook
 import naksha.model.Naksha
 import naksha.model.NakshaVersion
 import naksha.model.NewTuple
 import naksha.model.Tuple
 import naksha.model.objects.NakshaAdmin
 import naksha.model.objects.NakshaDatabase
-import naksha.model.objects.StandardMembers.StandardMembers_C.ChangeCount
-import naksha.model.objects.StandardMembers.StandardMembers_C.TN
 import naksha.psql.PgUtil.PgUtilCompanion.quoteIdent
 import kotlin.js.JsExport
 import kotlin.time.Instant
@@ -776,13 +773,6 @@ SELECT basics.*, procs.* FROM basics, procs;
       val databaseNumber = id.number
       val catalogNumber = schema.intValue
       val collectionNumber = table.intValue
-      // A duplicate HEAD on a metadata insert must surface as the specific "exists" error, not a
-      // generic feature conflict: catalogs live in `admin.catalogs`, collections in `<catalog>.collections`.
-      val conflictCode = when {
-        catalogNumber == Id.ADMIN_CATALOG_ID.intValue && collectionNumber == Id.CATALOGS_COL_ID.intValue -> NakshaError.CATALOG_EXISTS
-        collectionNumber == Id.COLLECTIONS_COL_ID.intValue -> NakshaError.COLLECTION_EXISTS
-        else -> NakshaError.FEATURE_EXISTS
-      }
       for (incoming in tuples) {
         val tuple = incoming.tuple
         val tn = tuple.tupleNumber
@@ -807,77 +797,10 @@ SELECT basics.*, procs.* FROM basics, procs;
         }
       }
       val result = ArrayList<Tuple>(tuples.size)
-      if (tuples.isEmpty()) return@execute_sql_notnull result
-      val rows = PgRows().addColumns(columns)
-        .withDatabaseNumber(databaseNumber).withCatalogNumber(catalogNumber).withCollectionNumber(collectionNumber)
-      rows.size = 1
-      val target = "${quoteIdent(schema.schemaName())}.${quoteIdent(table.tableName())}"
-      val source = "SELECT ${rows.decodedColumns()} FROM UNNEST(${rows.placeholders()}) AS t(${rows.aliases()})"
-      val select = "SELECT version::text AS version FROM $target WHERE fn = $1::text::bigint AND nv = $head FOR UPDATE"
-      val insert = "INSERT INTO $target (${rows.aliases()}) $source ON CONFLICT (fn, nv) DO NOTHING RETURNING version::text AS version"
-      conn.prepare(insert, rows.typeNames()).use { insertPlan ->
-        val updatePlan = if (storeHistory) null else conn.prepare(
-          "WITH new_row AS ($source) UPDATE $target AS current_row SET (${rows.aliases()}) = (SELECT ${rows.aliases()} FROM new_row) FROM new_row WHERE current_row.fn = new_row.fn AND current_row.nv = $head RETURNING current_row.version::text AS version",
-          rows.typeNames()
-        )
-        try {
-          for (incoming in tuples) {
-            val tuple = incoming.tuple
-            var actualVersion: Long? = null
-            try {
-              val fn = Id.featureNumberToOrdinal(tuple.tupleNumber.featureNumber).toString()
-              lockFeature(conn, target, fn)
-              while (true) {
-                actualVersion = null
-                actualVersion = conn.execute(select, arrayOf(fn)).use { cursor ->
-                  if (cursor.next()) cursor.get<String>("version").toLong() else null
-                }
-                if (actualVersion != null && Action.fromVersion(actualVersion) == Action.DELETE) {
-                  checkSuccessor(schema, table, tuple.id.text, tuple.version, actualVersion, null)
-                  if (!storeHistory) {
-                    for (column in rows.columns) column.values[0] = null
-                    rows.setRow(0, tuple)
-                    updatePlan!!.execute(rows.values()).use { cursor ->
-                      if (!cursor.next()) throw illegalState("Locked DELETE HEAD disappeared during replacement")
-                    }
-                    result.add(tuple)
-                    break
-                  }
-                  archiveHead(conn, target, fn, tuple.version, columns)
-                  actualVersion = null
-                }
-                if (actualVersion == null) {
-                  for (column in rows.columns) column.values[0] = null
-                  rows.setRow(0, tuple)
-                  val inserted = insertPlan.execute(rows.values()).use { cursor -> cursor.next() }
-                  if (inserted) {
-                    result.add(tuple)
-                    break
-                  }
-                  continue
-                }
-                throw NakshaException(NakshaError(
-                  code = conflictCode,
-                  msg = "Feature already has a HEAD state",
-                  id = tuple.id.text,
-                  collection = table.text,
-                  catalog = schema.text,
-                  database = id.text
-                ).apply { this.actualVersion = actualVersion })
-              }
-            } catch (e: NakshaException) {
-              val error = e.error
-              if (error.database == null) error.database = id.text
-              if (error.catalog == null) error.catalog = schema.text
-              if (error.collection == null) error.collection = table.text
-              if (error.id == null) error.id = tuple.id.text
-              if (error.actualVersion == null && actualVersion != null) error.actualVersion = actualVersion
-              throw e
-            }
-          }
-        } finally {
-          updatePlan?.close()
-        }
+      val inputs = ArrayList<PgMutationInput>(tuples.size)
+      for (tuple in tuples) inputs.add(PgMutationInput.fromTuple(PgMutationOp.CREATE, tuple))
+      for (outcome in PgBatchMutation(id, schema, table, columns, storeHistory).execute(conn, inputs)) {
+        result.add(outcome.state ?: throw illegalState("CREATE did not return a state"))
       }
       result
     } catch (e: NakshaException) {
@@ -947,108 +870,10 @@ SELECT basics.*, procs.* FROM basics, procs;
         ))
       }
       val result = ArrayList<NewTuple>(tuples.size)
-      if (tuples.isEmpty()) return@execute_sql_notnull result
-      val rows = PgRows().addColumns(columns)
-        .withDatabaseNumber(databaseNumber).withCatalogNumber(catalogNumber).withCollectionNumber(collectionNumber)
-      rows.size = 1
-      val target = "${quoteIdent(schema.schemaName())}.${quoteIdent(table.tableName())}"
-      val source = "SELECT ${rows.decodedColumns()} FROM UNNEST(${rows.placeholders()}) AS t(${rows.aliases()})"
-      val ccColumn = rows.getColumn(ChangeCount.name)?.pgColumn
-      val hasCc = ccColumn != null
-      val select = "SELECT version::text AS version${if (ccColumn != null) ", ${ccColumn.ident}::text AS cc" else ""} FROM $target WHERE fn = $1::text::bigint AND nv = $head FOR UPDATE"
-      val insert = "INSERT INTO $target (${rows.aliases()}) $source ON CONFLICT (fn, nv) DO NOTHING RETURNING version::text AS version"
-      val update = "WITH new_row AS ($source) UPDATE $target AS current_row SET (${rows.aliases()}) = (SELECT ${rows.aliases()} FROM new_row) FROM new_row WHERE current_row.fn = new_row.fn AND current_row.nv = $head RETURNING current_row.version::text AS version"
-      val insertPlan = conn.prepare(insert, rows.typeNames())
-      val updatePlan = if (storeHistory) null else conn.prepare(update, rows.typeNames())
-      try {
-        for (incoming in tuples) {
-          val tuple = incoming.tuple
-          val prev = incoming.previousTupleNumber
-          var actualVersion: Long? = null
-          var oldCc: Long? = null
-          try {
-            val fn = Id.featureNumberToOrdinal(tuple.tupleNumber.featureNumber).toString()
-            lockFeature(conn, target, fn)
-            while (true) {
-              oldCc = null
-              actualVersion = conn.execute(select, arrayOf(fn)).use { cursor ->
-                if (cursor.next()) {
-                  if (hasCc) oldCc = (cursor.column("cc") as? String)?.toLongOrNull()
-                  cursor.get<String>("version").toLong()
-                } else null
-              }
-              if (actualVersion != null) checkSuccessor(schema, table, tuple.id.text, tuple.version, actualVersion, prev?.version)
-              val live = actualVersion != null && Action.fromVersion(actualVersion) != Action.DELETE
-              if (!live) {
-                val createVersion = tuple.version
-                for (column in rows.columns) column.values[0] = null
-                rows.setRow(0, tuple)
-                if (actualVersion == null) {
-                  // A concurrent inserter may win after our absent-HEAD read. Reclassify without aborting the transaction.
-                  val inserted = insertPlan.execute(rows.values()).use { cursor -> cursor.next() }
-                  if (!inserted) continue
-                } else if (storeHistory) {
-                  archiveHead(conn, target, fn, createVersion, columns)
-                  insertPlan.execute(rows.values()).use { cursor ->
-                    if (!cursor.next()) throw illegalState("Re-creation after an archived DELETE HEAD failed")
-                  }
-                } else {
-                  updatePlan!!.execute(rows.values()).use { cursor ->
-                    if (!cursor.next()) throw illegalState("Locked DELETE HEAD disappeared during replacement")
-                  }
-                }
-                result.add(NewTuple(tuple, null))
-                break
-              }
-              if (prev != null && (prev.version and -4L) != (actualVersion and -4L)) {
-                throw NakshaException(NakshaError(
-                  code = NakshaError.CONFLICT,
-                  msg = "Atomic upsert failed, the HEAD version does not match the expected predecessor",
-                  id = tuple.id.text,
-                  collection = table.text,
-                  catalog = schema.text,
-                  database = id.text
-                ).apply { this.expectedVersion = prev.version; this.actualVersion = actualVersion })
-              }
-              val updateVersion = (tuple.version and -4L) or 1L
-              if (hasCc && (oldCc ?: 0L) >= Int.MAX_VALUE.toLong()) {
-                throw illegalState("Change count overflows int32")
-              }
-              val newCc = if (hasCc) ((oldCc ?: 0L) + 1L).toInt() else null
-              for (column in rows.columns) column.values[0] = null
-              rows.setRow(0, tuple)
-              rows.setColumn(PgColumn.PgColumn_C.VersionColumn.name, 0, updateVersion)
-              if (newCc != null) rows.setColumn(ChangeCount.name, 0, newCc)
-              if (storeHistory) {
-                archiveHead(conn, target, fn, updateVersion, columns)
-                insertPlan.execute(rows.values()).use { cursor ->
-                  if (!cursor.next()) throw illegalState("Re-insertion after an archived HEAD failed during upsert")
-                }
-              } else {
-                updatePlan!!.execute(rows.values()).use { cursor ->
-                  if (!cursor.next()) throw illegalState("Locked HEAD disappeared during upsert update")
-                }
-              }
-              val updatedBook = HeapBook.copyOf(tuple.membersBook)
-              updatedBook.put(TN, TupleNumber.copy(tuple.tupleNumber, version = updateVersion))
-              if (newCc != null) updatedBook.put(ChangeCount.name, newCc)
-              result.add(NewTuple(Tuple(tuple.featureBytes, updatedBook), TupleNumber.copy(tuple.tupleNumber, version = actualVersion)))
-              break
-            }
-          } catch (e: NakshaException) {
-            val error = e.error
-            if (error.database == null) error.database = id.text
-            if (error.catalog == null) error.catalog = schema.text
-            if (error.collection == null) error.collection = table.text
-            if (error.id == null) error.id = tuple.id.text
-            if (error.expectedVersion == null) error.expectedVersion = prev?.version
-            if (error.actualVersion == null && actualVersion != null) error.actualVersion = actualVersion
-            throw e
-          }
-        }
-      } finally {
-        insertPlan.close()
-        updatePlan?.close()
+      val inputs = ArrayList<PgMutationInput>(tuples.size)
+      for (tuple in tuples) inputs.add(PgMutationInput.fromTuple(PgMutationOp.UPSERT, tuple))
+      for (outcome in PgBatchMutation(id, schema, table, columns, storeHistory).execute(conn, inputs)) {
+        result.add(NewTuple(outcome.state ?: throw illegalState("UPSERT did not return a state"), outcome.previous))
       }
       result
     } catch (e: NakshaException) {
@@ -1114,75 +939,10 @@ SELECT basics.*, procs.* FROM basics, procs;
         ))
       }
       val result = ArrayList<NewTuple>(tuples.size)
-      if (tuples.isEmpty()) return@execute_sql_notnull result
-      val rows = PgRows().addColumns(columns)
-        .withDatabaseNumber(databaseNumber).withCatalogNumber(catalogNumber).withCollectionNumber(collectionNumber)
-      rows.size = 1
-      val target = "${quoteIdent(schema.schemaName())}.${quoteIdent(table.tableName())}"
-      val source = "SELECT ${rows.decodedColumns()} FROM UNNEST(${rows.placeholders()}) AS t(${rows.aliases()})"
-      val select = "SELECT version::text AS version FROM $target WHERE fn = $1::text::bigint AND nv = $head FOR UPDATE"
-      val insert = "INSERT INTO $target (${rows.aliases()}) $source RETURNING version::text AS version"
-      val update = "WITH new_row AS ($source) UPDATE $target AS current_row SET (${rows.aliases()}) = (SELECT ${rows.aliases()} FROM new_row) FROM new_row WHERE current_row.fn = new_row.fn AND current_row.nv = $head RETURNING current_row.version::text AS version"
-      val insertPlan = if (storeHistory) conn.prepare(insert, rows.typeNames()) else null
-      val updatePlan = if (storeHistory) null else conn.prepare(update, rows.typeNames())
-      try {
-        for (incoming in tuples) {
-          val tuple = incoming.tuple
-          val prev = incoming.previousTupleNumber
-          var actualVersion: Long? = null
-          try {
-            val fn = Id.featureNumberToOrdinal(tuple.tupleNumber.featureNumber).toString()
-            lockFeature(conn, target, fn)
-            actualVersion = conn.execute(select, arrayOf(fn)).use { cursor ->
-              if (cursor.next()) cursor.get<String>("version").toLong() else null
-            }
-            if (actualVersion == null || Action.fromVersion(actualVersion) == Action.DELETE) {
-              throw NakshaException(NakshaError(
-                code = NakshaError.FEATURE_NOT_FOUND,
-                msg = "Feature '${tuple.id.text}' has no live HEAD state to update",
-                id = tuple.id.text,
-                collection = table.text,
-                catalog = schema.text,
-                database = id.text
-              ).apply { this.actualVersion = actualVersion })
-            }
-            if (prev != null && (prev.version and -4L) != (actualVersion and -4L)) {
-              throw NakshaException(NakshaError(
-                code = NakshaError.CONFLICT,
-                msg = "Atomic update failed, the HEAD version does not match the expected predecessor",
-                id = tuple.id.text,
-                collection = table.text,
-                catalog = schema.text,
-                database = id.text
-              ).apply { this.expectedVersion = prev.version; this.actualVersion = actualVersion })
-            }
-            checkSuccessor(schema, table, tuple.id.text, tuple.version, actualVersion, prev?.version)
-            for (column in rows.columns) column.values[0] = null
-            rows.setRow(0, tuple)
-            if (storeHistory) {
-              archiveHead(conn, target, fn, tuple.version, columns)
-              insertPlan!!.execute(rows.values()).use { cursor ->
-                if (!cursor.next()) throw illegalState("Re-insertion after an archived HEAD failed during update")
-              }
-            } else {
-              updatePlan!!.execute(rows.values()).use { cursor ->
-                if (!cursor.next()) throw illegalState("Locked HEAD disappeared during update")
-              }
-            }
-            result.add(NewTuple(tuple, TupleNumber.copy(tuple.tupleNumber, version = actualVersion)))
-          } catch (e: NakshaException) {
-            val error = e.error
-            if (error.database == null) error.database = id.text
-            if (error.catalog == null) error.catalog = schema.text
-            if (error.collection == null) error.collection = table.text
-            if (error.id == null) error.id = tuple.id.text
-            if (error.actualVersion == null && actualVersion != null) error.actualVersion = actualVersion
-            throw e
-          }
-        }
-      } finally {
-        insertPlan?.close()
-        updatePlan?.close()
+      val inputs = ArrayList<PgMutationInput>(tuples.size)
+      for (tuple in tuples) inputs.add(PgMutationInput.fromTuple(PgMutationOp.UPDATE, tuple))
+      for (outcome in PgBatchMutation(id, schema, table, columns, storeHistory).execute(conn, inputs)) {
+        result.add(NewTuple(outcome.state ?: throw illegalState("UPDATE did not return a state"), outcome.previous))
       }
       result
     } catch (e: NakshaException) {
@@ -1217,30 +977,14 @@ SELECT basics.*, procs.* FROM basics, procs;
    ): List<Guid?> = execute_sql_notnull(collection.catalogId.schemaName(), collection.id.tableName()) {
      try {
        if (conn.autoCommit) throw illegalState("Row purge requires a caller-owned transaction")
-       val head = Version.HEAD.number
-       val plans = DeletePlans.prepare(conn, collection, id.number)
-       try {
-         val result = ArrayList<Guid?>(featureIds.size)
-         for (fid in featureIds) {
-           val fnOrd = Id.featureNumberToOrdinal(fid.number).toString()
-           val locked = lockHead(plans, conn, fnOrd, fid.text)
-           if (locked == null) {
-             result.add(null)
-             continue
-           }
-           val tuple = locked.first
-           val guid = Guid(tuple.id.text, tuple.tupleNumber)
-            if (Action.fromVersion(tuple.tupleNumber.version) == Action.DELETE) {
-              checkSuccessor(collection.catalogId, collection.id, fid.text, version, tuple.version, null)
-              if (collection.storeHistory) archiveHead(conn, plans.target, fnOrd, version, collection.columns)
-             else DeletePlans.deleteRow(conn, plans.target, head, fnOrd)
-           }
-           result.add(guid)
-         }
-         result
-       } finally {
-         DeletePlans.close(plans)
-       }
+        val inputs = ArrayList<PgMutationInput>(featureIds.size)
+        for (fid in featureIds) inputs.add(PgMutationInput(PgMutationOp.PURGE, fid.number, fid.text, version))
+        val result = ArrayList<Guid?>(inputs.size)
+        for (outcome in PgBatchMutation(id, collection.catalogId, collection.id, collection.columns, collection.storeHistory, collection).execute(conn, inputs)) {
+          val tuple = outcome.state
+          result.add(if (tuple == null) null else Guid(tuple.id.text, tuple.tupleNumber))
+        }
+        result
      } catch (e: NakshaException) {
        val error = e.error
        if (error.database == null) error.database = id.text
@@ -1275,19 +1019,14 @@ SELECT basics.*, procs.* FROM basics, procs;
    ): List<Guid> = execute_sql_notnull(collection.catalogId.schemaName(), collection.id.tableName()) {
      try {
        if (conn.autoCommit) throw illegalState("Row delete requires a caller-owned transaction")
-       val head = Version.HEAD.number
-       val plans = DeletePlans.prepare(conn, collection, id.number)
-       try {
-         val result = ArrayList<Guid>(featureIds.size)
-         for (fid in featureIds) {
-           val fnOrd = Id.featureNumberToOrdinal(fid.number).toString()
-           val outcome = deleteOneHead(plans, conn, collection, head, fnOrd, version, null, emptyTombstone, fid.text)
-           if (outcome.state != null) result.add(Guid(outcome.state.id.text, outcome.state.tupleNumber))
-         }
-         result
-       } finally {
-         DeletePlans.close(plans)
-       }
+        val inputs = ArrayList<PgMutationInput>(featureIds.size)
+        for (fid in featureIds) inputs.add(PgMutationInput(PgMutationOp.DELETE, fid.number, fid.text, version, emptyTombstone = emptyTombstone))
+        val result = ArrayList<Guid>(inputs.size)
+        for (outcome in PgBatchMutation(id, collection.catalogId, collection.id, collection.columns, collection.storeHistory, collection).execute(conn, inputs)) {
+          val tuple = outcome.state
+          if (tuple != null) result.add(Guid(tuple.id.text, tuple.tupleNumber))
+        }
+        result
      } catch (e: NakshaException) {
        val error = e.error
        if (error.database == null) error.database = id.text
@@ -1318,19 +1057,14 @@ SELECT basics.*, procs.* FROM basics, procs;
    ): List<NewTuple> = execute_sql_notnull(collection.catalogId.schemaName(), collection.id.tableName()) {
      try {
        if (conn.autoCommit) throw illegalState("Row delete requires a caller-owned transaction")
-       val head = Version.HEAD.number
-       val plans = DeletePlans.prepare(conn, collection, id.number)
-       try {
-         val result = ArrayList<NewTuple>(featureIds.size)
-         for (fid in featureIds) {
-           val fnOrd = Id.featureNumberToOrdinal(fid.number).toString()
-           val outcome = deleteOneHead(plans, conn, collection, head, fnOrd, version, null, false, fid.text)
-           if (outcome.state != null) result.add(NewTuple(outcome.state, outcome.predecessor))
-         }
-         result
-       } finally {
-         DeletePlans.close(plans)
-       }
+        val inputs = ArrayList<PgMutationInput>(featureIds.size)
+        for (fid in featureIds) inputs.add(PgMutationInput(PgMutationOp.DELETE, fid.number, fid.text, version))
+        val result = ArrayList<NewTuple>(inputs.size)
+        for (outcome in PgBatchMutation(id, collection.catalogId, collection.id, collection.columns, collection.storeHistory, collection).execute(conn, inputs)) {
+          val tuple = outcome.state
+          if (tuple != null) result.add(NewTuple(tuple, outcome.previous))
+        }
+        result
      } catch (e: NakshaException) {
        val error = e.error
        if (error.database == null) error.database = id.text
@@ -1365,19 +1099,15 @@ SELECT basics.*, procs.* FROM basics, procs;
    ): List<Guid> = execute_sql_notnull(collection.catalogId.schemaName(), collection.id.tableName()) {
      try {
        if (conn.autoCommit) throw illegalState("Row delete requires a caller-owned transaction")
-       val head = Version.HEAD.number
-       val plans = DeletePlans.prepare(conn, collection, id.number)
-       try {
-         val result = ArrayList<Guid>(guids.size)
-         for (guid in guids) {
-           val fnOrd = Id.featureNumberToOrdinal(guid.tupleNumber.featureNumber).toString()
-           val outcome = deleteOneHead(plans, conn, collection, head, fnOrd, version, guid.tupleNumber.version, emptyTombstone, guid.id)
-           if (outcome.state != null) result.add(Guid(outcome.state.id.text, outcome.state.tupleNumber))
-         }
-         result
-       } finally {
-         DeletePlans.close(plans)
-       }
+        val inputs = ArrayList<PgMutationInput>(guids.size)
+        for (guid in guids) inputs.add(PgMutationInput(PgMutationOp.DELETE, guid.tupleNumber.featureNumber, guid.id, version,
+          expected = guid.tupleNumber, emptyTombstone = emptyTombstone))
+        val result = ArrayList<Guid>(inputs.size)
+        for (outcome in PgBatchMutation(id, collection.catalogId, collection.id, collection.columns, collection.storeHistory, collection).execute(conn, inputs)) {
+          val tuple = outcome.state
+          if (tuple != null) result.add(Guid(tuple.id.text, tuple.tupleNumber))
+        }
+        result
      } catch (e: NakshaException) {
        val error = e.error
        if (error.database == null) error.database = id.text
@@ -1410,19 +1140,13 @@ SELECT basics.*, procs.* FROM basics, procs;
    ): List<NewTuple> = execute_sql_notnull(collection.catalogId.schemaName(), collection.id.tableName()) {
      try {
        if (conn.autoCommit) throw illegalState("Row delete requires a caller-owned transaction")
-       val head = Version.HEAD.number
-       val plans = DeletePlans.prepare(conn, collection, id.number)
-       try {
-         val result = ArrayList<NewTuple>(guids.size)
-         for (guid in guids) {
-           val fnOrd = Id.featureNumberToOrdinal(guid.tupleNumber.featureNumber).toString()
-           val outcome = deleteOneHead(plans, conn, collection, head, fnOrd, version, guid.tupleNumber.version, false, guid.id)
-           result.add(NewTuple(outcome.state ?: throw illegalState("Atomic delete must return a state"), outcome.predecessor))
-         }
-         result
-       } finally {
-         DeletePlans.close(plans)
-       }
+        val inputs = ArrayList<PgMutationInput>(guids.size)
+        for (guid in guids) inputs.add(PgMutationInput(PgMutationOp.DELETE, guid.tupleNumber.featureNumber, guid.id, version, expected = guid.tupleNumber))
+        val result = ArrayList<NewTuple>(inputs.size)
+        for (outcome in PgBatchMutation(id, collection.catalogId, collection.id, collection.columns, collection.storeHistory, collection).execute(conn, inputs)) {
+          result.add(NewTuple(outcome.state ?: throw illegalState("Atomic delete must return a state"), outcome.previous))
+        }
+        result
      } catch (e: NakshaException) {
        val error = e.error
        if (error.database == null) error.database = id.text
@@ -1476,246 +1200,19 @@ SELECT basics.*, procs.* FROM basics, procs;
            collection = collection.id.text, catalog = collection.catalogId.text, database = id.text
          ))
        }
-       val plans = DeletePlans.prepare(conn, collection, id.number)
-       try {
-         val result = ArrayList<NewTuple>(tuples.size)
-         for (incoming in tuples) {
-           val tombstone = incoming.tuple
-           val expected = incoming.previousTupleNumber
-           val errorId = tombstone.id.text
-           val fnOrd = Id.featureNumberToOrdinal(tombstone.tupleNumber.featureNumber).toString()
-           val locked = lockHead(plans, conn, fnOrd, errorId)
-           if (locked == null) {
-             throw NakshaException(NakshaError(
-               code = NakshaError.FEATURE_NOT_FOUND,
-               msg = "Feature has no HEAD state to delete",
-               id = errorId, collection = collection.id.text, catalog = collection.catalogId.text, database = id.text
-             ).apply { if (expected != null) this.expectedVersion = expected.version })
-           }
-           val tuple = locked.first
-           val actual = locked.second
-           if (expected == null) {
-             if (Action.fromVersion(actual) == Action.DELETE) {
-               throw NakshaException(NakshaError(
-                 code = NakshaError.CONFLICT,
-                 msg = "An explicit delete state requires a live HEAD or an exact predecessor",
-                 id = errorId, collection = collection.id.text, catalog = collection.catalogId.text, database = id.text
-               ).apply { this.actualVersion = actual })
-             }
-           } else if (tuple.tupleNumber != expected) {
-             throw NakshaException(NakshaError(
-               code = NakshaError.CONFLICT,
-               msg = "The explicit delete state does not match the HEAD",
-               id = errorId, collection = collection.id.text, catalog = collection.catalogId.text, database = id.text
-             ).apply { this.expectedVersion = expected.version; this.actualVersion = actual })
-           }
-            checkSuccessor(collection.catalogId, collection.id, errorId, tombstone.version, actual, expected?.version)
-            for (column in plans.rows.columns) column.values[0] = null
-           plans.rows.setRow(0, tombstone)
-           if (collection.storeHistory) {
-              archiveHead(conn, plans.target, fnOrd, tombstone.tupleNumber.version, collection.columns)
-             plans.insertPlan.execute(plans.rows.values()).use { if (!it.next()) throw illegalState("Inserting the explicit tombstone failed") }
-           } else {
-             plans.inPlacePlan.execute(plans.rows.values()).use { if (!it.next()) throw illegalState("Locked HEAD disappeared during explicit delete") }
-           }
-           result.add(NewTuple(tombstone, tuple.tupleNumber))
-         }
-         result
-       } finally {
-         DeletePlans.close(plans)
-       }
+        val inputs = ArrayList<PgMutationInput>(tuples.size)
+        for (tuple in tuples) inputs.add(PgMutationInput.fromTuple(PgMutationOp.EXPLICIT_DELETE, tuple))
+        val result = ArrayList<NewTuple>(inputs.size)
+        for (outcome in PgBatchMutation(id, collection.catalogId, collection.id, collection.columns, collection.storeHistory, collection).execute(conn, inputs)) {
+          result.add(NewTuple(outcome.state ?: throw illegalState("Explicit delete must return a state"), outcome.previous))
+        }
+        result
      } catch (e: NakshaException) {
        val error = e.error
        if (error.database == null) error.database = id.text
        if (error.catalog == null) error.catalog = collection.catalogId.text
        if (error.collection == null) error.collection = collection.id.text
        throw e
-     }
-   }
-
-  /**
-   * Serialize a feature even when HEAD is absent or physically replaced. Callers supply deterministic feature order. The subsequent HEAD read must be a separate statement for a fresh READ COMMITTED snapshot after waiting.
-   *
-   * Transaction resource constraint: callers must cap the total distinct target/feature keys selected across all requests in an open transaction, including absent/no-op selections. Each key retains one shared lock-manager entry until transaction end (or rollback of its acquiring savepoint); request batch limits alone do not bound this. Choose the cap and concurrent transaction limit against the cluster's shared lock budget, reserving room for relation/catalog locks and other sessions. max_locks_per_transaction sizes the shared pool, not a per-transaction limit. No cap is enforced at this row boundary. Hash striping alone is unsafe: stripe order would differ from the caller's deterministic feature order and could introduce deadlocks.
-   * @since 3.0
-   */
-  private fun lockFeature(conn: PgConnection, target: String, fnOrd: String) {
-    conn.execute("SELECT pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended(pg_catalog.format('naksha:feature:%s:%s', $1::text, $2::text), 0))",
-      arrayOf(target, fnOrd)).close()
-  }
-
-  /** Reject equal transaction versions as well as inverted history; action bits do not establish temporal order. @since 3.0 */
-  private fun checkSuccessor(schema: Id, table: Id, featureId: String, successor: Long, actual: Long, expected: Long?) {
-    if (successor >= 0L && successor < Version.HEAD.number && (successor and -4L) > (actual and -4L)) return
-    throw NakshaException(NakshaError(
-      code = NakshaError.CONFLICT, msg = "The successor transaction version must be newer than HEAD",
-      id = featureId, collection = table.text, catalog = schema.text, database = id.text
-    ).apply { expectedVersion = expected; actualVersion = actual })
-  }
-
-  /**
-   * Archives the exact stored state through the root using DELETE RETURNING followed by INSERT. The caller already holds the row lock and has ensured finite partition coverage.
-   * @since 3.0
-   */
-  private fun archiveHead(conn: PgConnection, target: String, fnOrd: String, toVersion: Long, columns: Array<PgColumn>) {
-    val names = columns.joinToString(", ") { it.ident }
-    val values = columns.joinToString(", ") {
-      if (it.columnName == "nv") "$2::text::bigint" else it.ident
-    }
-    conn.execute("WITH old_head AS (DELETE FROM $target WHERE fn = $1::text::bigint AND nv = ${Version.HEAD.number} RETURNING *) INSERT INTO $target ($names) SELECT $values FROM old_head",
-      arrayOf(fnOrd, toVersion.toString())).close()
-  }
-
-    /** The final state of a single-head delete; `state` is `null` only when no HEAD existed. */
-   private data class DeleteOutcome(val state: Tuple?, val predecessor: TupleNumber?)
-
-   /**
-    * Delete the live HEAD for a single feature, producing a DELETE tombstone, or return an existing
-    * DELETE HEAD unchanged. [expected] is `null` for a non-atomic delete; when set, a live HEAD must
-    * match it under masked version equality or a structured conflict is thrown, and a missing HEAD is
-    * a [NakshaError.FEATURE_NOT_FOUND]. The caller supplies [fnOrd] and [errorId] for errors.
-    * @since 3.0
-    */
-   private fun deleteOneHead(
-     plans: DeletePlans, conn: PgConnection, collection: PgCollection, head: Long,
-     fnOrd: String, version: Long, expected: Long?, emptyTombstone: Boolean, errorId: String
-   ): DeleteOutcome {
-     val locked = lockHead(plans, conn, fnOrd, errorId)
-     if (locked == null) {
-       if (expected == null) return DeleteOutcome(null, null)
-       throw NakshaException(NakshaError(
-         code = NakshaError.FEATURE_NOT_FOUND,
-         msg = "Feature has no HEAD state to delete",
-         id = errorId, collection = collection.id.text, catalog = collection.catalogId.text, database = id.text
-       ).apply { this.expectedVersion = expected; this.actualVersion = null })
-     }
-     val tuple = locked.first
-     val actual = locked.second
-     if (Action.fromVersion(actual) == Action.DELETE) {
-       return DeleteOutcome(tuple, null)
-     }
-     if (expected != null && (expected and -4L) != (actual and -4L)) {
-       throw NakshaException(NakshaError(
-         code = NakshaError.CONFLICT,
-         msg = "Atomic delete failed, the HEAD version does not match the expected version",
-         id = errorId, collection = collection.id.text, catalog = collection.catalogId.text, database = id.text
-       ).apply { this.expectedVersion = expected; this.actualVersion = actual })
-     }
-      val newVersion = (version and -4L) or 2L
-      checkSuccessor(collection.catalogId, collection.id, errorId, newVersion, actual, expected)
-     val tombstone = try {
-       buildTombstone(tuple, tuple.tupleNumber, newVersion)
-     } catch (e: NakshaException) {
-       val error = e.error
-       if (error.id == null) error.id = errorId
-       if (error.expectedVersion == null) error.expectedVersion = expected
-       if (error.actualVersion == null) error.actualVersion = actual
-       throw e
-     }
-     for (column in plans.rows.columns) column.values[0] = null
-     plans.rows.setRow(0, tombstone)
-     if (emptyTombstone) nullPayloadColumns(plans.rows)
-     if (collection.storeHistory) {
-        archiveHead(conn, plans.target, fnOrd, newVersion, collection.columns)
-       plans.insertPlan.execute(plans.rows.values()).use { if (!it.next()) throw illegalState("Inserting the tombstone failed") }
-     } else {
-       plans.inPlacePlan.execute(plans.rows.values()).use { if (!it.next()) throw illegalState("Locked HEAD disappeared during delete") }
-     }
-     return DeleteOutcome(tombstone, tuple.tupleNumber)
-   }
-
-   /**
-    * Lock and read the HEAD state for [fnOrd] into [plans]'s transport rows, returning the decoded
-    * tuple and its version, or `null` when no HEAD row exists.
-    * @since 3.0
-    */
-    private fun lockHead(plans: DeletePlans, conn: PgConnection, fnOrd: String, featureId: String): Pair<Tuple, Long>? {
-      lockFeature(conn, plans.target, fnOrd)
-      plans.rows.size = 0
-     conn.execute(plans.select, arrayOf(fnOrd)).fetch().use { plans.rows.readAll(it) }
-     if (plans.rows.size == 0) return null
-     val tuple = plans.rows.getTuple(0, featureId) ?: throw illegalState("Failed to decode the HEAD state")
-     return Pair(tuple, tuple.tupleNumber.version)
-   }
-
-   /**
-    * Build the DELETE tombstone from an existing HEAD state: the payload is retained, the tuple
-    * number takes the new delete version and the change count is incremented when present.
-    * @since 3.0
-    */
-   private fun buildTombstone(old: Tuple, oldTn: TupleNumber, newVersion: Long): Tuple {
-     val oldBook = old.membersBook
-     val newBook = HeapBook.copyOf(oldBook)
-     newBook.put(TN, TupleNumber.copy(oldTn, version = newVersion))
-     val oldCc = oldBook[ChangeCount.name]
-     if (oldCc != null) {
-       val cc = oldCc as? Int ?: 0
-       if (cc == Int.MAX_VALUE) throw illegalState("Change count overflows int32")
-       newBook.put(ChangeCount.name, cc + 1)
-     }
-     return Tuple(old.featureBytes, newBook)
-   }
-
-   /**
-    * Null every bound transport column that is not a mandatory key (fn, version or nv), producing
-    * an empty tombstone.
-    * @since 3.0
-    */
-   private fun nullPayloadColumns(rows: PgRows) {
-     for (column in rows.columns) {
-       val pgc = column.pgColumn
-       val isKey = pgc === PgColumn.PgColumn_C.FnColumn || pgc === PgColumn.PgColumn_C.VersionColumn ||
-         pgc === PgColumn.PgColumn_C.NextVersionColumn
-       if (!isKey) column.values[0] = null
-     }
-   }
-
-   /**
-    * Prepared plans and shared SQL fragments for single-root delete/purge operations. The caller owns
-    * the connection and transaction and closes the plans through [close].
-    * @since 3.0
-    */
-   private class DeletePlans(
-     val rows: PgRows,
-     val target: String,
-     val select: String,
-     val insertPlan: PgPlan,
-     val inPlacePlan: PgPlan,
-   ) {
-     companion object {
-       /** Prepare the transport rows and the insert/in-place plans for a collection's root. @since 3.0 */
-       fun prepare(conn: PgConnection, collection: PgCollection, databaseNumber: Long): DeletePlans {
-         val head = Version.HEAD.number
-         // The number setters clear the collection, so assign it last to keep [getTuple] able to decode.
-         val rows = PgRows()
-           .withDatabaseNumber(databaseNumber)
-           .withCatalogNumber(collection.catalogId.intValue)
-           .withCollectionNumber(collection.id.intValue)
-           .addColumns(collection.columns)
-           .withCollection(collection)
-         val target = "${quoteIdent(collection.catalogId.schemaName())}.${quoteIdent(collection.id.tableName())}"
-         val source = "SELECT ${rows.decodedColumns()} FROM UNNEST(${rows.placeholders()}) AS t(${rows.aliases()})"
-         val select = "SELECT * FROM $target WHERE fn = \$1::text::bigint AND nv = $head FOR UPDATE"
-         val insertPlan = conn.prepare(
-           "INSERT INTO $target (${rows.aliases()}) $source RETURNING version::text AS version", rows.typeNames()
-         )
-          val inPlacePlan = conn.prepare(
-            "WITH new_row AS ($source) UPDATE $target AS current_row SET (${rows.aliases()}) = (SELECT ${rows.aliases()} FROM new_row) FROM new_row WHERE current_row.fn = new_row.fn AND current_row.nv = $head RETURNING current_row.version::text AS version",
-            rows.typeNames()
-          )
-         return DeletePlans(rows, target, select, insertPlan, inPlacePlan)
-       }
-
-       /** Remove a HEAD row entirely. @since 3.0 */
-       fun deleteRow(conn: PgConnection, target: String, head: Long, fnOrd: String) {
-         conn.execute("DELETE FROM $target WHERE fn = \$1::text::bigint AND nv = $head", arrayOf(fnOrd)).close()
-       }
-
-       /** Close the prepared plans. @since 3.0 */
-       fun close(plans: DeletePlans) {
-         plans.insertPlan.close()
-         plans.inPlacePlan.close()
-       }
      }
    }
 

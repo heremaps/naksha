@@ -11,6 +11,15 @@ import java.sql.SQLException
 
 actual class PgExceptionMapper {
     actual companion object PgExceptionMapper_C {
+        internal actual fun sqlState(throwable: Throwable): String? {
+            var failure: Throwable? = throwable
+            var depth = 0
+            while (failure != null && depth++ < 16) {
+                if (failure is java.sql.SQLException && failure.sqlState != null) return failure.sqlState
+                failure = failure.cause
+            }
+            return null
+        }
         @JvmOverloads
         actual fun map(throwable: Throwable, sql: String?): NakshaException {
             if (throwable is NakshaException) return throwable

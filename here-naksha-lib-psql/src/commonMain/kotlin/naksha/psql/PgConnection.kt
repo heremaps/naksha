@@ -77,7 +77,13 @@ expect class PgConnection private constructor(id: Long, instance: PgInstance, op
    * Runs nonblocking maintenance in a savepoint within the caller's transaction; auto-commit must be disabled. Success retains the changes and locks until the caller completes the transaction. A false result or SQLSTATE 55P03 rolls back the attempt, releasing any partially acquired locks. Other failures propagate after rollback. Never commits the caller's transaction.
    * @since 3.0
    */
-  internal fun tryMaintenance(action: () -> Boolean): Boolean
+    internal fun tryMaintenance(action: () -> Boolean): Boolean
+
+    /**
+     * Executes one bulk mutation attempt in an internal subtransaction. False rolls back only that attempt; true retains its work and row locks. SQL errors propagate after cleanup, including deadlocks/timeouts. Never completes the caller's transaction.
+     * @since 3.0
+     */
+    internal fun tryBatch(action: () -> Boolean): Boolean
 
     /**
      * Commit the underlying database connection.

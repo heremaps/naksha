@@ -52,6 +52,21 @@ actual class PgConnection internal actual constructor(id: Long, instance: PgInst
     return completed
   }
 
+  internal actual fun tryBatch(action: () -> Boolean): Boolean {
+    var skipped = false
+    var original: Throwable? = null
+    try {
+      plv8.subtransaction {
+        try { skipped = !action() } catch (failure: Throwable) { original = failure }
+        if (skipped || original != null) throw MaintenanceSkipped()
+      }
+    } catch (failure: Throwable) {
+      if (skipped && original == null) return false
+      throw original ?: failure
+    }
+    return true
+  }
+
     actual fun commit() {
     }
 

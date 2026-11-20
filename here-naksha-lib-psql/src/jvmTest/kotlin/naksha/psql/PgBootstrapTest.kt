@@ -54,6 +54,16 @@ class PgBootstrapTest {
     assertTrue(storage.database.schemaOid > 0)
     assertTrue(storage.database.versionSequenceOid > 0)
 
+    // Each checkout must reset the requested mode, including reads following a write on the same pool.
+    for (readOnly in listOf(false, true, false, true)) {
+      storage.newConnection(Naksha.useAdminOptions(), readOnly).use { conn ->
+        conn.execute("SHOW work_mem").fetch().use { cursor ->
+          assertEquals(if (readOnly) "128MB" else "512MB", cursor.get<String>("work_mem"))
+        }
+        assertEquals(readOnly, conn.jdbc.isReadOnly)
+      }
+    }
+
     storage.newSession(Naksha.useAdminOptions(), false).use { session ->
       assertNull(session.getTransaction())
       val maintained = session.useConnNonNull(false) { conn ->

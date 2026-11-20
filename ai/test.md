@@ -113,6 +113,7 @@ Run each row separately with a newly created database. Set both `NAKSHA_TEST_PSQ
 | --- | --- |
 | `BOOTSTRAP` | `PgBootstrapTest` |
 | `BOOTSTRAP_LOCK` | `PgBootstrapConcurrencyTest` |
+| `BATCH` | `PgBatchMutationTest` |
 | `CATALOG` | `PgCatalogCreationTest` |
 | `CREATE` | `PgCreateFlowTest` |
 | `DROP` | `PgDatabaseDropTest` |
@@ -128,6 +129,12 @@ Run each row separately with a newly created database. Set both `NAKSHA_TEST_PSQ
 | `CONCURRENCY` | `PgMaintenanceConcurrencyTest` |
 | `PERMISSIONS` | `PgMaintenancePermissionsTest` |
 | `PLV8` | `PgPlv8MaintenanceTest` |
+
+The `BATCH` suite requires `NAKSHA_TEST_BATCH_DB_URL` and matching `NAKSHA_TEST_PSQL_DB_URL`. It covers single-execution multirow inserts, shuffled result correlation, mixed-operation history/no-ops, semantic-error prefixes, constraint precedence, real PLV8 execution of generated SQL and deadlock retry signalling. Its SQL-focused benchmark runs unless `NAKSHA_SUPPRESS_PERF_TEST=true`; reported time includes client binding/planning/result handling but excludes feature encoding, coverage setup and commit. The SPI proof uses session-local test functions and does **not** establish full compiled Kotlin/JS request/subtransaction behavior inside PLV8. See [the batch checkpoint](NAKSHA-33-batched-mutations.md) for results and limitations.
+
+For the local four-operation end-to-end benchmark, run `naksha.psql.PgMutationThroughputTest` separately with `NAKSHA_TEST_THROUGHPUT_DB_URL` and matching `NAKSHA_TEST_PSQL_DB_URL` on one fresh disposable database. It is not included in the ordinary or opt-in correctness campaign. It measures INSERT, existing-key UPDATE/UPSERT, and DELETE tombstone creation with history ON, four workers, four configured partitions, the small-topology fixture, and 100/1,000-row batches. Each case has one warmup and three measured 8,000-feature rounds. Fixture construction and committed seeding are excluded; encoding, write-session execution and commit are included. Run without other Gradle/test workloads: concurrent Gradle executions can race on generated JS outputs as well as distort throughput. Median per-round throughput and batch latency are exploratory local measurements, not a capacity estimate; the 1,000-row case has only eight batches per round, so its p95 is the maximum.
+
+For exact mutation-plan diagnostics, run `naksha.psql.PgMutationPlanProfileTest` separately on another **fresh disposable database**, with matching `NAKSHA_TEST_THROUGHPUT_DB_URL`/`NAKSHA_TEST_PSQL_DB_URL` and `NAKSHA_TEST_MUTATION_PROFILE_DIR` pointing to a private output directory. It commits its own catalog/collection and 8,000/32,000-row seed fixtures, captures generated SQL/typed arguments, then rolls back each EXPLAIN ANALYZE mutation attempt. Rollback preserves logical seed state, not pristine physical/WAL/cache state. Do not use `PgTestBase` to attach to retained fixtures: its initialization resets the shared test catalog. Inspect captured SETTINGS and inclusive node times when interpreting the plans; this fixture does not benchmark the full request or commit path.
 
 For example, to run the PLV8 suite (same local client variables as above):
 

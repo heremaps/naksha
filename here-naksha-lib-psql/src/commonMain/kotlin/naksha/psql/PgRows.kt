@@ -550,8 +550,8 @@ internal class PgRows() {
      */
     fun typeNames(): Array<String> = Array(columns.size) {
         val col = columns[it].pgColumn
-        // A text[] column can't ride the batch UNNEST (would be text[][]); carry it as jsonb, converted back in newRowProjection().
-        if (col.memberType == TAG_LIST) PgType.JSONB.text + "[]"
+        // Structured values are serialized JSON text. Binding them as text avoids PLV8 turning a JS string into a JSON scalar; decodedColumns parses them after UNNEST.
+        if (col.memberType == TAG_LIST || col.memberType == TAG_MAP) PgType.STRING.text + "[]"
         else col.pgType.text + "[]"
     }
 

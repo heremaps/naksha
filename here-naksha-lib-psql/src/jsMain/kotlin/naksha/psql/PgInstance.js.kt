@@ -45,7 +45,7 @@ actual class PgInstance private actual constructor(private val config: PgInstanc
     actual fun openConnection(options: SessionOptions, readOnly: Boolean, init: Fx2<PgConnection, String>?): PgConnection {
         val conn = PgConnection(connCount++, this, options)
         val query = """SET SESSION $search_path TO "naksha~admin", hint_plan, public, topology;
-SET SESSION $work_mem = '128MB';
+SET SESSION $work_mem = '${if (readOnly) "128MB" else "512MB"}';
 SET SESSION $idle_session_timeout = '600s';
 SET SESSION $statement_timeout = '${toSeconds(options.stmtTimeout)}s';
 SET SESSION $lock_timeout = '${toSeconds(options.lockTimeout, 0)}s';

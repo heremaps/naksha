@@ -23,6 +23,9 @@ expect class PgPlan private constructor(): AutoCloseable {
      */
     fun execute(args: Array<Any?>? = null): PgCursor
 
+    /** Execute returning mutation rows; PLV8 uses SPI execute because a data-modifying CTE cannot be opened as a read cursor. @since 3.0 */
+    internal fun executeMutation(args: Array<Any?>? = null): PgCursor
+
     /**
      * Adds the prepared statement with the given arguments into batch-execution queue. This requires a mutation query like UPDATE or
      * INSERT. The types of the arguments must match to the prepared statement. This does not return anything, it queues the execution

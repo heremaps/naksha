@@ -107,6 +107,22 @@ actual class PgConnection private actual constructor(id: Long, instance: PgInsta
     return completed
   }
 
+  internal actual fun tryBatch(action: () -> Boolean): Boolean {
+    val conn = jdbc
+    if (conn.autoCommit) throw illegalState("Batch mutation requires a caller-owned transaction")
+    val savepoint = conn.setSavepoint()
+    try {
+      val completed = action()
+      if (!completed) conn.rollback(savepoint)
+      conn.releaseSavepoint(savepoint)
+      return completed
+    } catch (failure: Throwable) {
+      try { conn.rollback(savepoint) } catch (cleanup: Throwable) { failure.addSuppressed(cleanup) }
+      try { conn.releaseSavepoint(savepoint) } catch (cleanup: Throwable) { failure.addSuppressed(cleanup) }
+      throw failure
+    }
+  }
+
   actual var autoCommit: Boolean
     get() {
       return try {

@@ -20,6 +20,12 @@ actual class PgPlan private actual constructor(): AutoCloseable {
         return PgCursor(if (args != null) plan.cursor(pgNameArguments(args).unsafeCast<Array<dynamic>>()) else plan.cursor())
     }
 
+    internal actual fun executeMutation(args: Array<Any?>?): PgCursor {
+        val plan = this.plan ?: throw illegalState("Plan is closed")
+        val result = if (args == null) plan.execute() else plan.execute(pgNameArguments(args).unsafeCast<Array<dynamic>>())
+        return if (result is Number) PgCursor(result.toInt()) else PgCursor(result.unsafeCast<Array<dynamic>>())
+    }
+
     actual fun addBatch(args: Array<Any?>?) {
         var batched = this.batched
         if (batched == null) {

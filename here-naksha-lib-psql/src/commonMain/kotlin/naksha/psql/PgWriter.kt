@@ -6,7 +6,9 @@ import naksha.base.Action
 import naksha.base.Id
 import naksha.base.NakshaError
 import naksha.base.NakshaException
-import naksha.base.PlatformUtil
+import naksha.base.Platform
+import naksha.base.Platform.PlatformCompanion.logger
+import naksha.base.TupleNumber
 import naksha.base.collectionNotFound
 import naksha.base.forbidden
 import naksha.base.illegalArg
@@ -39,7 +41,7 @@ open class PgWriter internal constructor(
   session: PgSession,
 
   /**
-   * Whether the writer should use savepoints.
+     * Legacy constructor flag; request and batch isolation now use native backend subtransactions on both platforms.
    * @since 3.0
    */
   @JvmField
@@ -220,16 +222,10 @@ open class PgWriter internal constructor(
     orderedCatalogs.sort()
     val orderedCollections = ArrayList(collectionGuards)
     orderedCollections.sortWith(compareBy({ it.first }, { it.second }))
-    val savepointId = PlatformUtil.randomString()
     session.useConn(false) { conn ->
-      var savepointCreated = false
-      try {
-        // Allocate the logical version before the savepoint: the allocator completes its own transaction.
-        session.useTransaction()
-        if (useSavepoint) {
-          conn.execute("SAVEPOINT \"$savepointId\"").close()
-          savepointCreated = true
-        }
+      // Allocate before request isolation: the allocator completes its own transaction on JVM.
+      session.useTransaction()
+      conn.tryBatch {
         // Acquire the combined set in catalog order with scoped modes before preparation or row locks. Existing schema reuse stays shared; later upgrades use PgPartitions' nonblocking retry path.
         for (catalogId in orderedCatalogs) {
           val schema = catalogId.schemaName()
@@ -238,43 +234,43 @@ open class PgWriter internal constructor(
           PgPartitions.lockCatalog(conn, schema, shared = !exclusive)
         }
         // Probe the entire combined set before upgrading anything. Releasing this subtransaction's shared guards avoids two missing-coverage writers deadlocking on an upgrade.
-        val coverageSavepoint = "coverage_$savepointId"
-        conn.execute("SAVEPOINT \"$coverageSavepoint\"").close()
         val missing = HashSet<Pair<Id, Id>>()
         val newCollections = HashSet<Pair<Id, Id>>()
         val version = session.useTransaction().version.number
         val newCatalogs = HashSet<Id>()
-        for (catalogId in catalogPreparations) {
-          if (!catalogCollectionsExist(conn, catalogId)) newCatalogs.add(catalogId)
-        }
-        for ((catalogId, collectionId) in orderedCollections) {
-          PgPartitions.lockCollection(conn, catalogId.schemaName(), collectionId.tableName(), shared = true)
-          if (catalogId in newCatalogs || catalogId to collectionId in exclusiveCollections &&
-            !PgPartitions.exists(conn, catalogId.schemaName(), collectionId.tableName())) {
-            newCollections.add(catalogId to collectionId)
-            continue
+        conn.tryBatch {
+          for (catalogId in catalogPreparations) {
+            if (!catalogCollectionsExist(conn, catalogId)) newCatalogs.add(catalogId)
           }
-          // Guard-only DDL targets may be tombstones with no physical root. Their metadata rows live in the write destination, not in the dropped target.
-          if (catalogId to collectionId !in writeCollections) continue
-          val collection = session.getPgCollection(catalogId.intValue, collectionId.intValue, conn)
-          if (collection == null) {
-            newCollections.add(catalogId to collectionId)
-          } else if (collection.storeHistory) {
-            try {
-              if (!PgPartitions.covered(conn, catalogId.schemaName(), collection.table, version, collection.shift, collection.partitions)) missing.add(catalogId to collectionId)
-            } catch (e: NakshaException) {
-              if (e.error.code == NakshaError.COLLECTION_NOT_FOUND) {
-                // Cache keys are logical identities, not physical aliases from the coverage probe.
-                e.error.database = storage.id.text
-                e.error.catalog = catalogId.text
-                e.error.collection = collectionId.text
+          for ((catalogId, collectionId) in orderedCollections) {
+            PgPartitions.lockCollection(conn, catalogId.schemaName(), collectionId.tableName(), shared = true)
+            if (catalogId in newCatalogs || catalogId to collectionId in exclusiveCollections &&
+              !PgPartitions.exists(conn, catalogId.schemaName(), collectionId.tableName())) {
+              newCollections.add(catalogId to collectionId)
+              continue
+            }
+            // Guard-only DDL targets may be tombstones with no physical root. Their metadata rows live in the write destination, not in the dropped target.
+            if (catalogId to collectionId !in writeCollections) continue
+            val collection = session.getPgCollection(catalogId.intValue, collectionId.intValue, conn)
+            if (collection == null) {
+              newCollections.add(catalogId to collectionId)
+            } else if (collection.storeHistory) {
+              try {
+                if (!PgPartitions.covered(conn, catalogId.schemaName(), collection.table, version, collection.shift, collection.partitions)) missing.add(catalogId to collectionId)
+              } catch (e: NakshaException) {
+                if (e.error.code == NakshaError.COLLECTION_NOT_FOUND) {
+                  // Cache keys are logical identities, not physical aliases from the coverage probe.
+                  e.error.database = storage.id.text
+                  e.error.catalog = catalogId.text
+                  e.error.collection = collectionId.text
+                }
+                throw e
               }
-              throw e
             }
           }
+          missing.isEmpty() && exclusiveCollections.isEmpty() && newCollections.isEmpty()
         }
         if (missing.isNotEmpty() || exclusiveCollections.isNotEmpty() || newCollections.isNotEmpty()) {
-          conn.execute("ROLLBACK TO SAVEPOINT \"$coverageSavepoint\"").close()
           for ((catalogId, collectionId) in orderedCollections) {
             val key = catalogId to collectionId
             PgPartitions.lockCollection(conn, catalogId.schemaName(), collectionId.tableName(),
@@ -300,7 +296,6 @@ open class PgWriter internal constructor(
             }
           }
         }
-        conn.execute("RELEASE SAVEPOINT \"$coverageSavepoint\"").close()
         prepareWrite(conn, pgWrites)
 
         // Provision successor ranges before any row locks; small shifts/imports can exceed premade coverage.
@@ -313,7 +308,7 @@ open class PgWriter internal constructor(
             collection.creationOptions(storage.config, storage.database.maxTupleSize))
         }
 
-        // Lock rows by catalog, collection and ID, independent of operation or atomicity.
+        // Preserve deterministic input/error order; the batch CTE locks physical feature ordinals and does not regroup operations.
         pgWrites.sortWith(compareBy({ it.dbCatalog.id }, { it.dbCollection.id }, { it.id }))
 
         // Perform the writes, if any error happens, we will roll back the session to where it was before we started.
@@ -331,16 +326,7 @@ open class PgWriter internal constructor(
         // Drop physical data only after every logical mutation has passed validation.
         for (write in collectionDrops) storage.database.collection_drop_if_exists(conn, write.dbCatalog.schema, write.id.tableName())
         for (write in catalogDrops) storage.database.catalog_drop_schema(conn, write.id.schemaName())
-        // We can drop the savepoint, if there is any.
-        if (savepointCreated) conn.execute("RELEASE SAVEPOINT \"$savepointId\"").close()
-      } catch (t: Throwable) {
-        if (savepointCreated) {
-          conn.execute("ROLLBACK TO SAVEPOINT \"$savepointId\"").close()
-        } else {
-          // The first request has no earlier writes to preserve and therefore no savepoint.
-          conn.rollback()
-        }
-        throw PgExceptionMapper.map(t)
+        true
       }
     }
 
@@ -597,23 +583,62 @@ WHERE n.nspname = $1 AND c.relname = $2
    */
   private fun executeWrite(conn: PgConnection, pgWrites: ArrayList<PgWrite>, start: Int, end: Int) {
     if (start == end) return
-    // All writes in [start, end) share one catalog and collection, ordered by ID.
     val pgCollection = pgWrites[start].dbCollection
-    var s = start
-    while (s < end) {
-      val op = pgWrites[s].op
-      var e = s + 1
-      while (e < end && pgWrites[e].op == op) e++
-      when (op) {
-        WriteOp.DELETE -> PgWriterDelete(this, pgCollection, pgWrites, s, e).execute(conn)
-        WriteOp.PURGE -> PgWriterDelete(this, pgCollection, pgWrites, s, e, purge = true).execute(conn)
-        WriteOp.CREATE -> PgWriterInsert(this, pgCollection, pgWrites, s, e).execute(conn)
-        WriteOp.UPSERT -> PgWriterUpsert(this, pgCollection, pgWrites, s, e).execute(conn)
-        WriteOp.UPDATE -> PgWriterUpdate(this, pgCollection, pgWrites, s, e).execute(conn)
-        else -> throw illegalArg("Unknown write operation: $op")
+    val database = storage.database
+    val version = session.useTransaction().version.number
+    val inputs = ArrayList<PgMutationInput>(end - start)
+    for (i in start until end) {
+      val write = pgWrites[i]
+      val op = when (write.op) {
+        WriteOp.CREATE -> PgMutationOp.CREATE
+        WriteOp.UPSERT -> PgMutationOp.UPSERT
+        WriteOp.UPDATE -> PgMutationOp.UPDATE
+        WriteOp.DELETE -> PgMutationOp.DELETE
+        WriteOp.PURGE -> PgMutationOp.PURGE
+        else -> throw illegalArg("Unknown write operation: ${write.op}")
       }
-      s = e
+      val tuple = if (op == PgMutationOp.DELETE || op == PgMutationOp.PURGE) null else
+        write.tuple ?: throw illegalState("Prepared mutation has no tuple")
+      val expected = write.requireVersion?.let {
+        TupleNumber(database.id.number, pgCollection.catalogId.intValue, pgCollection.id.intValue, write.id.number, it)
+      }
+      inputs.add(PgMutationInput(op, write.id.number, write.id.text, tuple?.version ?: version, tuple, expected))
     }
+    pgWrites[start].dbCatalog.applySearchPath(conn)
+    val started = Platform.currentNanos()
+    val result = try {
+      PgBatchMutation(database.id, pgCollection.catalogId, pgCollection.id, pgCollection.columns,
+        pgCollection.storeHistory, pgCollection).execute(conn, inputs)
+    } catch (failure: NakshaException) {
+      // Translate metadata UPDATE misses using the failing input, not the first operation in a mixed batch.
+      val error = failure.error
+      if (error.code == NakshaError.FEATURE_NOT_FOUND) {
+        for (i in start until end) {
+          val write = pgWrites[i]
+          if (write.op != WriteOp.UPDATE || write.id.text != error.id) continue
+          if (write.isCollectionModification) {
+            error.code = NakshaError.COLLECTION_NOT_FOUND
+            error.msg = "Collection '${error.id}' does not exist in catalog '${error.catalog}'"
+          } else if (write.isCatalogModification) {
+            error.code = NakshaError.CATALOG_NOT_FOUND
+            error.msg = "Catalog '${error.id}' does not exist"
+          }
+          break
+        }
+      }
+      throw failure
+    }
+    for (i in result.indices) {
+      val write = pgWrites[start + i]
+      val outcome = result[i]
+      write.changed = outcome.changed
+      if (write.op == WriteOp.PURGE) continue
+      val tuple = outcome.state ?: continue
+      write.tuple = tuple
+      write.tupleNumber = tuple.tupleNumber
+      if (write.op == WriteOp.UPSERT || write.op == WriteOp.DELETE) write.action = tuple.action
+    }
+    logger.info("BATCH of ${inputs.size} rows took ${(Platform.currentNanos() - started).toDouble() / 1e6}ms")
   }
 
 }

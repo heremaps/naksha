@@ -32,6 +32,7 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
+import kotlin.test.assertSame
 import kotlin.test.assertTrue
 
 @EnabledIfEnvironmentVariable(named = "NAKSHA_TEST_MUTATION_DB_URL", matches = ".+")
@@ -81,10 +82,9 @@ class PgDatabaseMutationCorrectnessTest {
             other.autoCommit = false
             other.execute("SET LOCAL lock_timeout = '10s'; SET LOCAL statement_timeout = '15s'").close()
             val pid = strings(other, "SELECT pg_backend_pid()::text AS value").single()
-            // PURGE of a live HEAD is a no-op, but must take the same stable feature lock as every mutation.
+            // PURGE of a live HEAD is a no-op, but must row-lock the same existing HEAD as every mutation.
             assertEquals(seed.tuple.tupleNumber, db.rows_purge(conn, col, version + 4, listOf(Id(id))).single()?.tupleNumber)
             val ordinal = Id.featureNumberToOrdinal(Id(id).number)
-            conn.execute("SELECT fn FROM ${col.qualifiedName} WHERE fn = $ordinal AND nv = ${Version.HEAD.number} FOR UPDATE").close()
             val incoming = encode(col, id, version + 8, Action.UPDATE)
             val frozen = freeze(listOf(incoming))
             val future = executor.submit(Callable {
@@ -98,11 +98,12 @@ class PgDatabaseMutationCorrectnessTest {
               val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(8)
               var waiting = false
               while (System.nanoTime() < deadline) {
-                waiting = strings(conn, "SELECT count(*)::text AS value FROM pg_stat_activity WHERE pid = $pid AND wait_event_type = 'Lock' AND wait_event = 'advisory'").single() == "1"
+                waiting = strings(conn, "SELECT count(*)::text AS value FROM pg_stat_activity WHERE pid = $pid AND wait_event_type = 'Lock' " +
+                  "AND wait_event IN ('transactionid', 'tuple') AND pg_backend_pid() = ANY(pg_blocking_pids(pid))").single() == "1"
                 if (waiting) break
                 Thread.sleep(10)
               }
-              assertTrue(waiting, "The contender must wait on the feature lock before reading HEAD")
+              assertTrue(waiting, "The contender must wait for the locked HEAD through row/transaction locking")
               val replacement = if (op == "purge") {
                 db.rows_delete_by_id_with_result(conn, col, version + 4, listOf(Id(id))).single().tuple
               } else {
@@ -250,11 +251,12 @@ class PgDatabaseMutationCorrectnessTest {
             val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(8)
             var waiting = false
             while (System.nanoTime() < deadline) {
-              waiting = strings(conn, "SELECT count(*)::text AS value FROM pg_stat_activity WHERE pid = $pid AND wait_event_type = 'Lock' AND wait_event = 'advisory'").single() == "1"
+              waiting = strings(conn, "SELECT count(*)::text AS value FROM pg_stat_activity WHERE pid = $pid AND wait_event_type = 'Lock' " +
+                "AND wait_event IN ('transactionid', 'tuple') AND pg_backend_pid() = ANY(pg_blocking_pids(pid))").single() == "1"
               if (waiting) break
               Thread.sleep(10)
             }
-            assertTrue(waiting, "Contender must wait on the uncommitted inserter's feature lock before reading HEAD")
+            assertTrue(waiting, "Contender must wait on the uncommitted inserter's unique-key transaction")
             if (outcome == "rollback") conn.rollback() else conn.commit()
             val result = future.get(15, TimeUnit.SECONDS)
             if (outcome == "older" || outcome == "atomic") {
@@ -276,6 +278,53 @@ class PgDatabaseMutationCorrectnessTest {
             conn.rollback()
             future.get(15, TimeUnit.SECONDS)
             other.rollback()
+          }
+        }
+      }
+    } finally { executor.shutdownNow() }
+  }
+
+  @Test
+  fun concurrentMultirowUpsertRetriesWithoutDuplicatingItsInsertedPrefix() = fixture(committed = true) { db, conn, col, version ->
+    val executor = Executors.newSingleThreadExecutor()
+    try {
+      for (commit in listOf(false, true)) {
+        DriverManager.getConnection(System.getenv("NAKSHA_TEST_MUTATION_DB_URL")).use { jdbc ->
+          val other = PgConnection(9880L, conn.instance, conn.options, jdbc as org.postgresql.jdbc.PgConnection)
+          other.autoCommit = false
+          other.execute("SET LOCAL lock_timeout = '10s'; SET LOCAL statement_timeout = '15s'").close()
+          val pid = strings(other, "SELECT pg_backend_pid()::text AS value").single()
+          val winner = encode(col, "batch_winner_$commit", version + 8)
+          insert(db, conn, col, listOf(winner))
+          // Numeric zero has the lowest physical ordinal and is inserted before the blocked key.
+          val inputs = listOf(encode(col, "0", version + 16), encode(col, winner.tuple.id.text, version + 16), encode(col, "1", version + 16))
+          val before = freeze(inputs)
+          val future = executor.submit(Callable { upsert(db, other, col, inputs) })
+          try {
+            val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(8)
+            var waiting = false
+            while (System.nanoTime() < deadline) {
+              waiting = strings(conn, "SELECT count(*)::text AS value FROM pg_stat_activity WHERE pid = $pid AND wait_event_type = 'Lock' " +
+                "AND wait_event IN ('transactionid', 'tuple') AND pg_backend_pid() = ANY(pg_blocking_pids(pid))").single() == "1"
+              if (waiting) break
+              Thread.sleep(10)
+            }
+            assertTrue(waiting, "The multirow attempt must reach unique-key contention")
+            if (commit) conn.commit() else conn.rollback()
+            val saved = future.get(15, TimeUnit.SECONDS)
+            assertEquals(3, saved.size)
+            assertSame(inputs[0].tuple, saved[0].tuple)
+            assertSame(inputs[2].tuple, saved[2].tuple)
+            assertEquals(if (commit) winner.tuple.tupleNumber else null, saved[1].previousTupleNumber)
+            assertEquals(if (commit) Action.UPDATE else Action.CREATE, saved[1].tuple.action)
+            for (i in inputs.indices) assertState(other, col, saved[i].tuple, Version.HEAD.number)
+            assertEquals(listOf("1"), strings(other, "SELECT count(*)::text AS value FROM ${col.qualifiedName} " +
+              "WHERE fn = ${Id.featureNumberToOrdinal(0)} AND nv = ${Version.HEAD.number}"))
+            assertEquals(before, freeze(inputs))
+            assertEquals(listOf("1"), strings(other, "SELECT 1::text AS value"))
+          } finally {
+            conn.rollback()
+            try { future.get(15, TimeUnit.SECONDS) } finally { other.rollback() }
           }
         }
       }
