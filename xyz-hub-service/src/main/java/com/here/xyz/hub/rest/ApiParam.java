@@ -116,6 +116,7 @@ public class ApiParam {
   public static class Query {
 
     private static final Pattern ALLOWED_IDENTIFIER = Pattern.compile("[a-zA-Z0-9@:._-]*");
+    private static final Pattern ALLOWED_SORT_PATH = Pattern.compile("[a-zA-Z0-9@:.,_!=<>-]*");
 
     public static final String ACCESS_TOKEN = "access_token";
     static final String FEATURE_ID = "id";
@@ -233,8 +234,8 @@ public class ApiParam {
       return owner;
     }
 
-    private static void validatePath(String path, String message) throws HttpException {
-      if (path == null || !ALLOWED_IDENTIFIER.matcher(path).matches())
+    private static void validatePath(String path, Pattern allowedCharacters, String message) throws HttpException {
+      if (path == null || !allowedCharacters.matcher(path).matches())
         throw new HttpException(BAD_REQUEST, message);
     }
 
@@ -335,7 +336,7 @@ public class ApiParam {
 
       List<String> sort = new ArrayList<>();
       for (String s : Query.queryParam(Query.SORT, context)) {
-        validatePath(s, "Invalid sort property.");
+        validatePath(s, ALLOWED_SORT_PATH, "Invalid sort property.");
         if (s.startsWith("p.") || s.startsWith("f."))
          sort.add( s.replaceFirst("^p\\.", "properties.") );
         else
@@ -387,7 +388,7 @@ public class ApiParam {
       if (propertyQuery != null) {
         for (PropertyQueryList conjunction : propertyQuery) {
           for (PropertyQuery property : conjunction)
-            validatePath(property.getKey(), "Invalid property key.");
+            validatePath(property.getKey(), ALLOWED_IDENTIFIER, "Invalid property key.");
         }
       }
       return propertyQuery;
