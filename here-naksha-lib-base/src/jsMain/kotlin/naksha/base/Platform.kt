@@ -906,8 +906,12 @@ return {
 
         @JsStatic
         actual fun primaryLocalIp(): String {
-            val rs = js("plv8").execute("SELECT inet_server_addr() AS ip")
-            if (rs is Array<dynamic> && rs.length == 1) return rs[0].ip
+            val rs = js("plv8").execute("SELECT pg_catalog.inet_server_addr()::text AS ip")
+            // Internal background workers and Unix-socket sessions have no network address. Never return SQL NULL through this non-null platform contract.
+            if (rs is Array<dynamic> && rs.length == 1) {
+                val ip: Any? = rs[0].ip
+                if (ip is String && ip.isNotEmpty()) return ip
+            }
             return "plv8"
         }
 

@@ -130,13 +130,23 @@ actual open class PgStorage() : AbstractStorage<PgConfig>() {
                 if (!replicas.contains(replica)) replicas.add(replica)
             }
             _cluster = PgCluster(master, replicas)
-            val db = PgDatabaseImpl(this, this.id)
-            db.init(
+            try {
+              val db = PgDatabaseImpl(this, this.id)
+              db.init(
                 doOverride = _config.override ?: false,
                 doCreate = create ?: _config.create,
                 doUpgrade = upgrade ?: _config.upgrade
-            )
-            _database = db
+              )
+              if (_config.maintenanceJobs && ((create ?: _config.create) || (upgrade ?: _config.upgrade) || _config.override == true)) {
+                // Admin initialization has committed. A failed scheduler setup is reported explicitly and can be retried without reinstalling the database.
+                PgCron.ensure(master, this.id, _config.maintenanceSslMode)
+              }
+              _database = db
+            } catch (failure: Throwable) {
+              _database = null
+              _cluster = null
+              throw failure
+            }
         }
     }
 
@@ -144,6 +154,14 @@ actual open class PgStorage() : AbstractStorage<PgConfig>() {
     }
 
     actual override fun shutdownStorage(dropCache: Boolean) {
+    }
+
+    /**
+     * Remove this database's maintenance job before an operator drops the physical database. Does not drop data or treat storage shutdown as database deletion. Out-of-band DROP DATABASE is covered by the cron database's orphan cleanup job.
+     * @since 3.0
+     */
+    fun removeMaintenanceJob() {
+      PgCron.remove(cluster.master, this.id, config.maintenanceSslMode)
     }
 
     actual override fun newWriteSession(options: SessionOptions?): IWriteSession
@@ -299,15 +317,19 @@ actual open class PgStorage() : AbstractStorage<PgConfig>() {
                 uri = System.getProperty("naksha.test.psql.db.url")
             }
             if (uri != null && uri.isNotEmpty()) {
+                val jobs = System.getenv("NAKSHA_TEST_MAINTENANCE_JOBS")
+                if (jobs != null && jobs != "true" && jobs != "false") throw illegalArg("NAKSHA_TEST_MAINTENANCE_JOBS must be true or false")
                 try {
                     val instance = PgInstanceConfig.fromUri(uri)
                     if (config != null) {
                         config.master = instance
                         config.replicas.clear()
+                        if (jobs != null) config.maintenanceJobs = jobs == "true"
                     }
                     return instance
                 } catch (e: Exception) {
-                    logger.warn("The URI for the database in the environment is invalid: $uri", e)
+                    // Connection configuration and parser failures can contain passwords. Do not log either.
+                    logger.warn("The test database URI is invalid")
                 }
             }
             return null

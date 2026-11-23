@@ -36,6 +36,10 @@ CREATE OR REPLACE FUNCTION "naksha~admin".naksha_maintain() RETURNS integer
 LANGUAGE plv8 VOLATILE PARALLEL UNSAFE SECURITY INVOKER
 SET search_path = "naksha~admin", pg_catalog
 AS $$
+  // The job and manual SQL entry point share the sweep guard. Busy databases are retried on the next run without waiting or blocking writes.
+  if (!plv8.execute("SELECT pg_catalog.pg_try_advisory_xact_lock(1852531051, 1835100526) AS acquired")[0].acquired) {
+    return 0;
+  }
   if (typeof require !== "function") {
     plv8.find_function('"naksha~admin".es_modules_init')();
   }

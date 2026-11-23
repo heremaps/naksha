@@ -107,6 +107,8 @@ If using the isolated-home option, append its `--init-script` argument to narrow
 
 ## Stage 2: opt-in fresh-database PostgreSQL suites
 
+Scheduling follow-up: JVM install/upgrade now defaults `maintenanceJobs=true` and requires preloaded pg_cron plus access to its designated cron database. Ordinary/isolated non-cron campaigns must **explicitly** set `NAKSHA_TEST_MAINTENANCE_JOBS=false` along with their existing `NAKSHA_TEST_PSQL_DB_URL` override, or set `maintenanceJobs=false` in their test PgConfig. This bypass is only applied as part of the existing test URL override and does not change production defaults. Run the separate `PgCronIntegrationTest` with `NAKSHA_TEST_CRON_CONTROL_URL` on a dedicated preloaded pg_cron cluster, **without** a global test storage URL. It creates uniquely named fixture databases, schedules real test workers at one-second intervals, verifies partition repair/no-op behavior and orphan cleanup, then restores managed eight-hour schedules. No existing database/container may be reset or reconfigured for this suite. See [the scheduling note](NAKSHA-33-cron.md).
+
 Run each row separately with a newly created database. Set both `NAKSHA_TEST_PSQL_DB_URL` and the row's suite variable to that database's exact JDBC URL. Never export every suite variable to one database and run all classes together: several suites explicitly assert that `naksha~admin` does not yet exist.
 
 | Suite variable suffix | Test class (`naksha.psql.` prefix) |

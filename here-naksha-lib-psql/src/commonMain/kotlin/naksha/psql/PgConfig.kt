@@ -38,6 +38,8 @@ class PgConfig() : NakshaStorage() {
     private val REPLICAS_LIST = NotNullProperty<PgConfig, PgInstanceConfigList>(PgInstanceConfigList::class) { _,_ ->
       PgInstanceConfigList() }
     private val BOOLEAN_FALSE = NullableProperty<PgConfig, Boolean>(Boolean::class) { _, _ -> false }
+    private val BOOLEAN_TRUE = NotNullProperty<PgConfig, Boolean>(Boolean::class) { _, _ -> true }
+    private val CRON_SSL_MODE = NotNullProperty<PgConfig, String>(String::class) { _, _ -> "verify-full" }
     private val STRING_NULL = NullableProperty<PgConfig, String>(String::class)
   }
 
@@ -124,6 +126,18 @@ class PgConfig() : NakshaStorage() {
   val override by BOOLEAN_FALSE
 
   /**
+   * Register an eight-hour database maintenance job and cluster orphan cleanup when JVM initialization permits creation/upgrades. Requires preloaded pg_cron and access to its designated database using the master role. Disable explicitly for externally scheduled databases and isolated tests; PLV8 attachment never configures cluster jobs.
+   * @since 3.0
+   */
+  var maintenanceJobs: Boolean by BOOLEAN_TRUE
+
+  /**
+   * TLS policy for the independent JVM scheduling connections. Defaults to verify-full using pgJDBC's normal certificate trust configuration; disable is an explicit opt-out intended only for isolated local tests. No automatic plaintext fallback is permitted.
+   * @since 3.0
+   */
+  var maintenanceSslMode: String by CRON_SSL_MODE
+
+  /**
    * Special parameter to force `lib-psql` to install the admin-map in this [version][naksha.model.NakshaVersion]. This is only for debugging purpose, and should not be used in any productive environment, normally the correct version is set, which is [adminVersion].
    *
    * **Warning**: This does not change the actual code that is installed, which will be always what is in the resources of the library, rather it modifies the version number that this code stores, so that the next time an upgrade will be executed. This option is really for debugging purpose only, use with care!
@@ -153,7 +167,9 @@ class PgConfig() : NakshaStorage() {
     val otherConfig = other.proxy(this::class)
     return hardCap == otherConfig.hardCap &&
         create == otherConfig.create &&
-        upgrade == otherConfig.upgrade &&
+            upgrade == otherConfig.upgrade &&
+            maintenanceJobs == otherConfig.maintenanceJobs &&
+            maintenanceSslMode == otherConfig.maintenanceSslMode &&
         version == otherConfig.version &&
         pgInstancesEquals(getMasterOrNull(), otherConfig.getMasterOrNull()) &&
         replicasEquals(replicas, otherConfig.replicas)
