@@ -4,7 +4,7 @@ import naksha.base.Id
 import naksha.base.PlatformUtil
 import naksha.base.TupleNumber
 import naksha.base.Version
-import naksha.jbon.HeapBook
+import naksha.jbon.MemberValuesBook
 import naksha.model.Tuple
 import naksha.model.objects.NakshaFeature
 import naksha.model.objects.StandardMembers.StandardMembers_C.NEXT_VERSION
@@ -98,8 +98,8 @@ private class PgHistoryFeatureTuple(tn: TupleNumber, private val nextVersion: Lo
         val cached = tuple ?: return
         if (cached.nextVersion == nextVersion) return
         // Never publish snapshot-specific metadata to the shared cache; the successor may be rolled back.
-        val members = HeapBook.copyOf(cached.membersBook)
-        members.put(NEXT_VERSION, nextVersion)
+        val members = MemberValuesBook.copyOf(cached.membersBook)
+        members.setNamedValue(NEXT_VERSION, nextVersion)
         tuple = Tuple(cached.featureBytes, members)
     }
 }

@@ -24,6 +24,7 @@ import naksha.geo.SpGeometry
 import naksha.geo.SpType
 import naksha.jbon.BookType
 import naksha.jbon.HeapBook
+import naksha.jbon.MemberValuesBook
 import naksha.jbon.JB2_MAGIC
 import naksha.jbon.JbDecoder2
 import naksha.jbon.JbEncoder2
@@ -231,6 +232,25 @@ data class Tuple @JvmOverloads constructor(
          * @param requestedAction an action the client wants to perform; defaults to `null` meaning auto-detected.
          * @param atomic a hint if the operation **must** be atomic; defaults to `null` meaning auto-detected.
          */
+        /** Encode using a collection-owned declaration snapshot, without per-feature mutable-layout validation. Public/raw mutable-declaration entry points continue using their existing content-checked path. @since 3.0 */
+        @JsStatic
+        @JvmStatic
+        fun encodeWithLayout(
+            raw: AnyObject,
+            databaseNumber: Long,
+            catalogNumber: Int,
+            collectionNumber: Int,
+            layout: CompiledMemberLayout,
+            version: Long,
+            session: IWriteSession? = null,
+            globalBook: IBook? = null,
+            processors: MemberProcessorMap? = session?.processors,
+            requestedAction: Action? = null,
+            atomic: Boolean? = null,
+        ): NewTuple = encode(raw, databaseNumber, catalogNumber, collectionNumber,
+            layout.encodingMembers(), session, version, globalBook, processors,
+            requestedAction, atomic, layout)
+
         private fun encode(
             raw: AnyObject,
             databaseNumber: Long,
@@ -243,22 +263,23 @@ data class Tuple @JvmOverloads constructor(
             processors: MemberProcessorMap?,
             requestedAction: Action?,
             atomic: Boolean?,
+            compiledLayout: CompiledMemberLayout? = null,
         ): NewTuple {
             // Find members.
-            val idMember = memberList.useMember(StandardMembers.Id)
-            val tnMember = memberList.useMember(StandardMembers.Tn) // uuid
-            val nextVersionMember = memberList.useMember(StandardMembers.NextVersion)
-            val globalBookFnMember = memberList.useMember(StandardMembers.GlobalBookFeatureNumber)
-            val originMember = memberList.findMember(StandardMembers.Origin)
+            val idPath = compiledLayout?.pathForName(StandardMembers.Id.name) ?: memberList.useMember(StandardMembers.Id).path
+            val tnPath = compiledLayout?.pathForName(TN) ?: memberList.useMember(StandardMembers.Tn).path
+            val nextVersionPath = compiledLayout?.pathForName(NEXT_VERSION) ?: memberList.useMember(StandardMembers.NextVersion).path
+            val globalBookFnPath = compiledLayout?.pathForName(GLOBAL_BOOK_FN) ?: memberList.useMember(StandardMembers.GlobalBookFeatureNumber).path
+            val originPath = if (compiledLayout != null) compiledLayout.pathForName(ORIGIN) else memberList.findMember(StandardMembers.Origin)?.path
 
             // Create feature with modified members copied.
-            val f = shallowCopy(raw, arrayOf(tnMember.path, nextVersionMember.path, globalBookFnMember.path, originMember?.path))
+            val f = shallowCopy(raw, arrayOf(tnPath, nextVersionPath, globalBookFnPath, originPath))
 
             // Read members.
-            val id = Id(idMember.readString(raw) ?: throw illegalArg("Missing 'id' in NakshaFeature"))
+            val id = Id(raw.getPath(idPath) as? String ?: throw illegalArg("Missing 'id' in NakshaFeature"))
             var prevTn: TupleNumber?
-            var origin: String? = originMember?.readString(raw)
-            val rawUuid = raw.getPath(tnMember.path)
+            var origin: String? = originPath?.let { raw.getPath(it) as? String }
+            val rawUuid = raw.getPath(tnPath)
             val uuidParts = (rawUuid as? String)?.split(":")?.size
 
             if (uuidParts != null &&
@@ -270,7 +291,7 @@ data class Tuple @JvmOverloads constructor(
                 prevTn = null
                 origin = rawUuid
             } else {
-                prevTn = tnMember.readTupleNumber(raw)
+                prevTn = tupleNumberOrNull(rawUuid)
             }
 
             // Detect CREATE, UPDATE, fork, and update.
@@ -330,45 +351,55 @@ data class Tuple @JvmOverloads constructor(
                 globalBookTn = null
             }
 
-            originMember?.write(f, origin)
-            tnMember.write(f, newTn)
-            nextVersionMember.write(f, UNDEFINED)
-            globalBookFnMember.write(f, globalBookTn?.featureNumber ?: UNDEFINED)
+            if (originPath != null) f.setPath(origin, originPath)
+            f.setPath(newTn, tnPath)
+            f.setPath(UNDEFINED, nextVersionPath)
+            f.setPath(globalBookTn?.featureNumber ?: UNDEFINED, globalBookFnPath)
 
             // Create the members book with member in the order as defined in the NakshaCollection.
             // This is important, because references are positional indices into the members book,
             // and the reader (PgRows.getTuple) restores the tuple in the same order.
-            val membersBook = HeapBook(BookType.MEMBER_BOOK)
-            var matchedReferences = memberList.currentReferenceLayout()
+            val indexedBook = compiledLayout?.let { MemberValuesBook(it.bookLayout) }
+            val heapBook = if (indexedBook == null) HeapBook(BookType.MEMBER_BOOK) else null
+            val membersBook: IBook = indexedBook ?: heapBook!!
+            var matchedReferences = if (compiledLayout == null) memberList.currentReferenceLayout() else null
             var referenceCount = 0
-            members@ for (i in 0 until memberList.size) {
-                val member = memberList[i] ?: throw illegalState("Member must not be null")
-                val memberName = member.name
-                if (member.isVirtual()) continue
+            val count = compiledLayout?.size ?: memberList.size
+            members@ for (i in 0 until count) {
+                val entry = compiledLayout?.entryAt(i)
+                val member = if (entry == null) memberList[i] ?: throw illegalState("Member must not be null") else null
+                val memberName = entry?.name ?: member!!.name
+                if (entry == null && member!!.isVirtual()) continue
+                val memberPath = entry?.path ?: member!!.path
                 var memberValue: Any? = when (memberName) {
                     TN -> newTn
                     NEXT_VERSION -> null
                     ORIGIN -> origin
                     GLOBAL_BOOK_FN -> globalBookTn?.featureNumber
-                    CHANGE_COUNT -> (member.readLong(f) ?: 0L) + 1L
-                    else -> member.read(f)
+                    CHANGE_COUNT -> {
+                        val previous = f.getPath(memberPath)
+                        (when (previous) { is Long -> previous; is Number -> previous.toLong(); else -> 0L }) + 1L
+                    }
+                    else -> f.getPath(memberPath)
                 }
                 val procs = processors?.get(memberName)
                 if (procs != null) {
+                    val processorMember = member ?: memberList[entry!!.memberIndex] ?: throw illegalState("Member must not be null")
                     for (proc in procs) {
-                        memberValue = proc.processMember(session, memberList, f, member, memberValue)
+                        memberValue = proc.processMember(session, memberList, f, processorMember, memberValue)
                     }
                 }
-                memberValue = coerce(memberValue, member.dataType, id, memberName)
-                val memberPath = member.path
+                memberValue = coerce(memberValue, entry?.type ?: member!!.dataType, id, memberName)
+                val writePath = if (entry == null) member!!.path else memberPath
                 // Write the (possibly processor-derived) value back so the encoder emits a reference
                 // into the members-book for it; server-stamped members (app_id, author, ...) are absent
                 // from the client feature otherwise and would be missing from the encoded blob.
                 if (memberName != TN && memberName != NEXT_VERSION && memberName != ORIGIN && memberName != GLOBAL_BOOK_FN) {
-                    f.setPath(memberValue ?: UNDEFINED, memberPath)
+                    f.setPath(memberValue ?: UNDEFINED, writePath)
                 }
-                membersBook.put(memberName, memberValue)
-                if (matchedReferences != null && !matchedReferences.matchesEntry(referenceCount, memberName, memberPath, membersBook.indexOfName(memberName))) {
+                if (indexedBook != null) indexedBook.setValue(i, memberValue)
+                else heapBook!!.put(memberName, memberValue)
+                if (matchedReferences != null && !matchedReferences.matchesEntry(referenceCount, memberName, writePath, membersBook.indexOfName(memberName))) {
                     matchedReferences = null
                 }
                 referenceCount++
@@ -376,7 +407,7 @@ data class Tuple @JvmOverloads constructor(
 
             // Bind a reusable, content-checked declarative member-reference plan.
             val encoder = JbEncoder2(globalBook)
-            encoder.withMemberReferences(memberList.memberReferencePlan(membersBook, matchedReferences, referenceCount))
+            encoder.withMemberReferences(compiledLayout?.references ?: memberList.memberReferencePlan(membersBook, matchedReferences, referenceCount))
 
             // Encode the feature.
             val featureBytes = encoder.buildTupleFromMap(f)
@@ -739,11 +770,14 @@ data class Tuple @JvmOverloads constructor(
         get() = membersBook[StandardMembers.NextVersion.name] as Long? ?: Version.HEAD.number
         set(value) {
             val members = this.membersBook
-            if (members is HeapBook) {
+            if (members is MemberValuesBook) {
+                members.setNamedValue(StandardMembers.NextVersion.name, value)
+            } else if (members is HeapBook) {
                 members.put(StandardMembers.NextVersion.name, value)
             } else {
                 throw NakshaException(ILLEGAL_STATE, "Members book is immutable, failed to set nextVersion")
             }
+            _nextTupleNumber = null
         }
 
     private var _nextTupleNumber: TupleNumber? = null

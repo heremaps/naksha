@@ -121,6 +121,15 @@ open class PgCollection @JvmOverloads constructor(
    */
   val qualifiedName: String = "${schema.quotedName}.$quotedName"
 
+  /** Private declaration content is compiled once for this descriptor, never cached by textual collection ID. @since 3.0 */
+  val memberLayout: CompiledMemberLayout = CompiledMemberLayout(naksha.validatedMembers)
+
+  /** Encode through the immutable collection layout while retaining session processing and feature preparation. @since 3.0 */
+  fun encodeFeature(feature: naksha.model.objects.NakshaFeature, session: IWriteSession, action: Action? = null, atomic: Boolean? = null): NewTuple =
+    Tuple.encodeWithLayout(feature, tuple.tupleNumber.databaseNumber, catalogId.intValue,
+      id.intValue, memberLayout, session.version.number, session,
+      requestedAction = action, atomic = atomic)
+
   /**
    * The columns to expect in the table.
    *
@@ -129,6 +138,22 @@ open class PgCollection @JvmOverloads constructor(
    */
   @JvmField
   val columns: Array<PgColumn> = generateColumns(naksha)
+
+  private val columnToBook: IntArray = IntArray(columns.size) { memberLayout.bookLayout.indexOfName(columns[it].member.name) }
+  private val bookToColumn: IntArray = IntArray(memberLayout.size) { -1 }.also { mapping ->
+    for (i in columnToBook.indices) {
+      val slot = columnToBook[i]
+      if (slot >= 0) mapping[slot] = i
+    }
+  }
+
+  internal val featureBytesColumnIndex: Int = columns.indexOfFirst { it.name == FeatureBytes.name }
+
+  /** Explicit physical-column to logical-book mapping; split tuple-number columns and virtual members need not have stored slots. @since 3.0 */
+  fun bookSlotForColumn(index: Int): Int = columnToBook.getOrNull(index) ?: -1
+
+  /** Resolve physical columns without confusing their positions with canonical book slots. The tuple-number slot has no single physical column. @since 3.0 */
+  fun columnForBookSlot(slot: Int): Int = bookToColumn.getOrNull(slot) ?: -1
 
   /**
    * The indices of the HISTORY table.

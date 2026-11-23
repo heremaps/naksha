@@ -8,11 +8,13 @@ import naksha.base.Version
 import naksha.jbon.JbDecoder2
 import naksha.jbon.JbEncoder2
 import naksha.model.Tuple
+import naksha.model.CompiledMemberLayout
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaFeature
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertContentEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
@@ -29,6 +31,7 @@ class TupleCodecCpuTest {
     val definition = NakshaCollection("codec_features", catalog.text)
     PgCollection.resolveLayout(definition)
     val members = definition.validatedMembers
+    val layout = CompiledMemberLayout(members)
     val collection = Id(definition.id)
     val version = Version.now(0L, Action.VERSION).number
     for (payload in listOf("small", "large")) {
@@ -39,7 +42,10 @@ class TupleCodecCpuTest {
       val bytes = Array(fixtures.size) { i -> JbEncoder2().buildTupleFromMap(fixtures[i]) }
       val tuples = Array(fixtures.size) { i -> Tuple.encodeRaw(fixtures[i], database.number, catalog.intValue,
         collection.intValue, members, version, requestedAction = Action.CREATE).tuple }
+      val compiledTuples = Array(fixtures.size) { i -> Tuple.encodeWithLayout(fixtures[i], database.number, catalog.intValue,
+        collection.intValue, layout, version, requestedAction = Action.CREATE).tuple }
       for (i in fixtures.indices) {
+        assertContentEquals(tuples[i].featureBytes, compiledTuples[i].featureBytes)
         val decoder = JbDecoder2()
         decoder.mapBytes(bytes[i])
         assertEquals(fixtures[i].id, decoder.toAnyObject().getRaw("id"))
@@ -48,7 +54,7 @@ class TupleCodecCpuTest {
         assertEquals(fixtures[i].hasRaw("geometry"), feature.hasRaw("geometry"), "Preserve the fixture's geometry presence; the large topology fixture has no top-level geometry")
       }
       val iterations = if (payload == "small") 20000 else 2000
-      for (operation in listOf("JBON_ENCODE", "JBON_DECODE", "TUPLE_ENCODE", "TUPLE_DECODE", "TUPLE_DECODE_FRESH")) {
+      for (operation in listOf("JBON_ENCODE", "JBON_DECODE", "TUPLE_ENCODE", "TUPLE_ENCODE_COMPILED", "TUPLE_DECODE", "TUPLE_DECODE_COMPILED", "TUPLE_DECODE_FRESH")) {
         val wall = ArrayList<Double>(5)
         val cpu = ArrayList<Double>(5)
         val allocations = ArrayList<Double>(5)
@@ -72,7 +78,10 @@ class TupleCodecCpuTest {
                 }
                 "TUPLE_ENCODE" -> result += Tuple.encodeRaw(fixtures[index], database.number, catalog.intValue,
                   collection.intValue, members, version, requestedAction = Action.CREATE).tuple.featureBytes.size
+                "TUPLE_ENCODE_COMPILED" -> result += Tuple.encodeWithLayout(fixtures[index], database.number, catalog.intValue,
+                  collection.intValue, layout, version, requestedAction = Action.CREATE).tuple.featureBytes.size
                 "TUPLE_DECODE" -> result += tuples[index].decodeFeature(null).id.length
+                "TUPLE_DECODE_COMPILED" -> result += compiledTuples[index].decodeFeature(null).id.length
                 else -> result += Tuple(tuples[index].featureBytes, tuples[index].membersBook).decodeFeature(null).id.length
               }
             }

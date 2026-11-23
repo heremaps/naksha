@@ -4,7 +4,7 @@ import naksha.base.AnyList
 import naksha.base.Action
 import naksha.geo.SpGeometry
 import naksha.jbon.BookType
-import naksha.jbon.HeapBook
+import naksha.jbon.MemberValuesBook
 import naksha.model.*
 import naksha.base.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
 import naksha.base.NakshaException
@@ -308,46 +308,37 @@ internal class PgRows() {
     fun getTuple(row: Int, featureId: String? = null): Tuple? {
         if (row !in 0..< size) return null
         val collection = this.collection ?: return null
-        val emptyTombstone = getAny(row, FeatureBytes.name) == null &&
-            getLong(row, PgColumn.VersionColumn)?.let { Action.fromVersion(it) } == Action.DELETE
+        val bytes = getColumn(collection.featureBytesColumnIndex)?.get(row)
+        val fn = getColumn(0)?.get(row) as Long?
+        val ver = getColumn(1)?.get(row) as Long?
+        val emptyTombstone = bytes == null && ver?.let { Action.fromVersion(it) } == Action.DELETE
         // Rebuild the members-book in the same canonical member order as Tuple.encodeFeature
         // (collection.useMembers()) so the blob's positional member references resolve; the
         // tuple-number is reconstructed from the split `_fn`/`_version` columns.
-        val members = collection.naksha.validatedMembers
-        val membersBook = HeapBook(BookType.MEMBER_BOOK)
-        var featureBytes: ByteArray? = null
-        for (i in 0 until members.size) {
-            val member = members[i] ?: continue
-            val name = member.name
-            if (name == FeatureBytes.name) {
-                val value = getAny(row, name)
-                if (emptyTombstone) continue
-                if (value !is ByteArray) throw NakshaException(ILLEGAL_STATE, "The feature root is no byte-array")
-                featureBytes = value
-                continue
-            }
-            if (member.isVirtual()) continue
+        val layout = collection.memberLayout
+        val membersBook = MemberValuesBook(layout.bookLayout)
+        if (bytes != null && bytes !is ByteArray) throw NakshaException(ILLEGAL_STATE, "The feature root is no byte-array")
+        var featureBytes = bytes as? ByteArray
+        for (i in 0 until layout.size) {
+            val name = layout.nameAt(i)
             when (name) {
                 Tn.name -> {
-                    val fn = getLong(row, PgColumn.FnColumn)
-                    val ver = getLong(row, PgColumn.VersionColumn)
                     val db = databaseNumber; val cat = catalogNumber; val col = collectionNumber
                     val tn = if (fn != null && ver != null && db != null && cat != null && col != null)
                         TupleNumber(db, cat, col, fn, ver) else null
-                    membersBook.put(name, tn)
+                    membersBook.setValue(i, tn)
                 }
                 NextVersion.name -> {
-                    membersBook.put(name, getLong(row, name))
+                    membersBook.setValue(i, getColumn(collection.columnForBookSlot(i))?.get(row) as Long?)
                 }
                 Id.name -> {
-                    val stored = getAny(row, name)
-                    val fn = getLong(row, PgColumn.FnColumn)
-                    membersBook.put(name, stored ?: if (fn != null && fn >= 0L) fn.toString() else if (emptyTombstone) featureId else null)
+                    val stored = getColumn(collection.columnForBookSlot(i))?.get(row)
+                    membersBook.setValue(i, stored ?: if (fn != null && fn >= 0L) fn.toString() else if (emptyTombstone) featureId else null)
                 }
                 else -> {
-                    val pg_value = getAny(row, name)
-                    val value = member.dataType.convert(pg_value)
-                    membersBook.put(name, value)
+                    val pg_value = getColumn(collection.columnForBookSlot(i))?.get(row)
+                    val value = layout.typeAt(i).convert(pg_value)
+                    membersBook.setValue(i, value)
                 }
             }
         }
@@ -391,12 +382,14 @@ internal class PgRows() {
     fun setRow(row: Int, tuple: Tuple) {
         withMinCapacity(row+1)
         val membersBook = tuple.membersBook
+        val descriptor = collection
+        val indexed = membersBook is MemberValuesBook && membersBook.layout === descriptor?.memberLayout?.bookLayout
         val END = membersBook.namesLength()
         for (i in 0 until END) {
             val memberName = membersBook.getNameAt(i) ?: continue
-            val column = getColumn(memberName) ?: continue
+            val column = if (indexed) getColumn(descriptor!!.columnForBookSlot(i)) ?: continue else getColumn(memberName) ?: continue
             val memberType = column.pgColumn.memberType
-            val member_value = membersBook[memberName]
+            val member_value = membersBook[i]
             // Note: The members book is required to contain correctly typed values.
             // We convert these values into what is stored in PostgresQL.
             val pg_value = when (memberType) {

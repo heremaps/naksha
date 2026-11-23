@@ -8,7 +8,7 @@ import naksha.base.TupleNumber
 import naksha.base.Version
 import naksha.base.illegalArg
 import naksha.base.illegalState
-import naksha.jbon.HeapBook
+import naksha.jbon.MemberValuesBook
 import naksha.model.NewTuple
 import naksha.model.Tuple
 import naksha.model.objects.MemberType
@@ -344,9 +344,9 @@ ORDER BY c.$order
           val newCc = (cursor.column(returnedCc) as? String)?.toInt()
           if (version == input.tuple.version && !(input.op == PgMutationOp.UPSERT && previous != null && cc != null)) input.tuple
           else {
-            val book = HeapBook.copyOf(input.tuple.membersBook)
-            book.put(StandardMembers.TN, TupleNumber.copy(input.tuple.tupleNumber, version = version))
-            if (newCc != null) book.put(StandardMembers.ChangeCount.name, newCc)
+            val book = MemberValuesBook.copyOf(input.tuple.membersBook)
+            book.setNamedValue(StandardMembers.TN, TupleNumber.copy(input.tuple.tupleNumber, version = version))
+            if (newCc != null) book.setNamedValue(StandardMembers.ChangeCount.name, newCc)
             Tuple(input.tuple.featureBytes, book)
           }
         } else if (old != null && output != null) {
