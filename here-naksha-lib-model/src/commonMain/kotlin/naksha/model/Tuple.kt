@@ -367,12 +367,9 @@ data class Tuple @JvmOverloads constructor(
                 membersBook.put(memberName, memberValue)
             }
 
-            // Create the encoder with a custom member encoder.
+            // Bind a reusable, content-checked declarative member-reference plan.
             val encoder = JbEncoder2(globalBook)
-            val routing = TupleMemberRouting(memberList, membersBook)
-            encoder.withMemberEncoder { path: Array<Any?>, pathEnd: Int, _: Any? ->
-                routing.find(path, pathEnd)
-            }
+            encoder.withMemberReferences(memberList.memberReferencePlan(membersBook))
 
             // Encode the feature.
             val featureBytes = encoder.buildTupleFromMap(f)

@@ -12,6 +12,7 @@ import naksha.model.objects.MemberType
 import naksha.model.objects.NakshaFeature
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertSame
 
 class TupleRoutingIntegrationTest {
   @Test
@@ -62,5 +63,20 @@ class TupleRoutingIntegrationTest {
     assertEquals("after", second.membersBook["label"])
     assertEquals("before", second.decodeObject(null).getPath("properties", "old"))
     assertEquals("after", second.decodeObject(null).getPath("properties", "new"))
+  }
+
+  @Test
+  fun reusedReferencePlansDoNotCacheMemberCoercionTypes() {
+    val member = Member("value", MemberType.STRING, JsonPath("properties", "value"))
+    val members = MemberList(member).verify()
+    val feature = NakshaFeature("5").apply { properties.setRaw("value", "original") }
+    val first = Tuple.encodeRaw(feature, 1L, 2, 3, members, 100L, requestedAction = Action.CREATE).tuple
+    val plan = members.memberReferencePlan(first.membersBook)
+    assertEquals("original", first.decodeObject(null).getPath("properties", "value"))
+    member.dataType = MemberType.INT32
+    feature.properties.setRaw("value", 123)
+    val second = Tuple.encodeRaw(feature, 1L, 2, 3, members, 104L, requestedAction = Action.CREATE).tuple
+    assertSame(plan, members.memberReferencePlan(second.membersBook))
+    assertEquals(123, second.decodeObject(null).getPath("properties", "value"))
   }
 }

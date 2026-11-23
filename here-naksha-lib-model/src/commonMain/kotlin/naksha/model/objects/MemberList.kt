@@ -3,6 +3,10 @@
 package naksha.model.objects
 
 import naksha.base.ListProxy
+import naksha.base.AtomicRef
+import naksha.jbon.IBook
+import naksha.jbon.JbMemberReferencePlan
+import naksha.model.TupleMemberReferenceLayout
 import naksha.base.NakshaException
 import naksha.base.Platform
 import naksha.base.Platform.PlatformCompanion.FAL
@@ -31,6 +35,17 @@ import kotlin.jvm.JvmStatic
  */
 @JsExport
 class MemberList() : ListProxy<Member>(Member::class) {
+
+  private val referenceLayout = AtomicRef<TupleMemberReferenceLayout>(null)
+
+  /** Reuse only content-equivalent immutable reference plans, never merely proxy identity. Atomic publication permits concurrent read-only encoding; declaration mutation retains the proxy's single-threaded contract. @since 3.0 */
+  internal fun memberReferencePlan(book: IBook): JbMemberReferencePlan {
+    val cached = referenceLayout.get()
+    if (cached != null && cached.matches(this, book)) return cached.plan
+    val snapshot = TupleMemberReferenceLayout(this, book)
+    referenceLayout.set(snapshot)
+    return snapshot.plan
+  }
 
   /**
    * Construct a list from a vararg of members.
