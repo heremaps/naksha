@@ -369,23 +369,9 @@ data class Tuple @JvmOverloads constructor(
 
             // Create the encoder with a custom member encoder.
             val encoder = JbEncoder2(globalBook)
+            val routing = TupleMemberRouting(memberList, membersBook)
             encoder.withMemberEncoder { path: Array<Any?>, pathEnd: Int, _: Any? ->
-                // Find the member whose declared path matches the current position and redirect its value into the members-book.
-                members@ for (i in 0 until memberList.size) {
-                    val member = memberList[i] ?: continue
-                    if (member.isVirtual()) continue
-                    val memberName = member.name
-                    val memberPath = member.path
-                    if (memberPath.size != pathEnd) continue
-                    for (pi in 0 until pathEnd) {
-                        if (path[pi] != memberPath[pi]) continue@members
-                    }
-                    // Path matches.
-                    val memberIndex = membersBook.indexOfName(memberName)
-                    if (memberIndex < 0) throw internalError("Member index should not be negative at this point")
-                    return@withMemberEncoder memberIndex
-                }
-                -1
+                routing.find(path, pathEnd)
             }
 
             // Encode the feature.

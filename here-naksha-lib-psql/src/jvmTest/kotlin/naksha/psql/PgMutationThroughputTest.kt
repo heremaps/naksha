@@ -25,6 +25,7 @@ class PgMutationThroughputTest : PgTestBase(collection = null) {
     val featuresPerRound = 8000
     val context = NakshaContext.currentContext()
     val pool = Executors.newFixedThreadPool(workers)
+    JvmCpuProfile.enableCounters()
     try {
       for (batchSize in listOf(100, 1000)) {
         for (operation in listOf("INSERT", "UPDATE", "UPSERT", "DELETE")) {
@@ -55,26 +56,44 @@ class PgMutationThroughputTest : PgTestBase(collection = null) {
               "DELETE" -> Action.DELETE
               else -> Action.UPDATE
             }
+            // Record only the final timed round. Fixtures/seeding are excluded, and earlier rounds establish JIT/cache warmup without recording overhead.
+            val recording = if (round == 3) JvmCpuProfile.recording("write_${operation.lowercase()}_${batchSize}") else null
             val started = System.nanoTime()
-            val futures = ArrayList<java.util.concurrent.Future<Double>>(requests.size)
+            val futures = ArrayList<java.util.concurrent.Future<BatchMeasurement>>(requests.size)
             for (request in requests) futures.add(pool.submit(Callable {
               context.attachToCurrentThread()
               val batchStarted = System.nanoTime()
+              val cpuStarted = JvmCpuProfile.cpuNanos()
+              val allocationStarted = JvmCpuProfile.allocatedBytes()
               val response = executeWrite(request)
+              val cpuNanos = JvmCpuProfile.cpuNanos() - cpuStarted
+              val allocatedBytes = JvmCpuProfile.allocatedBytes() - allocationStarted
               val millis = (System.nanoTime() - batchStarted) / 1e6
               assertEquals(batchSize, response.featureTupleList.size)
               for (feature in response.featureTupleList) assertEquals(expectedAction, feature!!.tupleNumber.action)
-              millis
+              BatchMeasurement(millis, cpuNanos, allocatedBytes)
             }))
             val latencies = ArrayList<Double>(requests.size)
-            for (future in futures) latencies.add(future.get(3, TimeUnit.MINUTES))
-            val seconds = (System.nanoTime() - started) / 1e9
+            var cpuNanos = 0L
+            var allocatedBytes = 0L
+            var ended = 0L
+            try {
+              for (future in futures) {
+                val result = future.get(3, TimeUnit.MINUTES)
+                latencies.add(result.wallMillis)
+                cpuNanos += result.cpuNanos
+                allocatedBytes += result.allocatedBytes
+              }
+              ended = System.nanoTime()
+            } finally { JvmCpuProfile.finish(recording) }
+            val seconds = (ended - started) / 1e9
             latencies.sort()
             val rate = featuresPerRound / seconds
             if (round > 0) rates.add(rate)
             val median = (latencies[(latencies.size - 1) / 2] + latencies[latencies.size / 2]) / 2
             val p95 = latencies[ceil(latencies.size * 0.95).toInt() - 1]
             println("MUTATION_THROUGHPUT operation=$operation batch=$batchSize workers=$workers round=$round warmup=${round == 0} features=$featuresPerRound seconds=$seconds features_per_second=$rate batch_median_ms=$median batch_p95_ms=$p95 encoding=true commit=true seeding=false history=true partitions=4 payload=small_topology")
+            println("MUTATION_CPU operation=$operation batch=$batchSize round=$round features=$featuresPerRound worker_cpu_ms=${cpuNanos / 1e6} worker_cpu_us_per_feature=${cpuNanos / 1000.0 / featuresPerRound} allocated_bytes_per_feature=${allocatedBytes.toDouble() / featuresPerRound} worker_cpu_cores=${cpuNanos / 1e9 / seconds} jfr=${recording != null}")
           }
           rates.sort()
           println("MUTATION_THROUGHPUT_SUMMARY operation=$operation batch=$batchSize workers=$workers rounds=${rates.size} median_features_per_second=${rates[rates.size / 2]} min_features_per_second=${rates.first()} max_features_per_second=${rates.last()}")
@@ -85,4 +104,6 @@ class PgMutationThroughputTest : PgTestBase(collection = null) {
       assertTrue(pool.awaitTermination(1, TimeUnit.MINUTES), "Throughput workers did not terminate")
     }
   }
+
+  private class BatchMeasurement(val wallMillis: Double, val cpuNanos: Long, val allocatedBytes: Long)
 }

@@ -303,6 +303,18 @@ class MemberList() : ListProxy<Member>(Member::class) {
    * @return this.
    */
   fun validateAndSort(): MemberList {
+    // Validate every access, including raw/in-place changes. Valid layouts take one pass; malformed layouts retain the original diagnostic ordering through the slow path.
+    val names = HashSet<String>()
+    val size = this.size
+    for (i in 0 until size) {
+      val member = this[i] ?: return validateInvalidMembers()
+      if (!names.add(member.name)) return validateInvalidMembers()
+    }
+    return this
+  }
+
+  /** Preserve the established first null/duplicate error on malformed input without making valid feature writes quadratic. @since 3.0 */
+  private fun validateInvalidMembers(): MemberList {
     val size = this.size
     for (i in 0 until size) {
       val member = this[i] ?: throw illegalState("Member at index $i is null")
