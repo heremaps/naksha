@@ -339,6 +339,8 @@ data class Tuple @JvmOverloads constructor(
             // This is important, because references are positional indices into the members book,
             // and the reader (PgRows.getTuple) restores the tuple in the same order.
             val membersBook = HeapBook(BookType.MEMBER_BOOK)
+            var matchedReferences = memberList.currentReferenceLayout()
+            var referenceCount = 0
             members@ for (i in 0 until memberList.size) {
                 val member = memberList[i] ?: throw illegalState("Member must not be null")
                 val memberName = member.name
@@ -358,18 +360,23 @@ data class Tuple @JvmOverloads constructor(
                     }
                 }
                 memberValue = coerce(memberValue, member.dataType, id, memberName)
+                val memberPath = member.path
                 // Write the (possibly processor-derived) value back so the encoder emits a reference
                 // into the members-book for it; server-stamped members (app_id, author, ...) are absent
                 // from the client feature otherwise and would be missing from the encoded blob.
                 if (memberName != TN && memberName != NEXT_VERSION && memberName != ORIGIN && memberName != GLOBAL_BOOK_FN) {
-                    member.write(f, memberValue ?: UNDEFINED)
+                    f.setPath(memberValue ?: UNDEFINED, memberPath)
                 }
                 membersBook.put(memberName, memberValue)
+                if (matchedReferences != null && !matchedReferences.matchesEntry(referenceCount, memberName, memberPath, membersBook.indexOfName(memberName))) {
+                    matchedReferences = null
+                }
+                referenceCount++
             }
 
             // Bind a reusable, content-checked declarative member-reference plan.
             val encoder = JbEncoder2(globalBook)
-            encoder.withMemberReferences(memberList.memberReferencePlan(membersBook))
+            encoder.withMemberReferences(memberList.memberReferencePlan(membersBook, matchedReferences, referenceCount))
 
             // Encode the feature.
             val featureBytes = encoder.buildTupleFromMap(f)

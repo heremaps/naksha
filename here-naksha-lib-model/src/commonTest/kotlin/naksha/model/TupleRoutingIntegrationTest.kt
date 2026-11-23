@@ -79,4 +79,26 @@ class TupleRoutingIntegrationTest {
     assertSame(plan, members.memberReferencePlan(second.membersBook))
     assertEquals(123, second.decodeObject(null).getPath("properties", "value"))
   }
+
+  @Test
+  fun extractionPassChecksRawNameChangesAndVirtualCountChanges() {
+    val member = Member("label", MemberType.STRING, JsonPath("properties", "label"))
+    val members = MemberList(member).verify()
+    val feature = NakshaFeature("5").apply { properties.setRaw("label", "original") }
+    val first = Tuple.encodeRaw(feature, 1L, 2, 3, members, 100L, requestedAction = Action.CREATE).tuple
+    assertEquals("original", first.membersBook["label"])
+    member.setRaw("name", "renamed")
+    feature.properties.setRaw("label", "updated")
+    val renamed = Tuple.encodeRaw(feature, 1L, 2, 3, members, 104L, requestedAction = Action.CREATE).tuple
+    assertEquals("updated", renamed.membersBook["renamed"])
+    assertEquals("updated", renamed.decodeObject(null).getPath("properties", "label"))
+    member.setRaw("virtual", true)
+    val virtual = Tuple.encodeRaw(feature, 1L, 2, 3, members, 108L, requestedAction = Action.CREATE).tuple
+    assertEquals(-1, virtual.membersBook.indexOfName("renamed"))
+    assertEquals(-1, members.memberReferencePlan(virtual.membersBook).memberIndex(arrayOf("properties", "label")))
+    assertEquals("updated", virtual.decodeObject(null).getPath("properties", "label"))
+    member.setRaw("virtual", false)
+    val restored = Tuple.encodeRaw(feature, 1L, 2, 3, members, 112L, requestedAction = Action.CREATE).tuple
+    assertEquals("updated", restored.membersBook["renamed"])
+  }
 }

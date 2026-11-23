@@ -47,6 +47,15 @@ class MemberList() : ListProxy<Member>(Member::class) {
     return snapshot.plan
   }
 
+  /** Immutable candidate for content checking during extraction. Publication remains atomic; only the per-encoding local candidate is changed while reading metadata. @since 3.0 */
+  internal fun currentReferenceLayout(): TupleMemberReferenceLayout? = referenceLayout.get()
+
+  /** Reuse a candidate only after every extracted entry and the final count match; cold/mismatched layouts retain the full snapshot validation path. @since 3.0 */
+  internal fun memberReferencePlan(book: IBook, matched: TupleMemberReferenceLayout?, count: Int): JbMemberReferencePlan {
+    if (matched != null && count == matched.memberCount) return matched.plan
+    return memberReferencePlan(book)
+  }
+
   /**
    * Construct a list from a vararg of members.
    * @since 3.0

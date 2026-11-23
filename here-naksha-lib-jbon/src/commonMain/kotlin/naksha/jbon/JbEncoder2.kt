@@ -446,8 +446,8 @@ open class JbEncoder2(var global: IBook? = null) : Binary() {
         var source = start + 5
         var target = writeStringHeader(this, start, size)
         if (target < source) {
-            while (source < pos) setInt8(target++, getInt8(source++))
-            pos = target
+            moveBytes(source, target, pos - source)
+            pos = target + size
         }
         end = pos
         return start
@@ -576,8 +576,9 @@ open class JbEncoder2(var global: IBook? = null) : Binary() {
         var source = start + headerReservedSize
         var target = writeStringHeader(this, start, size)
         if (target < source) {
-            while (source < pos) setInt8(target++, getInt8(source++))
-            pos = target
+            val count = pos - source
+            moveBytes(source, target, count)
+            pos = target + count
         }
         end = pos
         return start
@@ -644,9 +645,8 @@ open class JbEncoder2(var global: IBook? = null) : Binary() {
         writeStructHeader(structType, contentSize)
         var source = contentStart
         if (end < source) {
-            var e = this.end
-            while (source < contentEnd) setInt8(e++, getInt8(source++))
-            this.end = e
+            moveBytes(source, this.end, contentSize)
+            this.end += contentSize
         } else {
             // Header exactly consumed the 5 reserved bytes (contentSize >= 65536);
             // content is already in place — just advance end past it.
@@ -917,10 +917,8 @@ open class JbEncoder2(var global: IBook? = null) : Binary() {
         writeStructHeader(JB2_STRUCT_DICTIONARY, payloadSize)
         val headerEnd = end
         if (headerEnd < payloadStart) {
-            var source = payloadStart
-            var target = headerEnd
-            while (source < payloadEnd) setInt8(target++, getInt8(source++))
-            end = target
+            moveBytes(payloadStart, headerEnd, payloadSize)
+            end = headerEnd + payloadSize
         } else {
             end = payloadEnd
         }
@@ -984,21 +982,38 @@ open class JbEncoder2(var global: IBook? = null) : Binary() {
         val headerSize = if (withHeader) JB2_MAGIC.size else 0
         val targetSize = headerSize + tupleHeaderSize + tupleContentSize
         val target = ByteArray(targetSize)
-        val targetView = DataViewProxy(target)
         var t = 0
 
         if (withHeader) {
-            for (b in JB2_MAGIC) targetView.setInt8(t++, b)
+            JB2_MAGIC.copyInto(target)
+            t = JB2_MAGIC.size
         }
         // tuple header
-        var source = tupleHeaderStart
-        while (source < tupleHeaderEnd) targetView.setInt8(t++, getInt8(source++))
+        copyBytes(tupleHeaderStart, target, t, tupleHeaderSize)
+        t += tupleHeaderSize
         // feature object
-        source = featureStart
-        while (source < featureEnd) targetView.setInt8(t++, getInt8(source++))
+        copyBytes(featureStart, target, t, featureSize)
+        t += featureSize
         // local book
-        source = localBookStart
-        while (source < localBookEnd) targetView.setInt8(t++, getInt8(source++))
+        copyBytes(localBookStart, target, t, localBookSize)
         return target
+    }
+
+    /** Compact an already-written range. Validate mapped-view bounds/readonly state once; ByteArray.copyInto is overlap-safe and respects the view's backing-array offset. @since 3.0 */
+    private fun moveBytes(source: Int, target: Int, count: Int) {
+        if (count == 0) return
+        prepareRead(source, count, byteLength)
+        prepareWrite(target, count, false)
+        val bytes = byteArray
+        val offset = byteOffset
+        bytes.copyInto(bytes, offset + target, offset + source, offset + source + count)
+    }
+
+    /** Copy an already-written range into a fresh tuple result, not a caller-owned payload. @since 3.0 */
+    private fun copyBytes(source: Int, target: ByteArray, targetOffset: Int, count: Int) {
+        if (count == 0) return
+        prepareRead(source, count, byteLength)
+        val offset = byteOffset
+        byteArray.copyInto(target, targetOffset, offset + source, offset + source + count)
     }
 }
