@@ -47,6 +47,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -55,6 +56,7 @@ public class IterateFeatures extends SearchForFeatures<IterateFeaturesEvent> {
 
   public static final String HPREFIX = "h07~";
   private static final String HANDLE_ENCRYPTION_PHRASE = "findFeaturesSort";
+  private static final Pattern ALLOWED_SORT_PATH = Pattern.compile("[a-zA-Z0-9@:._-]*");
   private static String pg_hint_plan = "/*+ Set(seq_page_cost 100.0) IndexOnlyScan( ht1 ) */";
   private static String PropertyDoesNotExistIndikator = "#zJfCzPCz#";
   private long limit;
@@ -320,9 +322,16 @@ public class IterateFeatures extends SearchForFeatures<IterateFeaturesEvent> {
 
   private static boolean isDescending(String sortproperty) { return sortproperty.toLowerCase().endsWith(":desc"); }
 
+  // Escape for PostgreSQL E'...' literals, independent of standard_conforming_strings.
+  private static String escapeSqlString(String value) {
+    return value.replace("\\", "\\\\").replace("'", "''");
+  }
+
   private static String jpathFromSortProperty(String sortproperty)
   { String jformat = "(%s->'%s')", jpth = "jsondata";
     sortproperty = sortproperty.replaceAll(":(?i)(asc|desc)$", "");
+    if (!ALLOWED_SORT_PATH.matcher(sortproperty).matches())
+      throw new IllegalArgumentException("Invalid sort property.");
 
     for (String p : sortproperty.split("\\."))
       jpth = DhString.format(jformat, jpth, p);
@@ -407,7 +416,7 @@ public class IterateFeatures extends SearchForFeatures<IterateFeaturesEvent> {
    }
 
    if( h.has("h") ) // start handle partitioned by id
-   { ret.add(DhString.format(" and (jsondata->>'id') >= '%s'",h.get("h").toString()));
+   { ret.add(DhString.format(" and (jsondata->>'id') >= E'%s'", escapeSqlString(h.get("h").toString())));
      return ret;
    }
 
@@ -424,12 +433,12 @@ public class IterateFeatures extends SearchForFeatures<IterateFeaturesEvent> {
      if(s.startsWith("id"))
      { sortbyIdUseCase = true; break; }
      else if( !bNull )
-      sqlWhereContinuation += DhString.format(" and %s = ('%s'::jsonb)->'%s'", jpathFromSortProperty(s), jo.toString() ,hkey );
+      sqlWhereContinuation += DhString.format(" and %s = (E'%s'::jsonb)->'%s'", jpathFromSortProperty(s), escapeSqlString(jo.toString()), hkey );
      else
       sqlWhereContinuation += DhString.format(" and %s is null", jpathFromSortProperty(s) );
     }
 
-   sqlWhereContinuation += DhString.format(" and (jsondata->>'id') %s '%s'", ( descendingLast ? "<" : ">" ) ,h.get("h0").toString());
+   sqlWhereContinuation += DhString.format(" and (jsondata->>'id') %s E'%s'", ( descendingLast ? "<" : ">" ), escapeSqlString(h.get("h0").toString()));
 
    ret.add( sqlWhereContinuation );
 
@@ -456,8 +465,8 @@ public class IterateFeatures extends SearchForFeatures<IterateFeaturesEvent> {
        if(!bNull)
         switch( op )
         { case "=" :
-          case "<" : sqlWhereContinuation += DhString.format(" and %s %s ('%s'::jsonb)->'%s'", jpathFromSortProperty(s), op ,jo.toString() ,hkey ); break;
-          case ">" : ret.add( sqlWhereContinuation + DhString.format(" and ( %1$s > ('%2$s'::jsonb)->'%3$s' )", jpathFromSortProperty(s), jo.toString() ,hkey ) );
+          case "<" : sqlWhereContinuation += DhString.format(" and %s %s (E'%s'::jsonb)->'%s'", jpathFromSortProperty(s), op, escapeSqlString(jo.toString()), hkey ); break;
+          case ">" : ret.add( sqlWhereContinuation + DhString.format(" and ( %1$s > (E'%2$s'::jsonb)->'%3$s' )", jpathFromSortProperty(s), escapeSqlString(jo.toString()), hkey ) );
                      sqlWhereContinuation += DhString.format(" and ( %1$s is null )", jpathFromSortProperty(s) ); break;
         }
        else
