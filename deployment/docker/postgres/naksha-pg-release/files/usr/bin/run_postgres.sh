@@ -32,6 +32,7 @@ if [ -z "$(ls -A "$PGDATA")" ]; then
     echo "Initialized database with password: $PG_PWD"
     echo "Copy postgresql.conf to $PGDATA"
     cp /home/postgres/postgresql.conf "$PGDATA"/.
+    echo "cron.database_name = '$PGDATABASE'" >> "$PGDATA"/postgresql.conf
     echo "Start postgres"
     su postgres -c "pg_ctl -D '$PGDATA' start"
     sleep 1
@@ -40,6 +41,8 @@ if [ -z "$(ls -A "$PGDATA")" ]; then
       echo "Create $PGDATABASE database"
       su postgres -c "psql -d postgres -c \"CREATE DATABASE $PGDATABASE;\""
     fi
+    echo "Create pg_cron extension in $PGDATABASE"
+    su postgres -c "psql -d $PGDATABASE -c \"CREATE EXTENSION IF NOT EXISTS pg_cron;\""
     echo "Create temporary tablespace"
     su postgres -c "psql -c \"CREATE TABLESPACE temp LOCATION '$PGTEMP';\""
     echo "Stop postgres"
