@@ -302,14 +302,17 @@ actual open class PgStorage() : AbstractStorage<PgConfig>() {
          * - `NAKSHA_TEST_PSQL_DB_URL` — From environment variables.
          * - `naksha.test.psql.db.url` — From JVM properties set via `-Dnaksha.test.psql.db.url=...` when JVM is started.
          *
-         * If a config was provided and the method returns a detected instance configuration, then the config was patched; otherwise the config was left alone. This allows to read a default config from resources, then to override it from environment, when set accordingly.
-         * @param config if not `null` and an instance was detected, it is set as master into the given configuration, replicas are cleared.
+         * If a config was provided and an instance configuration was detected, its master is replaced and replicas are cleared. Independently of the URL override, `NAKSHA_TEST_MAINTENANCE_JOBS` overrides maintenance job registration when set to `true` or `false`; any other value is rejected.
+         * @param config if not `null`, receives the independent maintenance setting and any detected master override.
          * @return if the environment configures an instance to be used; `null` otherwise.
          * @since 3.0
          */
         @JvmOverloads
         @JvmStatic
         fun getPgInstanceConfigFromEnv(config: PgConfig? = null): PgInstanceConfig? {
+            val jobs = System.getenv("NAKSHA_TEST_MAINTENANCE_JOBS")
+            if (jobs != null && jobs != "true" && jobs != "false") throw illegalArg("NAKSHA_TEST_MAINTENANCE_JOBS must be true or false")
+            if (config != null && jobs != null) config.maintenanceJobs = jobs == "true"
             // - read from environment
             var uri = System.getenv("NAKSHA_TEST_PSQL_DB_URL")
             // - read from system (for Storage-API support)
@@ -317,14 +320,11 @@ actual open class PgStorage() : AbstractStorage<PgConfig>() {
                 uri = System.getProperty("naksha.test.psql.db.url")
             }
             if (uri != null && uri.isNotEmpty()) {
-                val jobs = System.getenv("NAKSHA_TEST_MAINTENANCE_JOBS")
-                if (jobs != null && jobs != "true" && jobs != "false") throw illegalArg("NAKSHA_TEST_MAINTENANCE_JOBS must be true or false")
                 try {
                     val instance = PgInstanceConfig.fromUri(uri)
                     if (config != null) {
                         config.master = instance
                         config.replicas.clear()
-                        if (jobs != null) config.maintenanceJobs = jobs == "true"
                     }
                     return instance
                 } catch (e: Exception) {
