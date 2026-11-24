@@ -1,3 +1,7 @@
+## Naksha_1.1.6
+
+- Hardened validation of space owner filters, feature property paths and sort properties.
+
 ## Naksha_1.1.5
 
 - Improved DataSource cache refresh handling in txn-handler submodule to gracefully close active DB connections
@@ -40,4 +44,3 @@
 ## Naksha_1.0.0
 
 - *[MCPODS-4933](https://devzone.it.here.com/jira/browse/MCPODS-4933)* - First PoC version, demo'ed in E2E, as an alternative to DataHub APIs
-
