@@ -34,17 +34,17 @@ Naksha normally registers PostgreSQL maintenance jobs when installing or upgradi
 
 ## Testing
 
-**Use a disposable database.** `cleanAndTest` cleans Gradle test outputs, not the database. Some test fixtures drop and recreate their own schemas or catalogs during setup; that is not a full database reset. Do not point tests at a database containing data you want to keep. Make sure HTTP port **8080** is free; the tests start and stop the app-service themselves.
+**Use a disposable PostgreSQL instance.** `cleanAndTest` takes the next number from `public.naksha_test_counter` in the control database and creates a fresh database such as `naksha_test_run_001`, then `naksha_test_run_002`. It skips existing names and prints the database it is using. The task leaves each run database in place, whether the tests pass or fail, so you can inspect the final state. The counter persists, but the task does not wipe the control database or remove existing schemas. You can rerun it without restarting PostgreSQL. Make sure HTTP port **8080** is free; the tests start and stop the app-service themselves.
 
 ### Run the common JVM and Node checks
 
-The root `cleanAndTest` task compiles common metadata, builds JVM production and test code, builds the JS production artifacts and test code, and runs the JVM and Node tests. It cleans the selected test outputs so the tests run again; it does not purge the whole build or Gradle cache. It requires `NAKSHA_TEST_DB_URL` and does not start a database for you.
+The root `cleanAndTest` task compiles common metadata, builds JVM production and test code, builds the JS production artifacts and test code, and runs the JVM and Node tests. It cleans the selected test outputs so the tests run again; it does not purge the whole build or Gradle cache. Start PostgreSQL first and set `NAKSHA_TEST_DB_URL` to a database that the test role can connect to. The role needs `CREATEDB` for the isolated run database and `CREATE` on the control database's `public` schema to initialize the counter, or `USAGE` on an existing `public.naksha_test_counter` sequence. Numbers use at least three digits; `1000` and later are not truncated.
 
-Start a fresh local test database (the password shown is for this local disposable container only):
+Start a fresh local test database on host port **15432** (the password shown is for this local disposable container only):
 
 ```bash
 docker run --rm -d --name naksha_test --shm-size=1g \
-  -p 127.0.0.1:15433:5432 \
+  -p 127.0.0.1:15432:5432 \
   -e PGDATABASE=naksha_test -e PGPASSWORD=naksha_test \
   ghcr.io/naksha-oss/naksha-postgres:v18.6-rc1
 ```
@@ -52,20 +52,20 @@ docker run --rm -d --name naksha_test --shm-size=1g \
 Wait for initialization to finish. On first startup the image briefly starts and stops PostgreSQL to initialize the database. After the final start, `docker exec naksha_test pg_isready -h 127.0.0.1 -U postgres -d naksha_test` should report that connections are accepted. Then run:
 
 ```bash
-export NAKSHA_TEST_DB_URL='jdbc:postgresql://127.0.0.1:15433/naksha_test?user=postgres&password=naksha_test&ssl=false'
+export NAKSHA_TEST_DB_URL='jdbc:postgresql://127.0.0.1:15432/naksha_test?user=postgres&password=naksha_test&ssl=false'
 export NAKSHA_TEST_MAINTENANCE_JOBS=false
 ./gradlew cleanAndTest --continue --max-workers=2
 ```
 
-If you already created a disposable instance, set the same variables to use it instead. For `cleanAndTest`, keep the database URL overrides in the table below unset or exactly equal to `NAKSHA_TEST_DB_URL`, and leave the app-service test context unset or set it to `LOCAL_STANDALONE`. The task ignores app-service URL files so your personal fixture configuration cannot redirect the run. It rejects isolated-suite settings. When finished, `docker stop naksha_test` removes **this test container** because it was created with `--rm`.
+If you already created a disposable instance, set the same variables to use it instead. For `cleanAndTest`, keep the database URL overrides in the table below unset or exactly equal to `NAKSHA_TEST_DB_URL`, and leave the app-service test context unset or set it to `LOCAL_STANDALONE`. The task ignores app-service URL files so your personal fixture configuration cannot redirect the run. It rejects isolated-suite settings. Run databases accumulate until you remove them or discard the test container. When you no longer need to inspect any runs, `docker stop naksha_test` removes **this test container** because it was created with `--rm`.
 
 ### Test environment variables
 
 | Setting | Meaning |
 | --- | --- |
 | `JAVA_HOME` | Path to JDK 25, if it is not already your default. On macOS: `export JAVA_HOME=$(/usr/libexec/java_home -v 25)`. |
-| `NAKSHA_TEST_DB_URL` | Shared test JDBC URL with a database name and `user`/`password` query parameters. Required for `cleanAndTest`; used as a fallback by standalone app-service fixtures and PostgreSQL test storage with no configured master. |
-| `NAKSHA_TEST_PSQL_DB_URL` | Global JVM `PgStorage` master override; it also clears configured replicas. `cleanAndTest` sets it in its test JVMs to the validated shared URL so explicitly configured fixture masters stay on the same disposable database. For focused runs without this variable, the test JVM system property `naksha.test.psql.db.url` can be used as an override. |
+| `NAKSHA_TEST_DB_URL` | Shared test JDBC URL with a database name and `user`/`password` query parameters. `cleanAndTest` uses it as a control connection and supplies the per-run database URL to the test JVMs. For direct runs, it is a fallback for standalone app-service fixtures and PostgreSQL test storage with no configured master. |
+| `NAKSHA_TEST_PSQL_DB_URL` | Global JVM `PgStorage` master override; it also clears configured replicas. `cleanAndTest` points it at the same per-run database so explicitly configured fixture masters cannot use the control database. For focused runs without this variable, the test JVM system property `naksha.test.psql.db.url` can be used as an override. |
 | `NAKSHA_TEST_ADMIN_DB_URL`, `NAKSHA_TEST_DATA_DB_URL` | Override the app-service admin and data fixture URLs for direct test runs. In those runs a valid `test_admin_db.url` or `test_data_db.url` in the test working directory, `~/.config/naksha/`, or test resources takes precedence; the shared URL follows. |
 | `NAKSHA_APP_SERVICE_TEST_CONTEXT` | `LOCAL_STANDALONE` (default) uses configured PostgreSQL. `TEST_CONTAINERS` starts a fixture PostgreSQL container for direct app-service `jvmTest` runs; it is not a `cleanAndTest` mode. |
 | `TEST_NAKSHA_PSQL_PASS` | Password for the app-service fallback URL at `localhost:5432/postgres` only. It does not configure a Testcontainers password. |

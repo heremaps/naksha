@@ -405,7 +405,7 @@ jacoco {
 
 val cleanAndTest = tasks.register("cleanAndTest") {
     group = "verification"
-    description = "Run common metadata compilation and fresh JVM and Node tests against a configured disposable PostgreSQL database."
+    description = "Run common metadata compilation and fresh JVM and Node tests with a new database on the configured test instance."
     notCompatibleWithConfigurationCache("Validates the shared test database before any scheduled tasks run")
     for (module in subprojects) {
         dependsOn("${module.path}:cleanJvmTest", "${module.path}:jvmTest")
@@ -430,12 +430,12 @@ gradle.taskGraph.whenReady {
             query.none { it.startsWith("password=") } || (port.isNotEmpty() && (port.toIntOrNull() ?: 0) !in 1..65535)
         ) {
             throw GradleException("""
-                cleanAndTest requires NAKSHA_TEST_DB_URL for a disposable PostgreSQL database.
+                cleanAndTest requires NAKSHA_TEST_DB_URL for a disposable PostgreSQL instance and a role with CREATEDB.
                 Start one with:
-                  docker run --rm -d --name naksha_test --shm-size=1g -p 127.0.0.1:15433:5432 \
+                  docker run --rm -d --name naksha_test --shm-size=1g -p 127.0.0.1:15432:5432 \
                     -e PGDATABASE=naksha_test -e PGPASSWORD=naksha_test ghcr.io/naksha-oss/naksha-postgres:v18.6-rc1
                 Wait for PostgreSQL to finish initializing, then run:
-                  export NAKSHA_TEST_DB_URL='jdbc:postgresql://127.0.0.1:15433/naksha_test?user=postgres&password=naksha_test&ssl=false'
+                  export NAKSHA_TEST_DB_URL='jdbc:postgresql://127.0.0.1:15432/naksha_test?user=postgres&password=naksha_test&ssl=false'
                   export NAKSHA_TEST_MAINTENANCE_JOBS=false
                   ./gradlew cleanAndTest
                 See README.md#testing for configuration and safety notes. Never use a database you need to keep.
@@ -459,8 +459,18 @@ gradle.taskGraph.whenReady {
         if (suiteOverrides.isNotEmpty()) {
             throw GradleException("Run opt-in database suites separately on isolated databases, not with cleanAndTest. Unset: ${suiteOverrides.joinToString()}.")
         }
-        // Some HTTP fixtures explicitly configure a master. Keep those, too, on the one disposable database selected for this run.
-        for (task in allTasks) if (task is Test) task.environment("NAKSHA_TEST_PSQL_DB_URL", url!!)
+        val runDatabase = gradle.sharedServices.registerIfAbsent("nakshaTestRunDatabase", TestRunDatabase::class) {
+            parameters.controlUrl.set(url!!)
+        }
+        for (task in allTasks) if (task is Test) {
+            task.usesService(runDatabase)
+            task.outputs.upToDateWhen { false }
+            task.doFirst {
+                val runUrl = runDatabase.get().testUrl()
+                // Route both the HTTP fixtures and explicitly configured masters to the freshly created database.
+                for (name in shared) task.environment(name, runUrl)
+            }
+        }
         project(":here-naksha-app-service").tasks.named<Test>("jvmTest").get()
             .systemProperty("naksha.test.sharedDatabaseRequired", true)
     }

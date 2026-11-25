@@ -31,3 +31,8 @@ repositories {
     }
     mavenLocal()
 }
+
+dependencies {
+    // Keep in sync with the PostgreSQL driver in gradle/libs.versions.toml.
+    implementation("org.postgresql:postgresql:42.7.7")
+}
