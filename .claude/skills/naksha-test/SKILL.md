@@ -4,7 +4,9 @@ description: Use ONLY when asked to run tests for the Naksha project. Do NOT use
 ---
 
 # General
-Database-backed tests need either a local PostgreSQL instance or their supported container setup. The psql library can start a container when no master is configured, but app-service defaults to an existing local database. When unclear, ask which database to use. Prefer a fresh disposable local test database; do not clear existing schemas or restart the database server. See `ai/test.md` for the full JVM procedure and the isolated integration suites.
+Database-backed tests need a separate disposable PostgreSQL instance or database. `./gradlew cleanAndTest` runs the shared JVM and Node checks and requires `NAKSHA_TEST_DB_URL`; see `README.md#testing` for the setup and `docs/testing.md` for isolated suites. Focused library or app-service tasks still support their own Testcontainers setup. When unclear, ask which database to use; do not clear existing schemas or restart the database server.
+
+For ticket-specific test notes and non-sensitive summaries, use the ticket folder from `CLAUDE.md`: prefer `../.ai/<ticket-id>/` if `../.ai/` exists, otherwise use `ai/<ticket-id>/` relative to the project checkout. Create the ticket subfolder as needed. Keep sensitive logs and profiles private.
 
 # Mandatory verification order
 
@@ -105,14 +107,14 @@ Set the local database variables above and use Java 25. `--rerun` forces test ex
 ./gradlew jvmTest --rerun --no-build-cache --continue --console=plain
 ```
 
-This does not enable the opt-in psql integration tests. Each suite requires a fresh, separate database and matching `NAKSHA_TEST_PSQL_DB_URL` plus its suite-specific URL variable. The independent-client bootstrap regression uses `NAKSHA_TEST_BOOTSTRAP_LOCK_DB_URL` and must run separately from `PgBootstrapTest`. Never export every suite variable to the same database and run all of them together. Follow the isolated-suite recipe in `ai/test.md`. One explicitly ignored partitioning test also remains ignored. Performance tests run unless `NAKSHA_SUPPRESS_PERF_TEST=true`; disclose this exclusion if used.
+This does not enable the opt-in psql integration tests. Each suite requires a fresh, separate database and matching `NAKSHA_TEST_PSQL_DB_URL` plus its suite-specific URL variable. The independent-client bootstrap regression uses `NAKSHA_TEST_BOOTSTRAP_LOCK_DB_URL` and must run separately from `PgBootstrapTest`. Never export every suite variable to the same database and run all of them together. Follow the isolated-suite recipe in `docs/testing.md`. One explicitly ignored partitioning test also remains ignored. Performance tests run unless `NAKSHA_SUPPRESS_PERF_TEST=true`; disclose this exclusion if used.
 
 ## All library tests (JS):
 ```bash
-./gradlew jsTest --rerun --no-build-cache --continue --console=plain
+./gradlew jsNodeTest --rerun --no-build-cache --continue --console=plain
 ```
 
-Check the task outcomes: the build configuration disables some `jsNodeTest` tasks. A successful `jsTest` lifecycle task with skipped runtime tasks is not evidence that JS tests executed. Report disabled/skipped runtime tasks separately from successful JS compilation and actual test results.
+Check runtime test results and distinguish them from JS compilation. The default Node run excludes the exact cases listed in `gradle/node-test-quarantine.txt`; use `-PincludeKnownFailingNodeTests=true` to reproduce them. Report quarantined or skipped cases separately from passing cases.
 
 ## Server tests
 Run when requested explicitly or as part of the full JVM suite. JUnit starts the service; only the PostgreSQL instance must already be running:

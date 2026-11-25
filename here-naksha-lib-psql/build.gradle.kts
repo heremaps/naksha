@@ -18,7 +18,7 @@ kotlin {
             }
         }
         jvmMain {
-            // Legacy implementations awaiting removal after the PgDatabase migration (ai/work.md).
+            // Legacy implementations awaiting removal after the PgDatabase migration.
             kotlin.exclude("**/PgAdminCatalogGc.jvm.kt", "**/PsqlAdminCatalog.kt",
                 "**/PsqlCatalog.kt", "**/PsqlCollection.kt", "**/PsqlStorageListener.kt")
             dependencies {

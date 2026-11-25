@@ -728,7 +728,7 @@ SELECT basics.*, procs.* FROM basics, procs;
     }
   }
 
-  // Row-operation boundary (ai/NAKSHA-33.md, db-01-c/db-01-g):
+  // Row-operation boundary (NAKSHA-33, db-01-c/db-01-g):
   // - schema/table are the catalog/collection [Id] of the target; the database identity is this
   //   instance's [id]. conn belongs to the caller; these functions never commit or roll back.
   // - Inputs are immutable: new-state operations take [NewTuple] wrappers, selection operations

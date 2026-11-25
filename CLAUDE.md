@@ -18,6 +18,11 @@ Please work with three distinct settings:
   - Anything unclear in that skill should follow the personal skills.
   - Anything still unclear may utilize other skills.
 
+# Ticket working files
+- Resolve paths relative to the project checkout root, not the directory containing the loaded skill.
+- For a specific ticket, if `../.ai/` already exists, create or reuse `../.ai/<ticket-id>/` for AI working files. Otherwise create or reuse `ai/<ticket-id>/` inside the checkout. Use the actual ticket ID, for example `NAKSHA-33`.
+- Keep plans, investigation notes, reviews and non-sensitive summaries in that ticket folder. The folder supplies the ticket ID; don't repeat it in filenames. Keep credentials, raw logs that may contain credentials, and sensitive profiles out of Git in either layout.
+
 # Secrets
 Please search for secrets and credentials like database users/passwords aso in `vault/`.
 First try a file name `{project}.credentials.md`, then for a `{user}.credentials.md`, and finally try `credentials.md`.
