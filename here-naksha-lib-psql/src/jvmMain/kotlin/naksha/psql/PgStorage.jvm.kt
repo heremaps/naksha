@@ -292,7 +292,7 @@ actual open class PgStorage() : AbstractStorage<PgConfig>() {
             }
         }
 
-        internal const val POSTGRES_IMAGE_URI = "ghcr.io/naksha-oss/naksha-postgres:v18.6"
+        internal const val POSTGRES_IMAGE_URI = "ghcr.io/naksha-oss/naksha-postgres:v18.6-rc1"
         internal val dockerContainerInfo = AtomicReference<PgDockerContainerInfo?>()
 
         /**

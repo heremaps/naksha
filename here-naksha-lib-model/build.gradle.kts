@@ -77,7 +77,3 @@ tasks.register("generateVersionFile") {
 tasks.named("jvmProcessResources") {
     dependsOn("generateVersionFile")
 }
-
-tasks.matching { it.name == "jsNodeTest" }.configureEach {
-    enabled = false
-}

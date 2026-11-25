@@ -5,6 +5,7 @@ import org.jetbrains.kotlin.gradle.dsl.JsSourceMapEmbedMode
 import org.jetbrains.kotlin.gradle.dsl.JsSourceMapNamesPolicy
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension
+import org.jetbrains.kotlin.gradle.targets.js.testing.KotlinJsTest
 import java.net.URI
 
 plugins {
@@ -87,7 +88,6 @@ enum class PublishModule {
 @Suppress("ArrayInDataClass")
 data class JsModuleConfig(
     val _moduleName: String,
-    val _enableTests: Boolean = false,
     val _dependencies: Array<String> = emptyArray()
 )
 val jsModules = mapOf(
@@ -101,8 +101,13 @@ val jsModules = mapOf(
         ":here-naksha-lib-geo:jsNodeProductionLibraryDistribution",
         ":here-naksha-lib-jbon:jsNodeProductionLibraryDistribution",
         ":here-naksha-lib-model:jsNodeProductionLibraryDistribution"))),
-    Pair("here-naksha-lib-diff", JsModuleConfig("naksha_diff", _enableTests = true)),
+    Pair("here-naksha-lib-diff", JsModuleConfig("naksha_diff")),
 )
+
+val includeKnownFailingNodeTests = providers.gradleProperty("includeKnownFailingNodeTests").map(String::toBoolean).getOrElse(false)
+val nodeTestQuarantine = providers.fileContents(layout.projectDirectory.file("gradle/node-test-quarantine.txt")).asText.get()
+    .lineSequence().map(String::trim).filter { it.isNotEmpty() && !it.startsWith('#') }
+    .groupBy({ it.substringBefore(' ') }, { it.substringAfter(' ') })
 
 val allModules = mapOf(
     Pair("naksha", Pair(CleanAndTest.OFF, PublishModule.CONFIG_ONLY)),
@@ -325,8 +330,7 @@ allprojects {
                 // We patch the build so that the JavaScript files are included into the JAR!
                 if (jsNoduleConfig != null) {
                     val _dependencies = jsNoduleConfig._dependencies
-                    val _enableTests = jsNoduleConfig._enableTests
-                    println("[$_name] --> Configure JavaScript dependencies: ${_dependencies.contentToString()} and tests: $_enableTests")
+                    println("[$_name] --> Configure JavaScript dependencies: ${_dependencies.contentToString()}")
                     project.tasks {
                         getByName<Task>("jsNodeProductionLibraryDistribution") {
                             dependsOn("jsProductionLibraryCompileSync", "jsProductionExecutableCompileSync")
@@ -339,8 +343,10 @@ allprojects {
                         // Test
                         getByName<ProcessResources>("jvmTestProcessResources") { dependsOn("jvmProcessResources") }
                     }
-                    project.tasks.matching { it.name == "jsNodeTest" }.configureEach {
-                        enabled = _enableTests
+                    project.tasks.named<KotlinJsTest>("jsNodeTest") {
+                        if (!includeKnownFailingNodeTests) {
+                            for (test in nodeTestQuarantine[_name].orEmpty()) filter.excludeTestsMatching(test)
+                        }
                     }
                 }
             }
@@ -397,20 +403,68 @@ jacoco {
     reportsDirectory = layout.buildDirectory.dir("reports/jacoco")
 }
 
-// Helper, run as `gradle cleanAndTestAll`
-fun Task.configureCleanAndTestTasks() {
-    allModules.forEach {
-        when (it.value.first) {
-            CleanAndTest.KOTLIN -> {
-                println("Run tests for ${it.key}")
-                dependsOn(":${it.key}:cleanJvmTest")
-                dependsOn(":${it.key}:jvmTest")
-            }
-            else -> {}
+val cleanAndTest = tasks.register("cleanAndTest") {
+    group = "verification"
+    description = "Run common metadata compilation and fresh JVM and Node tests against a configured disposable PostgreSQL database."
+    notCompatibleWithConfigurationCache("Validates the shared test database before any scheduled tasks run")
+    for (module in subprojects) {
+        dependsOn("${module.path}:cleanJvmTest", "${module.path}:jvmTest")
+        module.tasks.named<Test>("jvmTest") { mustRunAfter("cleanJvmTest") }
+        if (module.name in jsModules) {
+            dependsOn("${module.path}:compileCommonMainKotlinMetadata", "${module.path}:jsNodeProductionLibraryDistribution")
+            dependsOn("${module.path}:cleanJsNodeTest", "${module.path}:jsNodeTest")
+            module.tasks.named<KotlinJsTest>("jsNodeTest") { mustRunAfter("cleanJsNodeTest") }
         }
     }
 }
-tasks.register("cleanAndTestAll") { configureCleanAndTestTasks() }
+
+tasks.register("cleanAndTestAll") { dependsOn(cleanAndTest) }
+
+gradle.taskGraph.whenReady {
+    if (hasTask(":cleanAndTest")) {
+        val url = System.getenv("NAKSHA_TEST_DB_URL")
+        val jdbc = url?.let { Regex("^jdbc:postgresql://([^\\s/:?]+)(?::([0-9]+))?/([^\\s/?#]+)\\?([^\\s#]+)$").matchEntire(it) }
+        val query = jdbc?.groupValues?.get(4)?.split('&').orEmpty()
+        val port = jdbc?.groupValues?.get(2).orEmpty()
+        if (jdbc == null || query.none { it.startsWith("user=") && it.length > 5 } ||
+            query.none { it.startsWith("password=") } || (port.isNotEmpty() && (port.toIntOrNull() ?: 0) !in 1..65535)
+        ) {
+            throw GradleException("""
+                cleanAndTest requires NAKSHA_TEST_DB_URL for a disposable PostgreSQL database.
+                Start one with:
+                  docker run --rm -d --name naksha_test --shm-size=1g -p 127.0.0.1:15433:5432 \
+                    -e PGDATABASE=naksha_test -e PGPASSWORD=naksha_test ghcr.io/naksha-oss/naksha-postgres:v18.6-rc1
+                Wait for PostgreSQL to finish initializing, then run:
+                  export NAKSHA_TEST_DB_URL='jdbc:postgresql://127.0.0.1:15433/naksha_test?user=postgres&password=naksha_test&ssl=false'
+                  export NAKSHA_TEST_MAINTENANCE_JOBS=false
+                  ./gradlew cleanAndTest
+                See README.md#testing for configuration and safety notes. Never use a database you need to keep.
+            """.trimIndent())
+        }
+        val context = System.getenv("NAKSHA_APP_SERVICE_TEST_CONTEXT")
+        if (!context.isNullOrBlank() && context != "LOCAL_STANDALONE") {
+            throw GradleException("cleanAndTest uses the configured database. Unset NAKSHA_APP_SERVICE_TEST_CONTEXT or set it to LOCAL_STANDALONE.")
+        }
+        for (name in listOf("NAKSHA_TEST_PSQL_DB_URL", "NAKSHA_TEST_ADMIN_DB_URL", "NAKSHA_TEST_DATA_DB_URL")) {
+            val override = System.getenv(name)
+            if (override != null && override != url) throw GradleException("$name must be unset or equal NAKSHA_TEST_DB_URL for cleanAndTest.")
+        }
+        val property = System.getProperty("naksha.test.psql.db.url")
+        if (property != null && property != url) throw GradleException("naksha.test.psql.db.url must be unset or equal NAKSHA_TEST_DB_URL for cleanAndTest.")
+        val shared = setOf("NAKSHA_TEST_DB_URL", "NAKSHA_TEST_PSQL_DB_URL", "NAKSHA_TEST_ADMIN_DB_URL", "NAKSHA_TEST_DATA_DB_URL")
+        val suiteOverrides = System.getenv().filter { (key, value) ->
+            value.isNotBlank() && ((key.startsWith("NAKSHA_TEST_") && key.endsWith("_DB_URL") && key !in shared) ||
+                key == "NAKSHA_TEST_CRON_CONTROL_URL" || key == "NAKSHA_TEST_MUTATION_PROFILE_DIR")
+        }.keys.sorted()
+        if (suiteOverrides.isNotEmpty()) {
+            throw GradleException("Run opt-in database suites separately on isolated databases, not with cleanAndTest. Unset: ${suiteOverrides.joinToString()}.")
+        }
+        // Some HTTP fixtures explicitly configure a master. Keep those, too, on the one disposable database selected for this run.
+        for (task in allTasks) if (task is Test) task.environment("NAKSHA_TEST_PSQL_DB_URL", url!!)
+        project(":here-naksha-app-service").tasks.named<Test>("jvmTest").get()
+            .systemProperty("naksha.test.sharedDatabaseRequired", true)
+    }
+}
 
 tasks.register<JacocoReport>("jacocoAggregatedTestReport") {
     group = "jacoco"

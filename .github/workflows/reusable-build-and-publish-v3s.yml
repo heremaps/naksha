@@ -2,81 +2,83 @@ on:
   workflow_call:
 
 env:
-  MIN_COVERAGE_OVERALL: 0
-  MIN_COVERAGE_CHANGED_FILES: 0
-  SERVICE_JAR_DIR: ${{ github.workspace }}/build/libs
-  ARTIFACT_DIR: ${{ github.workspace }}/artifact
-  GITHUB_ARTIFACT_NAME: artifact
-  NAKSHA_APP_SERVICE_TEST_CONTEXT: TEST_CONTAINERS
-  # TODO - Disabling tests that are too big to succeed for Github free pipeline capacity
-  DISABLE_BIG_PAYLOAD_TESTS: true
+  MIN_COVERAGE_OVERALL: '0'
+  MIN_COVERAGE_CHANGED_FILES: '0'
+  NAKSHA_APP_SERVICE_TEST_CONTEXT: LOCAL_STANDALONE
+  NAKSHA_TEST_MAINTENANCE_JOBS: 'false'
+  NAKSHA_SUPPRESS_PERF_TEST: 'true'
+  # These two HTTP fixtures exceed the GitHub-hosted runner budget.
+  DISABLE_BIG_PAYLOAD_TESTS: 'true'
 
 jobs:
   main:
     runs-on: ubuntu-24.04-arm
+    services:
+      postgres:
+        image: ghcr.io/naksha-oss/naksha-postgres:v18.6-rc1
+        env:
+          PGDATABASE: naksha_test
+          PGPASSWORD: naksha_test
+        ports:
+          - 5432/tcp
+        options: >-
+          --shm-size=1g
+          --health-cmd "pg_isready -h 127.0.0.1 -U postgres -d naksha_test"
+          --health-start-period=15s
+          --health-interval=3s
+          --health-timeout=3s
+          --health-retries=30
     steps:
-      - run: echo "[${{ github.triggering_actor }}] triggered [${{ github.event_name }}] event on ${{ github.ref_type }}/PR# [${{ github.ref_name }}]"
-      - run: echo "🎉 This job is running on a ${{ runner.os }} server hosted by GitHub!"
       - name: Check out repository code
         uses: actions/checkout@v4
-      - name: Setup Gradle
-        uses: gradle/gradle-build-action@v2
-        with:
-          gradle-version: 9.4.1
       - name: Setup Java
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v4
         with:
-          distribution: 'temurin'
+          distribution: temurin
           java-version: '25'
-          java-package: 'jdk'
-          cache: 'gradle'
-      ### Build, Test, Coverage Verification
-      - name: Build fat jar, Run Unit tests, Verify code coverage
-        ## original run clause for project wise
-#        run: gradle shadowJar jacocoTestReport jacocoTestCoverageVerification
-        shell: bash
-        run: |
-          NAKSHA_SUPPRESS_PERF_TEST=true gradle cleanAndTest jacocoAggregatedTestReport
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+      - name: Run JVM and Node tests and generate JVM coverage
+        env:
+          NAKSHA_TEST_DB_URL: jdbc:postgresql://127.0.0.1:${{ job.services.postgres.ports[5432] }}/naksha_test?user=postgres&password=naksha_test&ssl=false
+        run: ./gradlew cleanAndTest jacocoAggregatedTestReport --continue --max-workers=2 --console=plain
       - name: Upload Test Report (HTML)
         if: success() || failure()
         uses: actions/upload-artifact@v4
         with:
           name: jvm-test-report
           path: '**/build/reports/tests/jvmTest/**/*'
+      - name: Upload Node Test Report (HTML)
+        if: success() || failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: node-test-report
+          path: '**/build/reports/tests/jsNodeTest/**/*'
       - name: Publish Test Report
         uses: mikepenz/action-junit-report@v4
-        if: success() || failure() # always run even if the previous step fails
+        # A fork PR has a read-only token; report artifacts are still uploaded above.
+        if: (success() || failure()) && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
         with:
-          report_paths: '**/build/test-results/jvmTest/TEST-*.xml'
+          report_paths: |
+            **/build/test-results/jvmTest/TEST-*.xml
+            **/build/test-results/jsNodeTest/TEST-*.xml
+          require_tests: true
       - name: Publish code coverage report as PR comment
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
         id: jacoco
         uses: madrapps/jacoco-report@v1.7.2
         with:
           paths: ${{ github.workspace }}/build/reports/jacoco/jacocoAggregatedTestReport/jacocoAggregatedTestReport.xml
           token: ${{ secrets.GITHUB_TOKEN }}
-          min-coverage-overall: $MIN_COVERAGE_OVERALL
-          min-coverage-changed-files: $MIN_COVERAGE_CHANGED_FILES
+          min-coverage-overall: ${{ env.MIN_COVERAGE_OVERALL }}
+          min-coverage-changed-files: ${{ env.MIN_COVERAGE_CHANGED_FILES }}
           title: Code Coverage
       - name: Fail when coverage of changed files is too low
+        if: steps.jacoco.outputs.coverage-changed-files != ''
+        env:
+          CHANGED_FILES_COVERAGE: ${{ steps.jacoco.outputs.coverage-changed-files }}
         run: |
-          CHANGED_FILES_FAILED=$(echo '${{ steps.jacoco.outputs.coverage-changed-files }} < ${{ env.MIN_COVERAGE_CHANGED_FILES }}' | bc)
-          [[ $CHANGED_FILES_FAILED -ne 0 ]] && echo 'Changed files coverage ${{ steps.jacoco.outputs.coverage-changed-files }}% is smaller than required ${{ env.MIN_COVERAGE_CHANGED_FILES }}%'
-          [[ $CHANGED_FILES_FAILED -ne 0 ]] && exit 1 || exit 0
-#      - name: List generated artifacts
-#        run: |
-#          ls -l $SERVICE_JAR_DIR/*
-      ### Upload as pipeline artifact
-#      - name: Prepare artifact content
-#        run: |
-#          mkdir $ARTIFACT_DIR
-#          cp -p $SERVICE_JAR_DIR/naksha-*-all.jar $ARTIFACT_DIR/
-#      - name: List artifact content
-#        run: |
-#          ls -lR $ARTIFACT_DIR
-#      - name: Save artifact content
-#        uses: actions/upload-artifact@v3
-#        with:
-#          name: ${{ env.GITHUB_ARTIFACT_NAME }}
-#          path: ${{ env.ARTIFACT_DIR }}
-#          if-no-files-found: error
-      - run: echo "🍏 This job's status is ${{ job.status }}."
+          if [[ $(echo "$CHANGED_FILES_COVERAGE < $MIN_COVERAGE_CHANGED_FILES" | bc) -ne 0 ]]; then
+            echo "Changed files coverage ($CHANGED_FILES_COVERAGE%) is below $MIN_COVERAGE_CHANGED_FILES%."
+            exit 1
+          fi
