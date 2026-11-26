@@ -69,6 +69,23 @@ class DeleteFeatureTest extends ApiTest {
   }
 
   @Test
+  void deletingTheSameFeatureTwiceReturnsNotFound() throws Exception {
+    final String streamId = UUID.randomUUID().toString();
+    final String id = "delete-twice-" + UUID.randomUUID();
+    final String features = "hub/spaces/" + SPACE_ID + "/features";
+    final String body = """
+        {"type":"FeatureCollection","features":[{"type":"Feature","id":"%s","geometry":null,"properties":{}}]}
+        """.formatted(id);
+    assertThat(nakshaClient.post(features, body, streamId)).hasStatus(200);
+    assertThat(nakshaClient.delete(features + "/" + id, streamId)).hasStatus(200);
+    assertThat(nakshaClient.delete(features + "/" + id, streamId)).hasStatus(404);
+    assertThat(nakshaClient.delete(features + "?id=" + id, streamId))
+        .hasStatus(200)
+        .hasJsonBody(loadFileOrFail("DeleteFeatures/TC0901_deleteNonExistingFeatures/response.json"),
+            "Bulk DELETE should omit already-deleted features");
+  }
+
+  @Test
   void tc0901_testDeleteNonExistingFeatures() throws Exception {
     // Test API : DELETE /hub/spaces/{spaceId}/features
     final String streamId = UUID.randomUUID().toString();

@@ -20,7 +20,11 @@ class PgBootstrapConfigTest {
     }
     val master = assertNotNull(config.getMasterOrNull())
     assertEquals("bootstrap_config", master.db)
-    assertEquals(config.masterUri, master.toString())
+    assertEquals("unused", PgInstanceConfig.fromUri(config.masterUri).password)
+    assertEquals("***", PgInstanceConfig.fromUri(master.toString()).password)
+    val instance = PgInstance.get(config.masterUri)
+    assertEquals("unused", instance.password)
+    assertEquals("***", PgInstanceConfig.fromUri(instance.toString()).password)
   }
 }
 

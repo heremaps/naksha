@@ -211,13 +211,13 @@ class PgInstanceConfig : AnyObject() {
 
     /**
      * Returns the JDBC URI, basically `jdbc:postgresql://{host}:{port}/{db}?user={user}&password={password}&ssl=true[&readOnly]`.
-     * @param addPassword if _false_, then the password is replaced with `***`; otherwise the real password is added.
+     * @param addPassword if _false_, the password is redacted as `***`; otherwise the real password is included.
      * @return the URI.
      * @since 3.0
      * @see toString
      */
     fun toJdbcUri(addPassword: Boolean): String = if (addPassword)
-        "jdbc:postgresql://${host}:${port}/${db}?user=${user}&password=***&ssl=true${if (readOnly) "&readOnly" else ""}"
-    else
         "jdbc:postgresql://${host}:${port}/${db}?user=${user}&password=${password}&ssl=true${if (readOnly) "&readOnly" else ""}"
+    else
+        "jdbc:postgresql://${host}:${port}/${db}?user=${user}&password=***&ssl=true${if (readOnly) "&readOnly" else ""}"
 }

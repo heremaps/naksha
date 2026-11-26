@@ -86,7 +86,7 @@ class PgConfig() : NakshaStorage() {
    * @since 3.0
    */
   val masterUri: String
-    get() = master.toString()
+    get() = master.toJdbcUri(true)
 
   /**
    * Sets the [master] and returns this.
@@ -114,7 +114,7 @@ class PgConfig() : NakshaStorage() {
       val list = StringList()
       val replicas = this.replicas
       for (replica in replicas) {
-        if (replica != null) list.add(replica.withReadOnly(true).toString())
+        if (replica != null) list.add(replica.withReadOnly(true).toJdbcUri(true))
       }
       return list
     }

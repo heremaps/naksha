@@ -633,6 +633,8 @@ WHERE n.nspname = $1 AND c.relname = $2
       val outcome = result[i]
       write.changed = outcome.changed
       if (write.op == WriteOp.PURGE) continue
+      // An already-deleted feature is absent to the writer API, not a new deletion.
+      if (write.op == WriteOp.DELETE && write.isFeatureModification && !outcome.changed) continue
       val tuple = outcome.state ?: continue
       write.tuple = tuple
       write.tupleNumber = tuple.tupleNumber

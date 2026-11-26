@@ -33,7 +33,7 @@ actual class PgInstance private actual constructor(private val config: PgInstanc
     actual val readOnly: Boolean
         get() = config.readOnly
     actual val url: String
-        get() = config.toString()
+        get() = config.toJdbcUri(true)
 
     override fun toString(): String
         = config.toJdbcUri(false)

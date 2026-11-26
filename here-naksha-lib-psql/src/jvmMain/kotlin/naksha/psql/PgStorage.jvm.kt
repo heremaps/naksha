@@ -354,7 +354,7 @@ actual open class PgStorage() : AbstractStorage<PgConfig>() {
                 }
                 instance
             } catch (e: Exception) {
-                logger.warn("The URI for the shared test database in the environment is invalid: $uri", e)
+                 logger.warn("The shared test database URI is invalid")
                 null
             }
         }

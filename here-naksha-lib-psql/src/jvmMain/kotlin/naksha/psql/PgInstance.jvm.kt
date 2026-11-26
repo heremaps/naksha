@@ -51,7 +51,7 @@ actual class PgInstance private actual constructor(private val config: PgInstanc
 
         @JvmStatic
         actual fun of(config: PgInstanceConfig): PgInstance {
-            var existing = instancePool[config.toString()]
+            var existing = instancePool[config.toJdbcUri(true)]
             if (existing != null) return existing
             val i = PgInstance(config)
             existing = instancePool.putIfAbsent(i.url, i)
@@ -126,7 +126,7 @@ actual class PgInstance private actual constructor(private val config: PgInstanc
      * The JDBC url. **Beware** that this URL does contain the password in clear text.
      */
     actual val url: String
-        get() = config.toString()
+        get() = config.toJdbcUri(true)
 
     actual var connectionLimit: Int
         get() = config.connectionLimit
@@ -266,5 +266,5 @@ SET SESSION pg_hint_plan.enable_hint = on;
      * Returns the JDBC URL of this instance.
      * @return the JDBC URL of this instance with obfuscated password.
      */
-    override fun toString(): String = url
+    override fun toString(): String = config.toString()
 }

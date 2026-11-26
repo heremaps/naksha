@@ -969,22 +969,12 @@ actual class Platform {
             }
 
             // Start processes.
-            val futures = Array<CompletableFuture<Z?>?>(COUNT) { i ->
+            val futures = Array(COUNT) { i ->
                 val input = a[i]
                 CompletableFuture.supplyAsync { process.call(input) }
             }
-            // Wait for results.
-            var done = 0
-            while (done < COUNT) {
-                for (i in 0 until COUNT) {
-                    val future = futures[i] ?: continue
-                    if (future.isDone) {
-                        result[i] = future.get()
-                        done++
-                    }
-                }
-                yield()
-            }
+            // All work is already submitted. Wait once per input slot, including legitimate null results.
+            for (i in futures.indices) result[i] = futures[i].get()
             return result
         }
     }
