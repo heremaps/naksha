@@ -8,8 +8,8 @@ import naksha.model.streaming.Stream
 import naksha.model.streaming.StreamChunk
 import naksha.model.streaming.StreamRequest
 import naksha.psql.PgConfig
-import naksha.psql.PsqlConnection
-import naksha.psql.PsqlInstance
+import naksha.psql.PgConnection
+import naksha.psql.PgInstance
 
 class StreamReadSessionV2(
     override val storage: IStorage,
@@ -25,10 +25,10 @@ class StreamReadSessionV2(
      * The connection to the database, opened in read-only mode.
      * @since 3.0.0
      */
-    val connection: PsqlConnection
+    val connection: PgConnection
 
     init {
-        val master = PsqlInstance(Platform.proxy(storage.config.properties, PgConfig::class).master)
+        val master = PgInstance.of(Platform.proxy(storage.config.properties, PgConfig::class).master)
 
         connection = master.openConnection(
             options = SessionOptions(),
