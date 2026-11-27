@@ -1,3 +1,4 @@
 com.here.naksha.cli.stream.providers.NullStorageProvider
 com.here.naksha.cli.stream.providers.RandomStorageProvider
 com.here.naksha.cli.stream.providers.V2StorageProvider
+com.here.naksha.cli.stream.providers.DataHubStorageProvider
