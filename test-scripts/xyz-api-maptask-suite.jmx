@@ -4700,6 +4700,226 @@ else {
           <hashTree/>
         </hashTree>
       </hashTree>
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Pos10 - Query Parameter Validation">
+        <intProp name="ThreadGroup.num_threads">1</intProp>
+        <intProp name="ThreadGroup.ramp_time">1</intProp>
+        <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
+        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller">
+          <stringProp name="LoopController.loops">1</stringProp>
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+        </elementProp>
+      </ThreadGroup>
+      <hashTree>
+        <HeaderManager guiclass="HeaderPanel" testclass="HeaderManager" testname="Pos10 authentication" enabled="true">
+          <collectionProp name="HeaderManager.headers">
+            <elementProp name="" elementType="Header">
+              <stringProp name="Header.name">Authorization</stringProp>
+              <stringProp name="Header.value">${__groovy(vars.get(&apos;WR_API_KEY&apos;) ? &apos;Bearer &apos; + vars.get(&apos;WR_API_KEY&apos;) : &apos;&apos;)}</stringProp>
+            </elementProp>
+            <elementProp name="" elementType="Header">
+              <stringProp name="Header.name">Accept</stringProp>
+              <stringProp name="Header.value">application/json</stringProp>
+            </elementProp>
+          </collectionProp>
+        </HeaderManager>
+        <hashTree/>
+        <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion" testname="Allow expected HTTP status" enabled="true">
+          <collectionProp name="Asserion.test_strings">
+            <stringProp name="-1447182358">200|400</stringProp>
+          </collectionProp>
+          <stringProp name="Assertion.test_field">Assertion.response_code</stringProp>
+          <boolProp name="Assertion.assume_success">true</boolProp>
+          <intProp name="Assertion.test_type">1</intProp>
+          <stringProp name="Assertion.custom_message"></stringProp>
+        </ResponseAssertion>
+        <hashTree/>
+        <JSR223Assertion guiclass="TestBeanGUI" testclass="JSR223Assertion" testname="Validate status and response" enabled="true">
+          <stringProp name="scriptLanguage">groovy</stringProp>
+          <stringProp name="script">
+def label = prev.getSampleLabel().replaceFirst(/^Pos10\.\d+ - /, &apos;&apos;)
+def expected = label.startsWith(&apos;Reject&apos;) ? &apos;400&apos; : &apos;200&apos;
+def body = prev.getResponseDataAsString()
+if (prev.getResponseCode() != expected) {
+  AssertionResult.setFailure(true)
+  AssertionResult.setFailureMessage(&quot;Expected HTTP ${expected}, got ${prev.getResponseCode()}&quot;)
+  return
+}
+try {
+  def json = new groovy.json.JsonSlurper().parseText(body)
+  if (expected == &apos;400&apos;) {
+    def expectedMessage = label.startsWith(&apos;Reject owner &apos;) ? &apos;Invalid owner parameter.&apos; :
+        label.startsWith(&apos;Reject property &apos;) ? &apos;Invalid property key.&apos; :
+        label.startsWith(&apos;Reject sort &apos;) ? &apos;Invalid sort property.&apos; : null
+    if (expectedMessage == null || !(json instanceof Map) || json.error != &apos;IllegalArgument&apos; || json.errorMessage != expectedMessage) {
+      AssertionResult.setFailure(true)
+      AssertionResult.setFailureMessage(&apos;Expected the appropriate validation error response&apos;)
+    }
+  } else if (label == &apos;Accept unknown owner&apos; &amp;&amp; (!(json instanceof List) || !json.isEmpty())) {
+    AssertionResult.setFailure(true)
+    AssertionResult.setFailureMessage(&apos;Expected no spaces for unknown owner&apos;)
+  } else if ((label.startsWith(&apos;Accept property&apos;) || label.startsWith(&apos;Accept sort&apos;)) &amp;&amp; json.type != &apos;FeatureCollection&apos;) {
+    AssertionResult.setFailure(true)
+    AssertionResult.setFailureMessage(&apos;Expected a FeatureCollection&apos;)
+  } else if (label.startsWith(&apos;Accept owner&apos;) &amp;&amp; !(json instanceof List)) {
+    AssertionResult.setFailure(true)
+    AssertionResult.setFailureMessage(&apos;Expected a list of spaces&apos;)
+  }
+} catch (Exception e) {
+  AssertionResult.setFailure(true)
+  AssertionResult.setFailureMessage(&apos;Response is not valid JSON&apos;)
+}
+</stringProp>
+          <stringProp name="parameters"></stringProp>
+          <stringProp name="filename"></stringProp>
+          <stringProp name="cacheKey">false</stringProp>
+        </JSR223Assertion>
+        <hashTree/>
+        <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="Owner filtering" enabled="true"/>
+        <hashTree>
+          <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Pos10.1 - Accept owner ANONYMOUS" enabled="true">
+            <stringProp name="HTTPSampler.path">${XYZ_URI_PREFIX}/spaces?owner=ANONYMOUS</stringProp>
+            <stringProp name="HTTPSampler.method">GET</stringProp>
+            <boolProp name="HTTPSampler.postBodyRaw">false</boolProp>
+            <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" testname="User Defined Variables">
+              <collectionProp name="Arguments.arguments"/>
+            </elementProp>
+          </HTTPSamplerProxy>
+          <hashTree/>
+          <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Pos10.2 - Accept owner all" enabled="true">
+            <stringProp name="HTTPSampler.path">${XYZ_URI_PREFIX}/spaces?owner=*</stringProp>
+            <stringProp name="HTTPSampler.method">GET</stringProp>
+            <boolProp name="HTTPSampler.postBodyRaw">false</boolProp>
+            <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" testname="User Defined Variables">
+              <collectionProp name="Arguments.arguments"/>
+            </elementProp>
+          </HTTPSamplerProxy>
+          <hashTree/>
+          <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Pos10.3 - Accept owner me" enabled="true">
+            <stringProp name="HTTPSampler.path">${XYZ_URI_PREFIX}/spaces?owner=me</stringProp>
+            <stringProp name="HTTPSampler.method">GET</stringProp>
+            <boolProp name="HTTPSampler.postBodyRaw">false</boolProp>
+            <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" testname="User Defined Variables">
+              <collectionProp name="Arguments.arguments"/>
+            </elementProp>
+          </HTTPSamplerProxy>
+          <hashTree/>
+          <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Pos10.4 - Accept owner others" enabled="true">
+            <stringProp name="HTTPSampler.path">${XYZ_URI_PREFIX}/spaces?owner=others</stringProp>
+            <stringProp name="HTTPSampler.method">GET</stringProp>
+            <boolProp name="HTTPSampler.postBodyRaw">false</boolProp>
+            <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" testname="User Defined Variables">
+              <collectionProp name="Arguments.arguments"/>
+            </elementProp>
+          </HTTPSamplerProxy>
+          <hashTree/>
+          <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Pos10.5 - Accept unknown owner" enabled="true">
+            <stringProp name="HTTPSampler.path">${XYZ_URI_PREFIX}/spaces?owner=NOT_A_REAL_OWNER</stringProp>
+            <stringProp name="HTTPSampler.method">GET</stringProp>
+            <boolProp name="HTTPSampler.postBodyRaw">false</boolProp>
+            <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" testname="User Defined Variables">
+              <collectionProp name="Arguments.arguments"/>
+            </elementProp>
+          </HTTPSamplerProxy>
+          <hashTree/>
+          <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Pos10.6 - Accept owner permitted characters" enabled="true">
+            <stringProp name="HTTPSampler.path">${XYZ_URI_PREFIX}/spaces?owner=owner.name%40example:abc-def_123</stringProp>
+            <stringProp name="HTTPSampler.method">GET</stringProp>
+            <boolProp name="HTTPSampler.postBodyRaw">false</boolProp>
+            <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" testname="User Defined Variables">
+              <collectionProp name="Arguments.arguments"/>
+            </elementProp>
+          </HTTPSamplerProxy>
+          <hashTree/>
+          <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Pos10.7 - Reject owner invalid character" enabled="true">
+            <stringProp name="HTTPSampler.path">${XYZ_URI_PREFIX}/spaces?owner=bad%27owner</stringProp>
+            <stringProp name="HTTPSampler.method">GET</stringProp>
+            <boolProp name="HTTPSampler.postBodyRaw">false</boolProp>
+            <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" testname="User Defined Variables">
+              <collectionProp name="Arguments.arguments"/>
+            </elementProp>
+          </HTTPSamplerProxy>
+          <hashTree/>
+          <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Pos10.8 - Reject owner sort-only character" enabled="true">
+            <stringProp name="HTTPSampler.path">${XYZ_URI_PREFIX}/spaces?owner=bad%21owner</stringProp>
+            <stringProp name="HTTPSampler.method">GET</stringProp>
+            <boolProp name="HTTPSampler.postBodyRaw">false</boolProp>
+            <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" testname="User Defined Variables">
+              <collectionProp name="Arguments.arguments"/>
+            </elementProp>
+          </HTTPSamplerProxy>
+          <hashTree/>
+        </hashTree>
+        <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="Property search keys" enabled="true"/>
+        <hashTree>
+          <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Pos10.9 - Accept property nested key" enabled="true">
+            <stringProp name="HTTPSampler.path">${XYZ_URI_PREFIX}/spaces/${SPACE_ID}/search?p.address.street=test</stringProp>
+            <stringProp name="HTTPSampler.method">GET</stringProp>
+            <boolProp name="HTTPSampler.postBodyRaw">false</boolProp>
+            <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" testname="User Defined Variables">
+              <collectionProp name="Arguments.arguments"/>
+            </elementProp>
+          </HTTPSamplerProxy>
+          <hashTree/>
+          <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Pos10.10 - Accept property quoted value" enabled="true">
+            <stringProp name="HTTPSampler.path">${XYZ_URI_PREFIX}/spaces/${SPACE_ID}/search?p.name=O%27Brien</stringProp>
+            <stringProp name="HTTPSampler.method">GET</stringProp>
+            <boolProp name="HTTPSampler.postBodyRaw">false</boolProp>
+            <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" testname="User Defined Variables">
+              <collectionProp name="Arguments.arguments"/>
+            </elementProp>
+          </HTTPSamplerProxy>
+          <hashTree/>
+          <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Pos10.11 - Reject property second invalid key" enabled="true">
+            <stringProp name="HTTPSampler.path">${XYZ_URI_PREFIX}/spaces/${SPACE_ID}/search?p.first=1&amp;p.bad%27key=1</stringProp>
+            <stringProp name="HTTPSampler.method">GET</stringProp>
+            <boolProp name="HTTPSampler.postBodyRaw">false</boolProp>
+            <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" testname="User Defined Variables">
+              <collectionProp name="Arguments.arguments"/>
+            </elementProp>
+          </HTTPSamplerProxy>
+          <hashTree/>
+          <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Pos10.12 - Reject property sort-only character" enabled="true">
+            <stringProp name="HTTPSampler.path">${XYZ_URI_PREFIX}/spaces/${SPACE_ID}/search?p.bad%21key=1</stringProp>
+            <stringProp name="HTTPSampler.method">GET</stringProp>
+            <boolProp name="HTTPSampler.postBodyRaw">false</boolProp>
+            <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" testname="User Defined Variables">
+              <collectionProp name="Arguments.arguments"/>
+            </elementProp>
+          </HTTPSamplerProxy>
+          <hashTree/>
+        </hashTree>
+        <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="Sort property keys" enabled="true"/>
+        <hashTree>
+          <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Pos10.13 - Accept sort ascending" enabled="true">
+            <stringProp name="HTTPSampler.path">${XYZ_URI_PREFIX}/spaces/${SPACE_ID}/iterate?sort=p.name:asc&amp;limit=1</stringProp>
+            <stringProp name="HTTPSampler.method">GET</stringProp>
+            <boolProp name="HTTPSampler.postBodyRaw">false</boolProp>
+            <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" testname="User Defined Variables">
+              <collectionProp name="Arguments.arguments"/>
+            </elementProp>
+          </HTTPSamplerProxy>
+          <hashTree/>
+          <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Pos10.14 - Accept sort descending" enabled="true">
+            <stringProp name="HTTPSampler.path">${XYZ_URI_PREFIX}/spaces/${SPACE_ID}/iterate?sort=p.name:desc&amp;limit=1</stringProp>
+            <stringProp name="HTTPSampler.method">GET</stringProp>
+            <boolProp name="HTTPSampler.postBodyRaw">false</boolProp>
+            <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" testname="User Defined Variables">
+              <collectionProp name="Arguments.arguments"/>
+            </elementProp>
+          </HTTPSamplerProxy>
+          <hashTree/>
+          <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Pos10.15 - Reject sort second invalid property" enabled="true">
+            <stringProp name="HTTPSampler.path">${XYZ_URI_PREFIX}/spaces/${SPACE_ID}/iterate?sort=p.first,p.bad%27key</stringProp>
+            <stringProp name="HTTPSampler.method">GET</stringProp>
+            <boolProp name="HTTPSampler.postBodyRaw">false</boolProp>
+            <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" testname="User Defined Variables">
+              <collectionProp name="Arguments.arguments"/>
+            </elementProp>
+          </HTTPSamplerProxy>
+          <hashTree/>
+        </hashTree>
+      </hashTree>
       <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Neg1 - Missing Task" enabled="true">
         <stringProp name="ThreadGroup.on_sample_error">stopthread</stringProp>
         <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">

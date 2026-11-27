@@ -67,14 +67,18 @@ public class SpaceApi extends SpaceBasedApi {
    * List all spaces accessible for the provided credentials.
    */
   public void getSpaces(final RoutingContext context) {
-    new MatrixReadQuery(
-        context,
-        ApiResponseType.SPACE_LIST,
-        ApiParam.Query.getBoolean(context, ApiParam.Query.INCLUDE_RIGHTS, false),
-        ApiParam.Query.getBoolean(context, Query.INCLUDE_CONNECTORS, false),
-        ApiParam.Query.getString(context, ApiParam.Query.OWNER, MatrixReadQuery.ME),
-        ApiParam.Query.getSpacePropertiesQuery(context, ApiParam.Query.CONTENT_UPDATED_AT)
-    ).execute(this::sendResponse, this::sendErrorResponse);
+    try {
+      new MatrixReadQuery(
+          context,
+          ApiResponseType.SPACE_LIST,
+          ApiParam.Query.getBoolean(context, ApiParam.Query.INCLUDE_RIGHTS, false),
+          ApiParam.Query.getBoolean(context, Query.INCLUDE_CONNECTORS, false),
+          ApiParam.Query.getOwner(context),
+          ApiParam.Query.getSpacePropertiesQuery(context, ApiParam.Query.CONTENT_UPDATED_AT)
+      ).execute(this::sendResponse, this::sendErrorResponse);
+    } catch (HttpException e) {
+      sendErrorResponse(context, e);
+    }
   }
 
   /**
