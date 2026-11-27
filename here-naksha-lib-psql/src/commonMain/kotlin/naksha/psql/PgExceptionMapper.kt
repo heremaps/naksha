@@ -22,5 +22,8 @@ expect class PgExceptionMapper {
          * @since 3.0
          */
         fun map(throwable: Throwable, sql: String? = null): NakshaException
+
+        /** Native SQLSTATE through wrapped causes, used for bounded batch retry/error policy. @since 3.0 */
+        internal fun sqlState(throwable: Throwable): String?
     }
 }

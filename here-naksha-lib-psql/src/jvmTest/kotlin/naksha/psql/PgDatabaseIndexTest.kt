@@ -1,0 +1,95 @@
+package naksha.psql
+
+import naksha.base.Id
+import naksha.base.NakshaException
+import naksha.base.IdTextType
+import org.mockito.Mockito
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+import kotlin.test.assertTrue
+
+class PgDatabaseIndexTest {
+    private val database = PgDatabaseImpl(Mockito.mock(PgStorage::class.java), Id(1L))
+
+    @Test
+    fun executesQualifiedRootIndexDdlAndClosesCursors() {
+        val conn = Mockito.mock(PgConnection::class.java)
+        Mockito.`when`(conn.autoCommit).thenReturn(false)
+        val statements = mutableListOf<String>()
+        val cursors = mutableListOf<PgCursor>()
+        Mockito.doAnswer { invocation ->
+            statements.add(invocation.getArgument(0))
+            Mockito.mock(PgCursor::class.java).also {
+                Mockito.`when`(it.fetch()).thenReturn(it)
+                Mockito.`when`(it.get<Boolean>("upgrading")).thenReturn(false)
+                cursors.add(it)
+            }
+        }.`when`(conn).execute(Mockito.anyString(), Mockito.nullable(Array<Any?>::class.java))
+        val index = PgIndex("lookup", arrayOf(PgColumn.FnColumn to PgOrder.ASC))
+        val schema = PgSchemaName.checked("My Schema")
+        val table = PgTableName.checked("root")
+        database.collection_create_index(conn, schema, table, index)
+        database.collection_drop_index(conn, schema, table, index)
+        assertEquals(8, statements.size)
+        for (offset in listOf(0, 4)) {
+            assertTrue(statements[offset].contains("pg_advisory_xact_lock_shared"))
+            assertTrue(statements[offset + 1].contains("AS upgrading"))
+            assertTrue(statements[offset + 2].contains("pg_advisory_xact_lock("))
+            assertTrue(statements[offset + 2].contains("naksha:partman:%I.%I"))
+        }
+        assertEquals("CREATE INDEX \"root\$lookup\" ON \"My Schema\".\"root\" USING btree (\"fn\" ASC)", statements[3])
+        assertEquals("DROP INDEX IF EXISTS \"My Schema\".\"root\$lookup\"", statements[7])
+        for (cursor in cursors) Mockito.verify(cursor).close()
+        Mockito.verify(conn, Mockito.never()).commit()
+        Mockito.verify(conn, Mockito.never()).rollback()
+        Mockito.verify(conn, Mockito.never()).close()
+    }
+
+    @Test
+    fun rejectsInvalidDefinitionsAndTruncatedNamesBeforeDdl() {
+        val conn = Mockito.mock(PgConnection::class.java)
+        assertFailsWith<NakshaException> {
+            database.collection_create_index(conn, PgSchemaName.checked("schema"), PgTableName.checked("root"), PgIndex("empty", emptyArray()))
+        }
+        val index = PgIndex("lookup", arrayOf(PgColumn.FnColumn to PgOrder.ASC))
+        assertFailsWith<NakshaException> { database.collection_create_index(conn, PgSchemaName.checked("schema"), PgTableName.checked("a".repeat(64)), index) }
+        assertFailsWith<NakshaException> { database.collection_drop_index(conn, PgSchemaName.checked("schema"), PgTableName.checked("a".repeat(64)), index) }
+        Mockito.verifyNoInteractions(conn)
+    }
+
+    @Test
+    fun aliasesLongAndUnsafeNamesConsistentlyForCreateAndDrop() {
+        val conn = Mockito.mock(PgConnection::class.java)
+        Mockito.`when`(conn.autoCommit).thenReturn(false)
+        val statements = mutableListOf<String>()
+        val cursors = mutableListOf<PgCursor>()
+        Mockito.doAnswer { invocation ->
+            statements.add(invocation.getArgument(0))
+            Mockito.mock(PgCursor::class.java).also {
+                Mockito.`when`(it.fetch()).thenReturn(it)
+                Mockito.`when`(it.get<Boolean>("upgrading")).thenReturn(false)
+                cursors.add(it)
+            }
+        }.`when`(conn).execute(Mockito.anyString(), Mockito.nullable(Array<Any?>::class.java))
+        for (name in listOf("Road Name", "road-west", "\u00e9".repeat(50), "a".repeat(100))) {
+            val index = PgIndex(name, arrayOf(PgColumn.FnColumn to PgOrder.ASC))
+            val table = "a".repeat(25)
+            val physical = "$table\$${index.id.indexName()}"
+            val verifiedSchema = PgSchemaName.checked("schema")
+            val verifiedTable = PgTableName.checked(table)
+            database.collection_create_index(conn, verifiedSchema, verifiedTable, index)
+            database.collection_drop_index(conn, verifiedSchema, verifiedTable, index)
+            for (offset in listOf(statements.size - 8, statements.size - 4)) {
+                assertTrue(statements[offset].contains("pg_advisory_xact_lock_shared"))
+                assertTrue(statements[offset + 1].contains("AS upgrading"))
+                assertTrue(statements[offset + 2].contains("pg_advisory_xact_lock("))
+                assertTrue(statements[offset + 2].contains("naksha:partman:%I.%I"))
+            }
+            assertEquals("CREATE INDEX ${PgUtil.quoteIdent(physical)} ON \"schema\".${PgUtil.quoteIdent(table)} USING btree (\"fn\" ASC)", statements[statements.size - 5])
+            assertEquals("DROP INDEX IF EXISTS \"schema\".${PgUtil.quoteIdent(physical)}", statements.last())
+        }
+        assertEquals(32, statements.size)
+        for (cursor in cursors) Mockito.verify(cursor).close()
+    }
+}

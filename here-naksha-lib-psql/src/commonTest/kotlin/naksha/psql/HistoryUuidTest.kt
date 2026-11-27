@@ -45,6 +45,7 @@ class HistoryUuidTest: PgTestBase(NakshaCollection(
             featureIds += feature.id
             queryHistory = true
             queryDeleted = true
+            versions = 10
         }).features.filterNotNull()
 
         // Then:
@@ -77,7 +78,7 @@ class HistoryUuidTest: PgTestBase(NakshaCollection(
         // And:
         val upsertFeatureReq = WriteRequest().add(Write().upsertFeature(collection, createdFeature.apply {
             title = "updated_version"
-        }))
+        }, atomic = false))
         executeWrite(upsertFeatureReq)
 
         // And:
@@ -92,6 +93,7 @@ class HistoryUuidTest: PgTestBase(NakshaCollection(
             featureIds += feature.id
             queryHistory = true
             queryDeleted = true
+            versions = 10
         }).features.filterNotNull()
 
         // Then:

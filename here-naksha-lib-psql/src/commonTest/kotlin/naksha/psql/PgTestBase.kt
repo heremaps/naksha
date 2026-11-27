@@ -341,14 +341,14 @@ abstract class PgTestBase(
          * fully operational; stale map entries in its registry are cleaned up per-map via the
          * normal [dropCatalog] call inside [initCatalog].
          *
-         * The function is idempotent: `DROP SCHEMA IF EXISTS … CASCADE` is safe when the schemas
-         * do not exist (first ever run).
+         * Schema drops are committed before tests start. Missing schemas are harmless (first ever run). Collection/catalog metadata is reconciled through the normal write API when each fixture is initialized.
          */
         private fun cleanDatabase() {
             storage.adminConnection().use { conn ->
                 for (tm in TestMap.entries) {
-                    conn.execute("""DROP SCHEMA IF EXISTS "${tm.id}" CASCADE""").close()
+                    storage.database.catalog_drop_schema(conn, PgSchemaName.checked(tm.id))
                 }
+                conn.commit()
                 logger.info("Test database cleaned: dropped ${TestMap.entries.size} test schema(s)")
             }
         }

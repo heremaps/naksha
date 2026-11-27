@@ -11,6 +11,7 @@ import naksha.model.objects.Member
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaFeature
 import naksha.model.objects.StandardMembers
+import naksha.model.objects.XyzMembers.XyzMembers_C.XyzTn
 import kotlin.js.JsExport
 import kotlin.js.JsName
 import kotlin.jvm.JvmField
@@ -44,7 +45,8 @@ open class FeatureTuple(
      */
     @JsName("fromFeatureAndCollection")
     @Suppress("LeakingThis")
-    constructor(feature: NakshaFeature, collection: NakshaCollection) : this(feature, collection.useMember(StandardMembers.Tn))
+    constructor(feature: NakshaFeature, collection: NakshaCollection)
+        : this(feature, collection.members?.useMember(StandardMembers.Tn) ?: XyzTn)
 
     /**
      * Create a feature-tuple from a [NakshaFeature].
@@ -64,6 +66,13 @@ open class FeatureTuple(
      * @since 3.0
      */
     @JvmField var source: Any? = null
+
+    /**
+     * Called by tuple loaders after assigning [tuple], before returning the loaded reference. Overrides may apply response-local metadata without modifying the shared cached tuple. Direct field assignments must invoke this hook explicitly when that behavior is needed.
+     * @since 3.0
+     */
+    open fun onTupleLoaded() {
+    }
 
     /**
      * Returns the feature-id, if available.
@@ -97,7 +106,7 @@ open class FeatureTuple(
             val tuple = this.tuple
             if (tuple != null && tuple !== cachedTuple && !doNotAutoUpdate) {
                 // TODO: We need a global book for decoding, we should make Tuples explicit for clients!
-                feature = tuple.toNakshaFeature()
+                feature = tuple.decodeFeature(null)
                 cachedFeature = feature
                 cachedJson = null
             }
@@ -126,12 +135,4 @@ open class FeatureTuple(
             }
             return json
         }
-
-    /**
-     * Convert the tuple into a new feature, bypassing the cache and not updating the cache.
-     *
-     * @return a new copy of the tuple converted into a feature.
-     * @since 3.0
-     */
-    open fun newFeature(): NakshaFeature? = tuple?.toNakshaFeature() // TODO: Same as above, we need to change this generally!
 }

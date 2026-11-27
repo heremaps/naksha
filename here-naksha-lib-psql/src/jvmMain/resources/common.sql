@@ -26,7 +26,8 @@ CREATE EXTENSION IF NOT EXISTS pg_buffercache; -- https://www.postgresql.org/doc
 CREATE EXTENSION IF NOT EXISTS pg_prewarm; -- https://www.postgresql.org/docs/current/pgprewarm.html
 CREATE EXTENSION IF NOT EXISTS pg_stat_statements; -- https://www.postgresql.org/docs/current/pgstatstatements.html
 CREATE EXTENSION IF NOT EXISTS pg_visibility; -- https://www.postgresql.org/docs/current/pgvisibility.html
---CREATE EXTENSION IF NOT EXISTS pg_cron;
+-- Partition provisioning runs in shared Kotlin. Install pg_cron separately when
+-- configuring scheduled maintenance in the cluster's designated cron database.
 
 -- Set search path and install extension.
 SET SESSION search_path TO "naksha~admin", public, topology;

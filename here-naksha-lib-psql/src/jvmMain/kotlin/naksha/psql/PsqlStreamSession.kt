@@ -4,6 +4,7 @@ import naksha.base.Action
 import naksha.base.Id
 import naksha.base.NakshaError
 import naksha.base.NakshaError.NakshaErrorCompanion.CLOSED
+import naksha.base.NakshaError.NakshaErrorCompanion.CATALOG_NOT_FOUND
 import naksha.base.NakshaError.NakshaErrorCompanion.COLLECTION_NOT_FOUND
 import naksha.base.NakshaError.NakshaErrorCompanion.EXCEPTION
 import naksha.base.NakshaError.NakshaErrorCompanion.TIMEOUT
@@ -29,7 +30,7 @@ import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
 
 class PsqlStreamSession(
-    private val pgStorage: PsqlStorage,
+    private val pgStorage: PgStorage,
     override val options: SessionOptions,
 ) : IStreamSession {
     override val storage: IStorage get() = pgStorage
@@ -44,16 +45,20 @@ class PsqlStreamSession(
     override val mayWrite: Boolean get() = false
 
     override fun read(request: StreamRequest): Stream {
+        if (closed) throw NakshaException(CLOSED, "Stream session closed")
         val conn = pgStorage.newConnection(options, true)
         try {
-            val catalog = pgStorage.adminCatalog.getPgCatalogById(conn, request.catalogId.text)
-                ?: throw NakshaException(COLLECTION_NOT_FOUND, "No such catalog: ${request.catalogId}")
-            val collection = catalog.getPgCollectionById(conn, request.collectionId.text)
+            val database = pgStorage.database
+            val catalog = database.getPgCatalog(request.catalogId.intValue, conn)
+                ?.takeIf { it.id == request.catalogId && !it.tuple.isTombstone }
+                ?: throw NakshaException(CATALOG_NOT_FOUND, "No such catalog: ${request.catalogId}")
+            val collection = database.getPgCollection(catalog.id.intValue, request.collectionId.intValue, conn)
+                ?.takeIf { it.id == request.collectionId && !it.tuple.isTombstone }
                 ?: throw NakshaException(COLLECTION_NOT_FOUND, "No such collection: ${request.collectionId}")
             return if (request.ignoreTransactions || !request.queryHistory) {
                 PerFeatureStream(this, request, conn, collection)
             } else {
-                PerTransactionStream(this, request, conn, pgStorage.adminCatalog, collection)
+                PerTransactionStream(this, request, conn, database.pgAdminTransactions, collection)
             }
         } catch (e: Throwable) {
             conn.close()
@@ -238,27 +243,24 @@ class PsqlStreamSession(
 
         protected val fn = PgUtil.quoteIdent(FnColumn.name)
         protected val version = PgUtil.quoteIdent(VersionColumn.name)
-        protected val head = collection.headTable.quotedName
-        protected val hst = collection.historyTable.quotedName
+        protected val root = collection.qualifiedName
 
         protected fun selectAll(where: String, orderAndLimit: String): String {
             val cols = PgRows().withCollection(collection).aliases()
-            return """SELECT $cols FROM $head WHERE $where
-UNION ALL
-SELECT $cols FROM $hst WHERE $where
-$orderAndLimit"""
+            return "SELECT $cols FROM $root WHERE $where $orderAndLimit"
         }
 
         protected fun query(sql: String, types: Array<String>, args: Array<Any?>): List<Tuple> {
-            collection.catalog.setSearchPath(conn)
             val rows = PgRows().withCollection(collection)
-            conn.prepare(sql, types).execute(args).fetch().use { rows.readAll(it) }
+            conn.prepare(sql, types).use { plan ->
+                plan.execute(args).fetch().use { rows.readAll(it) }
+            }
             return (0 until rows.size).mapNotNull { rows[it] }
         }
 
         protected fun toStreamTuple(t: Tuple): StreamTuple = StreamTuple(
-            id = Id(t.id),
-            feature = t.toNakshaFeature().platformObject() as PlatformMap,
+            id = t.id,
+            feature = t.decodeFeature(null).platformObject() as PlatformMap,
             tupleNumber = t.tupleNumber,
             nextVersion = t.nextVersion,
             version = t.tupleNumber.version,
@@ -282,15 +284,15 @@ $orderAndLimit"""
             val where = "($fn, $version) > ($1, $2) AND $version >= $3 AND $version <= $4"
             // TODO: queryHistory = false must return the latest state <= request.version, which may live in HISTORY.
             val sql = if (!request.queryHistory) {
-                "SELECT ${PgRows().withCollection(collection).aliases()} FROM $head WHERE $where ORDER BY $fn, $version LIMIT $pageSize"
+                selectAll("$where AND nv = ${Version.HEAD.number}", "ORDER BY $fn, $version LIMIT $pageSize")
             } else {
                 selectAll(where, "ORDER BY $fn, $version LIMIT $pageSize")
             }
             val page = query(sql, arrayOf(INT8, INT8, INT8, INT8), arrayOf(lastFn, lastVersion, request.minVersion, request.version))
             if (page.isEmpty()) return false
-            val pageStart = page.first().tupleNumber.featureNumber
+            val pageStart = Id.featureNumberToOrdinal(page.first().tupleNumber.featureNumber)
             val last = page.last().tupleNumber
-            lastFn = last.featureNumber
+            lastFn = Id.featureNumberToOrdinal(last.featureNumber)
             lastVersion = last.version
 
             // Bucket k holds the k-th state of each feature, so no bucket repeats a feature and the history stays in order.
@@ -307,7 +309,7 @@ $orderAndLimit"""
                 for (part in bucket.chunked(request.chunkSize)) add(StreamChunk(this, part.toTypedArray()), pageStart)
             }
             val full = page.size == pageSize
-            readPosition = if (full) lastFn else lastFn + 1
+            readPosition = if (full || lastFn == Long.MAX_VALUE) lastFn else lastFn + 1
             return full
         }
 
@@ -318,7 +320,7 @@ $orderAndLimit"""
         session: PsqlStreamSession,
         request: StreamRequest,
         conn: PgConnection,
-        private val admin: PgAdminCatalog,
+        private val txns: PgCollection,
         collection: PgCollection,
     ) : PsqlStream(session, request, conn, collection, request.minVersion) {
 
@@ -341,17 +343,17 @@ $orderAndLimit"""
         }
 
         private fun loadTransactions() {
-            val txns = admin.transactions
             // TODO: no index on collection; this scans every transaction in the range.
-            val sql = """SELECT ${PgRows().withCollection(txns).aliases()} FROM "naksha~admin".${txns.headTable.quotedName}
-WHERE $version >= $1 AND $version <= $2 ORDER BY $version LIMIT $TX_PAGE"""
-            admin.setSearchPath(conn)
+            val sql = """SELECT ${PgRows().withCollection(txns).aliases()} FROM ${txns.qualifiedName}
+WHERE nv = ${Version.HEAD.number} AND $version >= $1 AND $version <= $2 ORDER BY $version LIMIT $TX_PAGE"""
             val rows = PgRows().withCollection(txns)
-            conn.prepare(sql, arrayOf(INT8, INT8)).execute(arrayOf(from, request.version)).fetch().use { rows.readAll(it) }
+            conn.prepare(sql, arrayOf(INT8, INT8)).use { plan ->
+                plan.execute(arrayOf(from, request.version)).fetch().use { rows.readAll(it) }
+            }
             for (i in 0 until rows.size) {
-                val tx = rows[i]?.toNakshaFeature()?.proxy(NakshaTx::class) ?: continue
+                val tx = rows[i]?.decodeTransaction() ?: continue
                 from = tx.version.number + 1
-                if (tx.maps[collection.catalog.id]?.collections?.get(collection.id) != null) transactions.addLast(tx)
+                if (tx.catalogs[collection.catalogId.text]?.collections?.get(collection.id.text) != null) transactions.addLast(tx)
             }
             if (rows.size < TX_PAGE) lastPage = true
             if (transactions.isEmpty()) readPosition = from

@@ -1,5 +1,6 @@
 package naksha.model.objects
 
+import naksha.base.AnyObject
 import naksha.geo.SpGeometry
 import naksha.model.Tuple
 import naksha.base.illegalArg
@@ -34,7 +35,7 @@ class SpatialMember() : TypedMember<SpatialMember>() {
     }
 
     /** Retrieves the spatial geometry value of this member from the given feature. */
-    fun get(feature: NakshaFeature): SpGeometry? = readGeometry(feature)
+    fun get(feature: AnyObject): SpGeometry? = readGeometry(feature)
 
     /**
      * Retrieves the spatial geometry value of this member from the given tuple.
@@ -44,5 +45,5 @@ class SpatialMember() : TypedMember<SpatialMember>() {
     fun get(tuple: Tuple): SpGeometry? = readGeometry(tuple)
 
     /** Sets the spatial geometry value of this member on the given feature. */
-    fun set(feature: NakshaFeature, value: SpGeometry): Any? = setPath(feature, path, value)
+    fun set(feature: AnyObject, value: SpGeometry): Any? = setPath(feature, path, value)
 }

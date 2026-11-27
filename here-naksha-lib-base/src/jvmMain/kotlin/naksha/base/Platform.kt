@@ -12,16 +12,23 @@ import com.fasterxml.jackson.databind.deser.BeanDeserializerModifier
 import com.fasterxml.jackson.databind.json.JsonMapper
 import com.fasterxml.jackson.databind.module.SimpleModule
 import naksha.base.Platform.PlatformCompanion.proxy
+import naksha.base.fn.Fn1
 import net.jpountz.lz4.LZ4Factory
 import sun.misc.Unsafe
 import java.lang.invoke.MethodHandles
 import java.lang.reflect.Method
+import java.net.Inet4Address
+import java.net.InetAddress
+import java.net.NetworkInterface
 import java.net.URLDecoder
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
 import java.text.Normalizer
+import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.Executors
+import java.util.concurrent.ForkJoinPool
 import java.util.concurrent.ThreadLocalRandom
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.math.round
@@ -303,7 +310,7 @@ actual class Platform {
          * @throws NakshaException with error [NakshaError.ILLEGAL_ARGUMENT] if the given object does not implement [PlatformObject].
          */
         @JvmStatic
-        fun <T : Proxy> javaProxy(any: Any?, javaClass: Class<T>): T? {
+        fun <T : Proxy> javaProxy(any: Any?, javaClass: Class<out T>): T? {
             if (any == null) return null
             if (javaClass.isInstance(any)) return javaClass.cast(any)
             if (any is PlatformObject) return proxy(any, javaClass.kotlin)
@@ -403,6 +410,15 @@ actual class Platform {
 
         @JvmStatic
         actual fun toInt64RawBits(d: Double): Long = java.lang.Double.doubleToRawLongBits(d)
+
+        @JvmStatic
+        actual fun swapLong(value: Long): Long = java.lang.Long.reverseBytes(value)
+
+        @JvmStatic
+        actual fun swapInt(value: Int): Int = java.lang.Integer.reverseBytes(value)
+
+        @JvmStatic
+        actual fun swapShort(value: Short): Short = java.lang.Short.reverseBytes(value)
 
         @JvmStatic
         actual fun intToInt64(value: Int): Long = value.toLong()
@@ -628,7 +644,7 @@ actual class Platform {
          */
         @Suppress("UNCHECKED_CAST")
         @JvmStatic
-        actual fun <T : Proxy> proxy(pobject: PlatformObject, klass: KClass<T>, doNotOverride: Boolean): T {
+        actual fun <T : Proxy> proxy(pobject: PlatformObject, klass: KClass<out T>, doNotOverride: Boolean): T {
             val obj = unbox(pobject)
             require(obj is JvmObject)
             val symbol = Symbols.of(klass)
@@ -871,6 +887,7 @@ actual class Platform {
         @JvmStatic
         actual fun gzipInflate(compressed: ByteArray): ByteArray = GZip.gunzip(compressed)
 
+        @JvmStatic
         actual fun stackTrace(t: Throwable): String = t.stackTraceToString()
 
         @JvmStatic
@@ -886,6 +903,7 @@ actual class Platform {
             return if(id.isNullOrEmpty()) "local_psql_test_storage" else id
         }
 
+        @JvmStatic
         @get:JvmName("FAL")
         actual val FAL: String
             get() {
@@ -893,9 +911,71 @@ actual class Platform {
                 return "[${frame.fileName}:${frame.lineNumber}] "
             }
 
+        @JvmStatic
         actual fun fal(n: Int): String {
             val frame = StackWalker.getInstance().walk { it.skip(1).findFirst().get() }
             return "[${frame.fileName}:${frame.lineNumber}] "
+        }
+
+        fun primaryLocalIpAddress(): InetAddress? {
+            var ipAddress: InetAddress? = null
+            var prio: Int = -1
+            val networkInterfaces = NetworkInterface.getNetworkInterfaces()
+            for (networkInterface in networkInterfaces) {
+                if (!networkInterface.isUp || networkInterface.isLoopback || networkInterface.isVirtual) continue
+                networkInterface.inetAddresses.iterator().forEach { inet ->
+                    if (inet is Inet4Address &&
+                        !inet.isLoopbackAddress &&
+                        !inet.isLinkLocalAddress &&
+                        !inet.isMulticastAddress) {
+                        val p = addressPriority(inet)
+                        if (p > prio) {
+                            ipAddress = inet
+                            prio = p
+                        }
+                    }
+                }
+            }
+            return ipAddress
+        }
+
+        private fun addressPriority(address: Inet4Address): Int {
+            val octets = address.address.map { it.toInt() and 0xff }
+            return when {
+                // 10.0.0.0/8
+                octets[0] == 10 -> 3
+                // 172.16.0.0/12
+                octets[0] == 172 && octets[1] in 16..31 -> 2
+                // 192.168.0.0/16
+                octets[0] == 192 && octets[1] == 168 -> 1
+                // Any remaining non-loopback, non-link-local IPv4 address
+                else -> 0
+            }
+        }
+
+        @JvmStatic
+        actual fun primaryLocalIp(): String = primaryLocalIpAddress()?.hostAddress ?: "127.0.0.1"
+
+        @JvmStatic
+        actual fun yield() {
+            Thread.yield()
+        }
+
+        actual fun <A, Z> runParallel(a: Array<A>, o: Array<Z?>, process: Fn1<Z?, A>): Array<Z?> {
+            val COUNT = a.size
+            val result = if (o.size < COUNT) o.copyOf(COUNT) else {
+                o.fill(null)
+                o
+            }
+
+            // Start processes.
+            val futures = Array(COUNT) { i ->
+                val input = a[i]
+                CompletableFuture.supplyAsync { process.call(input) }
+            }
+            // All work is already submitted. Wait once per input slot, including legitimate null results.
+            for (i in futures.indices) result[i] = futures[i].get()
+            return result
         }
     }
 }

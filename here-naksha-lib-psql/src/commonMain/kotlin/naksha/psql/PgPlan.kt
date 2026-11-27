@@ -1,15 +1,11 @@
 package naksha.psql
 
-import kotlin.js.JsExport
-
 /**
  * The PostgresQL plan (prepared statement), this API is designed so that it matches the way the
  * [PLV8](https://plv8.github.io/) engine exposes plans. In Java this is a thin wrapper around a JDBC `PreparedStatement`.
  * @since 3.0
  */
-@Suppress("OPT_IN_USAGE")
-@JsExport
-interface PgPlan : AutoCloseable {
+expect class PgPlan private constructor(): AutoCloseable {
     /**
      * Gives a hint as to the number of rows that should be fetched from the database when more rows are needed. Zero means no limit (Postgres may use other hints).
      * If the value specified is zero or negative, zero will be used, but it MIGHT be ignored by the underlying implementation (see {@link java.sql.Statement}),
@@ -26,6 +22,9 @@ interface PgPlan : AutoCloseable {
      * @since 3.0
      */
     fun execute(args: Array<Any?>? = null): PgCursor
+
+    /** Execute returning mutation rows; PLV8 uses SPI execute because a data-modifying CTE cannot be opened as a read cursor. @since 3.0 */
+    internal fun executeMutation(args: Array<Any?>? = null): PgCursor
 
     /**
      * Adds the prepared statement with the given arguments into batch-execution queue. This requires a mutation query like UPDATE or

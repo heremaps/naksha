@@ -31,12 +31,14 @@ import java.util.Map;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import kotlin.reflect.KClass;
+import naksha.base.Id;
 import naksha.base.Platform;
 import naksha.base.PlatformLock;
 import naksha.jbon.JbDictionary;
 import naksha.model.*;
 import naksha.base.NakshaError;
 import naksha.model.objects.NakshaCollection;
+import naksha.model.objects.NakshaDatabase;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.objects.NakshaStorage;
 import naksha.model.request.ErrorResponse;
@@ -50,6 +52,7 @@ public class NHAdminMock extends AbstractStorage<Config> {
 
   protected static @NotNull Map<String, TreeMap<String, NakshaFeature>> mockCollection;
   protected static @NotNull NakshaHubConfig nakshaHubConfig;
+  private final @NotNull Id id = new Id();
 
   @Override
   public @NotNull KClass<Config> getConfigKlass() {
@@ -57,7 +60,7 @@ public class NHAdminMock extends AbstractStorage<Config> {
   }
 
   @Override
-  protected void initStorage(@NotNull NHAdminMock.Config config, @Nullable Boolean create, @Nullable Boolean upgrade) {
+  public void initStorage(@NotNull NHAdminMock.Config config, @Nullable Boolean create, @Nullable Boolean upgrade) {
     // empty on purpose
   }
 
@@ -74,6 +77,11 @@ public class NHAdminMock extends AbstractStorage<Config> {
   @Override
   public @NotNull IStreamSession newStreamSession(@Nullable SessionOptions options) {
     throw unsupportedOp("newStreamSession");
+  }
+
+  @Override
+  public @NotNull NakshaDatabase getDatabase() {
+    return null;
   }
 
   public static class Config extends NakshaStorage {
@@ -118,13 +126,8 @@ public class NHAdminMock extends AbstractStorage<Config> {
 
   @NotNull
   @Override
-  public String getId() {
-    throw new UnsupportedOperationException("Not yet supported by NHAdminMock");
-  }
-
-  @Override
-  public int getHardCap() {
-    throw new UnsupportedOperationException("Not yet supported by NHAdminMock");
+  public Id getId() {
+    return id;
   }
 
   private void setupCollections() {
@@ -164,11 +167,6 @@ public class NHAdminMock extends AbstractStorage<Config> {
   @Override
   public @NotNull PlatformLock getLock() {
     return Platform.newLock();
-  }
-
-  @Override
-  public long getNumber() {
-    throw new UnsupportedOperationException("Not yet supported by NHAdminMock");
   }
 
   @Override

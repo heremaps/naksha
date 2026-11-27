@@ -20,6 +20,13 @@ internal data class PgQueryWhereClause(
     val where: String,
 
     /**
+     * All columns that are part of the query. This helps when deciding if ordering can be done using an index.
+     * @since 3.0
+     */
+    @JvmField
+    val columns: Map<String, PgColumn>,
+
+    /**
      * The arguments to used with the WHERE in order.
      * @since 3.0
      */

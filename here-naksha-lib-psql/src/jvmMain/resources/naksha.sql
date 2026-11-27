@@ -31,6 +31,46 @@
 -- PARALLEL SAFE indicates that the function is safe to run in parallel mode without restriction.
 SET SESSION search_path TO "naksha~admin", topology, hint_plan, public;
 
+-- Invoke the shared Kotlin implementation in the caller's transaction and role.
+CREATE OR REPLACE FUNCTION "naksha~admin".naksha_maintain() RETURNS integer
+LANGUAGE plv8 VOLATILE PARALLEL UNSAFE SECURITY INVOKER
+SET search_path = "naksha~admin", pg_catalog
+AS $$
+  // The job and manual SQL entry point share the sweep guard. Busy databases are retried on the next run without waiting or blocking writes.
+  if (!plv8.execute("SELECT pg_catalog.pg_try_advisory_xact_lock(1852531051, 1835100526) AS acquired")[0].acquired) {
+    return 0;
+  }
+  if (typeof require !== "function") {
+    plv8.find_function('"naksha~admin".es_modules_init')();
+  }
+  return require("naksha_psql").naksha_maintain();
+$$;
+REVOKE ALL ON FUNCTION "naksha~admin".naksha_maintain() FROM PUBLIC;
+
+-- Physical range-sort feature numbers. These functions never change logical API identifiers.
+CREATE OR REPLACE FUNCTION "naksha~admin".bswap8(v bigint) RETURNS bigint
+LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE AS $$
+    SELECT get_byte(b, 0)::bigint
+        | (get_byte(b, 1)::bigint << 8)
+        | (get_byte(b, 2)::bigint << 16)
+        | (get_byte(b, 3)::bigint << 24)
+        | (get_byte(b, 4)::bigint << 32)
+        | (get_byte(b, 5)::bigint << 40)
+        | (get_byte(b, 6)::bigint << 48)
+        | (get_byte(b, 7)::bigint << 56)
+    FROM (SELECT pg_catalog.int8send(v) AS b) bytes
+$$;
+
+CREATE OR REPLACE FUNCTION "naksha~admin".fn_to_ordinal(fn bigint) RETURNS bigint
+LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE AS $$
+    SELECT "naksha~admin".bswap8(fn) # '-9223372036854775808'::bigint
+$$;
+
+CREATE OR REPLACE FUNCTION "naksha~admin".ordinal_to_fn(value bigint) RETURNS bigint
+LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE AS $$
+    SELECT "naksha~admin".bswap8(value # '-9223372036854775808'::bigint)
+$$;
+
 CREATE OR REPLACE FUNCTION buf2bytes(in buffers int4, in decimals int4 default 2, out bytes text)
 LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE
 SET search_path FROM CURRENT

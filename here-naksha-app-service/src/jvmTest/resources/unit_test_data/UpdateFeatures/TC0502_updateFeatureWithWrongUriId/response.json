@@ -1,5 +1,5 @@
 {
   "type": "ErrorResponse",
   "error": "FeatureNotFound",
-  "errorMessage": "Failed to update feature 'wrong-id', no such feature exists"
+  "errorMessage": "Feature 'wrong-id' has no live HEAD state to update"
 }

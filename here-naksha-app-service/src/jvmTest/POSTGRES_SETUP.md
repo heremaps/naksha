@@ -44,7 +44,7 @@ The CI pipeline may use either this option or Testcontainers; see the workflow c
 
 #### Prerequisites:
 - Postgres with PostGIS extension running on localhost
-- By default, Postgres is expected on localhost port **5432**; use `NAKSHA_TEST_DB_URL` to specify another host or port
+- The [shared local test container](../../../README.md#run-the-common-jvm-and-node-checks) uses host port **15432**. Set `NAKSHA_TEST_DB_URL` as shown there. Direct app-service tests without a configured URL still fall back to `localhost:5432`.
 - Environment variable `NAKSHA_APP_SERVICE_TEST_CONTEXT` can be unset or set to `LOCAL_STANDALONE`
 
 #### Notes:

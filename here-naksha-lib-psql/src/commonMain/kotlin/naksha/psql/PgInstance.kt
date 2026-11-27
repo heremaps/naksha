@@ -2,14 +2,22 @@ package naksha.psql
 
 import naksha.base.fn.Fx2
 import naksha.model.SessionOptions
-import kotlin.js.JsExport
 
 /**
- * Information about a PostgresQL instance.
+ * A PostgresQL _database server_.
+ * @since 3.0
  */
-@Suppress("OPT_IN_USAGE")
-@JsExport
-interface PgInstance {
+expect class PgInstance private constructor(config: PgInstanceConfig) {
+    companion object PgInstance_C {
+        /**
+         * Return the _Postgres Server Instance_ for the given instance configuration.
+         * @param config the configuration for which to return the [PgInstance] singleton.
+         * @return the instance.
+         * @since 3.0
+         */
+        fun of(config: PgInstanceConfig): PgInstance
+    }
+
     /**
      * The host to connect to.
      */

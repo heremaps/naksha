@@ -474,43 +474,24 @@ class Naksha private constructor() {
         /**
          * The admin-options to use by all storages for internal processing, like setting up the admin-map.
          *
-         * This should be overridden by the application when bootstrapping.
+         * **This should be overridden by the application when bootstrapping.**
          *
-         * The admin-options are needed for administrative work, reading dictionaries, collection information, create administrative structures. The application should set the defaults to have more control over the `appId` and/or `author` being used, when internal data is processed, and how internal connections authenticate (`appName`).
+         * The admin-options are needed for administrative work, reading global books, collection information, create administrative structures. The application should set the defaults to have more control over the `appId` and/or `author` being used, when internal data is processed, and how internal connections authenticate (`appName`).
          *
-         * If not explicitly set, the first time the options are needed, they are creating from the current [NakshaContext].
-         *
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        var adminOptions: SessionOptions? = null
+
+        /**
+         * Returns [adminOptions], if being `null`, creates new [SessionOptions] from the static [NakshaContext], so using [defaultAppName][NakshaContext.defaultAppName], [defaultAppId][NakshaContext.defaultAppId], [defaultConnectTimeout][NakshaContext.defaultConnectTimeout], ...
+         * @return options for administrative internal session.
          * @since 3.0
          */
         @JvmStatic
         @JsStatic
-        var adminOptions: SessionOptions
-            get() {
-                var options = _adminOptions.get()
-                while (options == null) {
-                    options = SessionOptions(
-                        appName = "naksha/$CURRENT",
-                        appId = NakshaContext.appId(),
-                        author = NakshaContext.author(),
-                        parallel = false,
-                        useMaster = true,
-                        excludePaths = NakshaContext.defaultExcludePaths.get(),
-                        excludeFn = NakshaContext.defaultExcludeFn.get(),
-                        connectTimeout = NakshaContext.defaultConnectTimeout.get(),
-                        socketTimeout = NakshaContext.defaultSocketTimeout.get(),
-                        stmtTimeout = NakshaContext.defaultStmtTimeout.get(),
-                        lockTimeout = NakshaContext.defaultLockTimeout.get()
-                    )
-                    if (!_adminOptions.compareAndSet(null, options)) {
-                        options = null
-                    }
-                }
-                return options
-            }
-            set(value) {
-                _adminOptions.set(value)
-            }
-
+        fun useAdminOptions(): SessionOptions = adminOptions ?: SessionOptions(useMaster = true)
 
         /**
          * Creates a new virtual [TupleNumber] for a feature in the given storage, catalog, collection.

@@ -257,10 +257,15 @@ class ReadFeaturesByRadiusPostTest extends ApiTest {
                 .post("hub/spaces/" + SPACE_ID + "/spatial?" + urlQueryParams, requestBody, streamId);
 
         // Then: Perform standard assertions
-        assertThat(response)
-                .hasStatus(expectedResCode)
-                .hasStreamIdHeader(streamId)
-                .hasJsonBody(expectedBodyPart, "Response body doesn't match", strictChecking);
+        final var assertions = assertThat(response)
+                 .hasStatus(expectedResCode)
+                 .hasStreamIdHeader(streamId);
+        if (strictChecking) {
+            // Spatial results are unordered, but selection must not introduce any unrequested properties.
+            assertions.hasJsonBodyWithUnorderedFeatures(expectedBodyPart, "Response body doesn't match");
+            return;
+        }
+        assertions.hasJsonBody(expectedBodyPart, "Response body doesn't match");
     }
 
     @ParameterizedTest

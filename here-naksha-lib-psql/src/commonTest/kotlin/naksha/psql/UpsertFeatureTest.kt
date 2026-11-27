@@ -21,11 +21,11 @@ class UpsertFeatureTest : PgTestBase() {
             id = "feature_1"
         }
         val writeInitialFeature = WriteRequest().add(
-            Write().upsertFeature(collection, initialFeature)
+            Write().upsertFeature(collection, initialFeature, atomic = false)
         )
 
         val upsertFeaturesReq = WriteRequest().add(
-            Write().upsertFeature(collection, initialFeature)
+            Write().upsertFeature(collection, initialFeature, atomic = false)
         )
 
         // When: Writing initial version of feature
@@ -39,6 +39,7 @@ class UpsertFeatureTest : PgTestBase() {
             collectionId = collection.id
             featureIds += initialFeature.id
             queryHistory = true
+            versions = 10
         }).features.sortedBy { it!!.properties.xyz.version!!.number.toLong() }
 
         // Then
@@ -85,7 +86,7 @@ class UpsertFeatureTest : PgTestBase() {
 
         // When: first upsert is done
         val writeInitialFeature = WriteRequest()
-        initialFeatures.forEach { writeInitialFeature.add(Write().upsertFeature(collection, it)) }
+        initialFeatures.forEach { writeInitialFeature.add(Write().upsertFeature(collection, it, atomic = false)) }
         executeWrite(writeInitialFeature)
 
         // And: upsert changed features
@@ -95,7 +96,7 @@ class UpsertFeatureTest : PgTestBase() {
             }
         }
         val upsertChangedFeatures = WriteRequest()
-        changedFeatures.forEach { upsertChangedFeatures.add(Write().upsertFeature(collection, it)) }
+        changedFeatures.forEach { upsertChangedFeatures.add(Write().upsertFeature(collection, it, atomic = false)) }
         val response = executeWrite(upsertChangedFeatures)
 
         // Then

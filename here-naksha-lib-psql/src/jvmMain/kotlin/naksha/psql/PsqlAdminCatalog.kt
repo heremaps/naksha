@@ -2,7 +2,6 @@ package naksha.psql
 
 import naksha.base.*
 import naksha.base.Platform.PlatformCompanion.logger
-import naksha.jbon.JbDictionary
 import naksha.model.*
 import naksha.psql.PgUtil.PgUtilCompanion.quoteLiteral
 
@@ -20,16 +19,6 @@ class PsqlAdminCatalog internal constructor(
 
     override val storage: PsqlStorage
         get() = super.storage as PsqlStorage
-
-    override fun getDictionary(id: String): JbDictionary? {
-        // TODO: Implement me!
-        return null
-    }
-
-    override fun getEncodingDictionary(feature: Any?, context: Any?): JbDictionary? {
-        // TODO: Implement me!
-        return null
-    }
 
     override fun createAdminCatalog(conn: PgConnection, config: PgConfig, storageId: String, storageNumber: Long, psqlVersion: NakshaVersion): Int {
         return upsertAdminMap(conn, storageId, storageNumber, psqlVersion, null, null)
@@ -161,10 +150,10 @@ class PsqlAdminCatalog internal constructor(
         conn.execute("CREATE SEQUENCE IF NOT EXISTS $NAKSHA_VERSION_SEQ AS ${PgType.INT64} START ${START_VERSION.number} INCREMENT BY 4 CACHE 1;").close()
 
         logger.info("Create internal collections: transactions, collections, and dictionaries")
-        createPgCollection(conn, collections) // 0
-        createPgCollection(conn, transactions) // 1
-        createPgCollection(conn, catalogs) // 2
-        createPgCollection(conn, books) //3
+        _createCollectionTable(conn, collectionsCol) // 0
+        _createCollectionTable(conn, transactions) // 1
+        _createCollectionTable(conn, catalogs) // 2
+        _createCollectionTable(conn, books) //3
 
         logger.info("Done creating transactions, collections, and dictionaries")
         return adminMapOid

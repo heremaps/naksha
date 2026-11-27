@@ -82,9 +82,7 @@ class Jbon2MembersTest {
         feature["score"] = 99  // will be intercepted by the member encoder
 
         // Encode: replace "score" value with a reference to members slot 0
-        val enc = JbEncoder2().withMemberEncoder(IMemberEncoder { path, pathEnd, _ ->
-            if (pathEnd > 0 && path[pathEnd - 1] == "score") 0 else -1
-        })
+        val enc = JbEncoder2().withMemberReferences(JbMemberReferenceBuilder().add(arrayOf("score"), 0).build())
         @Suppress("UNCHECKED_CAST")
         val tupleBytes = enc.buildTupleFromMap(feature as MapProxy<String, *>)
 
@@ -121,9 +119,7 @@ class Jbon2MembersTest {
         feature["geometry"] = SpPoint(0.0, 0.0)  // placeholder; intercepted below
 
         // Encode: replace "geometry" value with a reference to members slot 0
-        val enc = JbEncoder2().withMemberEncoder(IMemberEncoder { path, pathEnd, _ ->
-            if (pathEnd > 0 && path[pathEnd - 1] == "geometry") 0 else -1
-        })
+        val enc = JbEncoder2().withMemberReferences(JbMemberReferenceBuilder().add(arrayOf("geometry"), 0).build())
         @Suppress("UNCHECKED_CAST")
         val tupleBytes = enc.buildTupleFromMap(feature as MapProxy<String, *>)
 
@@ -195,9 +191,7 @@ class Jbon2MembersTest {
         feature["id"] = "x"
         feature["label"] = "placeholder"
 
-        val enc = JbEncoder2().withMemberEncoder(IMemberEncoder { path, pathEnd, _ ->
-            if (pathEnd > 0 && path[pathEnd - 1] == "label") 0 else -1
-        })
+        val enc = JbEncoder2().withMemberReferences(JbMemberReferenceBuilder().add(arrayOf("label"), 0).build())
         @Suppress("UNCHECKED_CAST")
         val tupleBytes = enc.buildTupleFromMap(feature as MapProxy<String, *>)
 
@@ -223,9 +217,7 @@ class Jbon2MembersTest {
         feature["id"] = "x"
         feature["optional"] = "placeholder"
 
-        val enc = JbEncoder2().withMemberEncoder(IMemberEncoder { path, pathEnd, _ ->
-            if (pathEnd > 0 && path[pathEnd - 1] == "optional") 0 else -1
-        })
+        val enc = JbEncoder2().withMemberReferences(JbMemberReferenceBuilder().add(arrayOf("optional"), 0).build())
         @Suppress("UNCHECKED_CAST")
         val tupleBytes = enc.buildTupleFromMap(feature as MapProxy<String, *>)
 
@@ -255,9 +247,7 @@ class Jbon2MembersTest {
         feature["id"] = "x"
         feature["score"] = 99
 
-        val enc = JbEncoder2().withMemberEncoder(IMemberEncoder { path, pathEnd, _ ->
-            if (pathEnd > 0 && path[pathEnd - 1] == "score") 0 else -1
-        })
+        val enc = JbEncoder2().withMemberReferences(JbMemberReferenceBuilder().add(arrayOf("score"), 0).build())
         @Suppress("UNCHECKED_CAST")
         val tupleBytes = enc.buildTupleFromMap(feature as MapProxy<String, *>)
 

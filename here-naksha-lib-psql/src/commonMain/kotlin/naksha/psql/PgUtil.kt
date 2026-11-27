@@ -9,10 +9,10 @@ import naksha.model.Naksha.NakshaCompanion.BOOKS_COL_ID
 import naksha.model.Naksha.NakshaCompanion.CATALOGS_COL_ID
 import naksha.model.Naksha.NakshaCompanion.TRANSACTIONS_COL_ID
 import naksha.base.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
-import naksha.psql.PgPlatform.PgPlatformCompanion.quote_ident
 import naksha.psql.PgPlatform.PgPlatformCompanion.quote_literal
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
+import kotlin.js.JsName
 import kotlin.jvm.JvmField
 import kotlin.jvm.JvmStatic
 
@@ -114,7 +114,7 @@ class PgUtil private constructor() {
 
         /**
          * Quotes an identifier, so a database internal name. For PostgresQL database this means to replace all double quotes
-         * (`"`) with two double quotes (`""`). This encloses the string with quotation characters, when needed.
+         * (`"`) with two double quotes (`""`). Always encloses the concatenated identifier in double quotes, preserving case, keywords and backslashes. Parts form one identifier, not a qualified relation.
          * @param parts the identifier parts to merge and quote.
          * @return the quoted identifier.
          * @since 3.0.0
@@ -123,25 +123,34 @@ class PgUtil private constructor() {
         @JvmStatic
         fun quoteIdent(vararg parts: String): String {
             if (parts.isEmpty()) throw NakshaException(ILLEGAL_ARGUMENT, "The given parts must not be empty")
-            val quote = quote_ident(*parts)
-            if (quote != null) return quote
-            var quoted = false
             val sb = StringBuilder()
             sb.append('"')
             for (part in parts) {
                 for (c in part) {
                     when (c) {
-                        in 'a'..'z', in 'A'..'Z', in '0'..'9', '_' -> sb.append(c)
-                        '"' -> { quoted = true; sb.append('"').append('"') }
-                        '\\' -> { quoted = true; sb.append('\\').append('\\') }
-                        else -> { quoted = true; sb.append(c) }
+                        '"' -> sb.append("\"\"")
+                        else -> sb.append(c)
                     }
                 }
             }
-            if (!quoted) return if (parts.size == 1) return parts[0] else sb.substring(1)
             sb.append('"')
             return sb.toString()
         }
+
+        @JsStatic
+        @JvmStatic
+        @JsName("quoteDatabaseName")
+        fun quoteIdent(name: PgDatabaseName): String = name.quotedName
+
+        @JsStatic
+        @JvmStatic
+        @JsName("quoteSchemaName")
+        fun quoteIdent(name: PgSchemaName): String = name.quotedName
+
+        @JsStatic
+        @JvmStatic
+        @JsName("quoteTableName")
+        fun quoteIdent(name: PgTableName): String = name.quotedName
 
         /**
          * Calculates the partition number between 0 and 255. This is the unsigned value of the first byte of the MD5 hash above the

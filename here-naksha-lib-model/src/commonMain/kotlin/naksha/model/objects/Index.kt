@@ -3,6 +3,10 @@
 package naksha.model.objects
 
 import naksha.base.AnyObject
+import naksha.base.Id
+import naksha.base.IdTextType
+import naksha.base.NakshaException
+import naksha.base.illegalId
 import naksha.base.NotNullProperty
 import naksha.base.NullableProperty
 import naksha.base.StringList
@@ -10,21 +14,11 @@ import kotlin.js.JsExport
 import kotlin.js.JsName
 
 /**
- * An index on a [NakshaCollection] — either a mandatory/internal storage-managed index or a
- * user-defined one.
+ * An index on a [NakshaCollection].
  *
- * The [on] list holds the names of the members to index. These may be names of mandatory or default
- * built-in members (see [StandardMembers]) or names of custom [Member]s declared on the same
- * collection. The [type] decides the storage method:
- * - [IndexType.BTREE]: ordered index for equality and range queries on scalar and text columns.
- * - [IndexType.SPATIAL]: spatial index covering a 2D-encoded geometry column. [on] must contain exactly one geometry member.
- * - [IndexType.TAG_MAP]: inverted index over a tags member ([MemberType.TAG_MAP] or [MemberType.TAG_MAP_FROM_TAG_LIST]) supporting key/value containment queries. [on] must contain exactly one member.
- * - [IndexType.TAG_LIST]: inverted index over a tag-list member ([MemberType.TAG_LIST]) supporting element containment queries. [on] must contain exactly one member.
- *
- * When [internal] is `true` the index is storage-managed (an index the storage maintains itself to keep
- * its own bookkeeping fast). The storage injects these into the [NakshaCollection.indices] list; clients
- * must not declare them manually.
+ * The [on] list holds the names of the members to index directly. The [include] list holds named of members that should be added into the index, but are not essential part of the indexing. Actually, all indices need to contain the [primary-key][NakshaCollection.indices].
  * @since 3.0
+ * @see NakshaCollection.indices
  */
 @JsExport
 open class Index() : AnyObject() {
@@ -35,7 +29,7 @@ open class Index() : AnyObject() {
      * @param on the member names to index.
      * @since 3.0
      */
-    @JsName("of")
+    @JsName("IndexByName")
     constructor(name: String, vararg on: String) : this() {
         this.name = name
         val cols = StringList()
@@ -45,16 +39,58 @@ open class Index() : AnyObject() {
     }
 
     /**
-     * The index name. Must be unique within the collection.
+     * Construct a user-defined index.
+     * @param name the index name (must be unique within the collection).
+     * @param on the members to index.
      * @since 3.0
      */
-    var name: String by NAME
+    @JsName("IndexByMember")
+    constructor(name: String, vararg on: Member) : this() {
+        this.name = name
+        val cols = StringList()
+        cols.setCapacity(on.size)
+        for (c in on) cols.add(c.name)
+        this.on = cols
+    }
+
+    /**
+     * The logical index name, unique within the collection and preserved without normalization or storage-specific aliasing. Accepts classifications through [IdTextType.UNSAFE]; internal, reserved and illegal names are rejected.
+     * @since 3.0
+     */
+    var name: String
+        get() = declaredName
+        set(value) {
+            if (!IdTextType.UNSAFE.accepts(IdTextType.classify(value))) throw illegalId("Invalid custom index name")
+            declaredName = value
+        }
+
+    private var declaredName: String by NAME
+    private var _id_org: String? = null
+    private var _id_val: Id? = null
+
+    /**
+     * Hidden virtual identifier derived on demand from [name], excluded from serialized data. Reuses the same [Id] while the source name has the same string identity; source replacement, including raw-map changes, refreshes the cache.
+     * @throws NakshaException with [naksha.base.NakshaError.ILLEGAL_ID] for an invalid custom index name.
+     * @since 3.0
+     */
+    val id: Id
+        get() {
+            val name = this.name
+            val cached = _id_val
+            @Suppress("StringReferentialEquality")
+            if (cached != null && name === _id_org) return cached
+            val id = Id(name)
+            if (!IdTextType.UNSAFE.accepts(id.textType)) throw illegalId("Invalid custom index name")
+            _id_org = name
+            _id_val = id
+            return id
+        }
 
     /** True iff the underlying map has an entry for [name]. */
     fun hasName(): Boolean = hasRaw("name")
 
     /** Remove [name] from the underlying map; returns this for chaining. */
-    fun removeName(): Index {
+    fun withoutName(): Index {
         removeRaw("name")
         return this
     }
@@ -76,7 +112,7 @@ open class Index() : AnyObject() {
     fun hasOn(): Boolean = hasRaw("on")
 
     /** Remove [on] from the underlying map; returns this for chaining. */
-    fun removeOn(): Index {
+    fun withoutOn(): Index {
         removeRaw("on")
         return this
     }
@@ -84,6 +120,26 @@ open class Index() : AnyObject() {
     /** Fluent setter for [on]; returns this for chaining. */
     fun withOn(value: StringList): Index {
         on = value
+        return this
+    }
+
+    /**
+     * The _(optional)_ sort order of the members within the index.
+     *
+     * This is just a hint, the index can ignore it. The values must be one of [SortOrder][naksha.model.request.query.SortOrder]. If the list is too short, missing values are appended with order [ANY][naksha.model.request.query.SortOrder.ANY]. Values other than [ASCENDING][naksha.model.request.query.SortOrder.ASCENDING] (`ASC`) and [DESCENDING][naksha.model.request.query.SortOrder.DESCENDING] (`DESC`) are ignored and interpreted as [ANY][naksha.model.request.query.SortOrder.ANY].
+     * @since 3.0
+     */
+    var order: StringList? by STRINGS_NULLABLE
+
+    /** Remove [order] from the underlying map; returns this for chaining. */
+    fun withoutOrder(): Index {
+        order = null
+        return this
+    }
+
+    /** Fluent setter for [order]; returns this for chaining. */
+    fun withOrder(value: StringList?): Index {
+        order = value
         return this
     }
 
@@ -97,7 +153,7 @@ open class Index() : AnyObject() {
     fun hasInclude(): Boolean = hasRaw("include")
 
     /** Remove [include] from the underlying map; returns this for chaining. */
-    fun removeInclude(): Index {
+    fun withoutInclude(): Index {
         removeRaw("include")
         return this
     }
@@ -108,33 +164,52 @@ open class Index() : AnyObject() {
         return this
     }
 
+    /** Fluent setter for [include]; returns this for chaining. */
+    fun withIncludes(vararg names: String): Index {
+        val original = this.include
+        val include = original ?: StringList()
+        for (name in names) {
+            if (!include.contains(name)) include.add(name)
+        }
+        if (original == null) this.include = include
+        return this
+    }
+
+    /** Fluent setter for [include]; returns this for chaining. */
+    @JsName("withIncludesMembers")
+    fun withIncludes(vararg members: Member): Index {
+        val original = this.include
+        val include = original ?: StringList()
+        for (member in members) {
+            val name = member.name
+            if (!include.contains(name)) include.add(name)
+        }
+        if (original == null) this.include = include
+        return this
+    }
+
     /**
      * Whether the index enforces uniqueness across the [on] columns. Defaults to `false`.
      * @since 3.0
      */
+    @Deprecated(message = "Removed soon, unique indices are removed, because they do not work well with partitioning")
     private var unique: Boolean by UNIQUE
 
     /** True iff the underlying map has an entry for [unique]. */
+    @Deprecated(message = "Removed soon, unique indices are removed, because they do not work well with partitioning")
     fun isUnique(): Boolean = unique
 
-    /** Remove [unique] from the underlying map; returns this for chaining. */
-    internal fun removeUnique(): Index {
-        removeRaw("unique")
-        return this
-    }
-
     /** Fluent setter for [unique]; returns this for chaining. */
+    @Deprecated(message = "Removed soon, unique indices are removed, because they do not work well with partitioning")
     internal fun withUnique(value: Boolean): Index {
         unique = value
         return this
     }
 
     /**
-     * Whether the index is conditional: the client declares that only the subset of rows where the
-     * leading [on] member has a value needs to be indexed. Defaults to `false`.
+     * Whether the index is conditional: the client declares that only the subset of rows where the leading [on] member has a value needs to be indexed. Defaults to _false_.
      *
-     * This is only an intent, not a directive: the storage decides whether and how to honour it
-     * (for example by indexing fewer rows). The client never says how the index is built.
+     * This is only an intent, not a directive: the storage decides whether and how to honor it, for example by indexing fewer rows. The client never says how the index is built.
      * @since 3.0
      */
     private var conditional: Boolean by CONDITIONAL
@@ -143,7 +218,7 @@ open class Index() : AnyObject() {
     fun isConditional(): Boolean = conditional
 
     /** Remove [conditional] from the underlying map; returns this for chaining. */
-    internal fun removeConditional(): Index {
+    internal fun withoutConditional(): Index {
         removeRaw("conditional")
         return this
     }
@@ -160,29 +235,27 @@ open class Index() : AnyObject() {
      * drop it. Defaults to `false`.
      * @since 3.0
      */
+    @Deprecated(message = "Removed soon, only the primary key is internal, we will no longer expose this anyway")
     private var internal: Boolean by INTERNAL
 
     /** True iff the underlying map has an entry for [internal]. */
+    @Deprecated(message = "Removed soon, only the primary key is internal, we will no longer expose this anyway")
     fun isInternal(): Boolean = internal
 
-    /** Remove [internal] from the underlying map; returns this for chaining. */
-    internal fun removeInternal(): Index {
-        removeRaw("internal")
-        return this
-    }
-
     /** Fluent setter for [internal]; returns this for chaining. */
+    @Deprecated(message = "Removed soon, only the primary key is internal, we will no longer expose this anyway")
     internal fun withInternal(value: Boolean): Index {
         internal = value
         return this
     }
 
     companion object Index_C {
-        private val NAME     = NotNullProperty<Index, String>(String::class) { _, _ -> "" }
-        private val ON       = NotNullProperty<Index, StringList>(StringList::class)
-        private val INCLUDE  = NullableProperty<Index, StringList>(StringList::class)
-        private val UNIQUE   = NotNullProperty<Index, Boolean>(Boolean::class) { _, _ -> false }
-        private val CONDITIONAL = NotNullProperty<Index, Boolean>(Boolean::class) { _, _ -> false }
-        private val INTERNAL = NotNullProperty<Index, Boolean>(Boolean::class) { _, _ -> false }
+        private val NAME             = NotNullProperty<Index, String>(String::class, name = "name") { _, _ -> "" }
+        private val ON               = NotNullProperty<Index, StringList>(StringList::class)
+        private val STRINGS_NULLABLE = NullableProperty<Index, StringList>(StringList::class, autoRemove = true)
+        private val INCLUDE          = NullableProperty<Index, StringList>(StringList::class)
+        private val UNIQUE           = NotNullProperty<Index, Boolean>(Boolean::class) { _, _ -> false }
+        private val CONDITIONAL      = NotNullProperty<Index, Boolean>(Boolean::class) { _, _ -> false }
+        private val INTERNAL         = NotNullProperty<Index, Boolean>(Boolean::class) { _, _ -> false }
     }
 }

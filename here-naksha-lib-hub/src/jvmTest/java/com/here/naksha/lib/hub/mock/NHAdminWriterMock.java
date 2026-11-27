@@ -51,7 +51,7 @@ public class NHAdminWriterMock extends NHAdminReaderMock implements IWriteSessio
   public @NotNull Response executeWrite(@NotNull WriteRequest request) {
     for (Write write : request.getWrites()) {
       Response singularResponse;
-      if (Naksha.COLLECTIONS_COL_ID.equals(write.getCollectionId())) {
+      if (Naksha.COLLECTIONS_COL_ID.equals(write.getCollectionId().text())) {
         singularResponse = executeWriteCollection(write);
       } else {
         singularResponse = executeWriteFeature(write);
@@ -64,7 +64,7 @@ public class NHAdminWriterMock extends NHAdminReaderMock implements IWriteSessio
   }
 
   private Response executeWriteCollection(Write write) {
-    String collectionId = write.getId();
+    String collectionId = write.getId().text();
     WriteOp op = write.getOp();
     if (op.equals(WriteOp.CREATE)) {
       mockCollection.putIfAbsent(collectionId, new TreeMap<>());
@@ -78,7 +78,7 @@ public class NHAdminWriterMock extends NHAdminReaderMock implements IWriteSessio
   }
 
   private Response executeWriteFeature(Write write) {
-    String collectionId = write.getCollectionId();
+    String collectionId = write.getCollectionId().text();
     if (!mockCollection.containsKey(collectionId)) {
       return new ErrorResponse(new NakshaError(
           NakshaError.COLLECTION_NOT_FOUND,

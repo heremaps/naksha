@@ -12,10 +12,11 @@ on:
       - 'v3*'
 
 permissions:
+  contents: read
   checks: write         # for junit reporting
   pull-requests: write  # for jacoco PR comments
 
 jobs:
-  ### Job to Build and Publish artifacts
+  # Keep the existing job ID for PR check compatibility. This job does not publish releases.
   Build-and-Publish:
     uses: ./.github/workflows/reusable-build-and-publish-v3s.yml

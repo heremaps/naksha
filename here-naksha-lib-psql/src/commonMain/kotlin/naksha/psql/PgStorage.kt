@@ -2,108 +2,93 @@
 
 package naksha.psql
 
+import naksha.base.Id
 import naksha.base.fn.Fx2
 import naksha.model.*
-import naksha.base.NakshaError.NakshaErrorCompanion.UNINITIALIZED
-import naksha.base.NakshaException
-import kotlin.js.JsExport
-
-// TODO: Create "naksha~admin" map with map-number 0
-//       Create the "naksha~transactions", "naksha~books" collections in it
-//       Additionally create a new "naksha~catalogs" collection, in which we store maps the way we store collections in "naksha~collections"
-//       We keep all maps all the time in memory (using refreshMaps).
-//       Always keep it in the path, install scripts into it
-//       Create the map-number-seq in it
-//       Add `naksha_storage_number` method in it
-//       Install scripts into it
-//       Creating a map is then simply creating a schema with the "naksha~collections", and `col-number-seq`
-//       Register background thread to listen for notifications
-//       Send notifications whenever "naksha~transactions" is written
-//       If maps are created/deleted, we should update the caches
-//       Create a mechanism to call-back to the host, so allow the host to register a transaction-listener
-//       Split the work into steps, initially, lets use md5-hash above map-id (schema-name) as map-number
+import naksha.model.objects.NakshaStorage
+import kotlin.js.JsStatic
+import kotlin.jvm.JvmStatic
+import kotlin.reflect.KClass
 
 /**
  * A storage implementation based upon PostgresQL database.
  *
- * This class is a default multi-platform implementation of the [IStorage] interface for the PostgresQL database. To get an instance of it, a platform specific code has to be used.
+ * This class is a multi-platform implementation of the [IStorage] interface for the PostgresQL database.
  *
- * ### JVM / Java,Scala,Kotlin,...
- * On the JVM platform, create an instance using a configuration, and operate with it like for example:
+ * ### JVM
+ * Create an instance using a configuration, and operate with it like for example:
  * ```kotlin
- * val config = PgConfig()
- *   .withId("demo")
- *   .withClassName("naksha.psql.PgStorageImpl")
- *   .withMaster(PgInstanceConfig()
+ * val instance = PgInstanceConfig()
  *     .withHost("host")
  *     .withDb("testdb")
  *     .withUser("fred")
- *     .withPassword("secret"))
- * val storage = Naksha.useStorage(config)
+ *     .withPassword("secret")
+ * val config = PgConfig()
+ *     .withId("demo")
+ *     .withMaster(instance)
+ * val storage = PgStorage(config)
  * storage.newReadSession().use { session ->
- *   ...
+ *   // ...
  * }
  * ```
- * If needed, you can cast the returned [IStorage] up to [PgStorage] or even `JvmPgStorage`.
+ * The instance of the storage should be kept somewhere in a static member.
  *
  * ### JavaScript / PLV8
- * When using Naksha storage within PostgresQL, an initialized storage is needed. Ones a storage was initialized from external, every PostgresQL session can prepare usage via:
+ * When using Naksha storage within PostgresQL via [Plv8 Engine](https://plv8.github.io/), the same as in JVM can be done:
  * ```SQL
- * SELECT naksha_init_session('id', 12345678, 'appName', 'appId', 'author');
- * ```
- * This creates a [PgStorage] singleton in the global context (`globalThis.naksha.storage`), a session singleton (`globalThis.naksha.session`), and the `NakshaContext` (`globalThis.naksha.context`). The _session_ is the one that is currently being used, and normally an [IWriteSession], even when execute on a read-replica, as the internal PLV8 code does not know that this instance is a read-replica. This is necessary for all other Naksha SQL functions to work. The storage only support a single [PgSession], which is already exposed via `naksha.session`, trying to acquire another session will always fail with [naksha.base.NakshaError.ILLEGAL_STATE]. Actually, within PLV8 each `plv8` session is always bound to a single connection/session. Usage example:
- * ```
- * SELECT naksha_init_session('id', 12345678, 'appName', 'appId', 'author');
  * DO $$
+ * var instance = PgInstanceConfig()
+ *     .withHost("localhost")
+ *     .withDb("testdb")
+ *     .withUser("fred")
+ *     .withPassword("secret")
+ * var config = PgConfig()
+ *     .withId("demo")
+ *     .withMaster(instance)
+ * var storage = PgStorage(config)
+ * storage.newReadSession().use { session ->
  *   // Print storage-id to server output.
- *   plv8.elog(NOTICE, "Hello storage " + naksha.storage.id);
+ *   plv8.elog(NOTICE, "Hello storage " + storage.id);
  *   // All code that requires a ISession, should use:
- *   plv8.elog(NOTICE, naksha.session.getMapById("foo").number);
+ *   plv8.elog(NOTICE, session.getMapById("foo").number);
+ * }
  * $$ LANGUAGE plv8;
  * ```
- * After the session was closed, a new call to `naksha_init_session` should be done.
- *
- * If needed, you can cast the returned [IStorage] up to [PgStorage], or even to `JsPgStorage`.
- *
- * ### JavaScript / Browser
- * TBD, technically every connection should be represented using a single WebSocket.
+ * There are some things to notice. Actually, within PLV8 each `plv8` session is always bound to a single connection/session. Therefore, opening a second connection will work, but shared the underlying same physical connection. When execute on a read-replica, the internal PLV8 code does not know that this instance is a read-replica.
  *
  * ### JavaScript / Node
- * TBD, technically every connection can be represented by a real PostgresQL connection, the same way Java does it.
+ * TBD, technically every connection can be represented by a real PostgresQL connection, the same way Java does it. It is planned to be supported exactly the same way as on JVM.
+ *
+ * ### JavaScript / Browser
+ * TBD, technically every connection should be represented using a single WebSocket. It is planned to be supported exactly the same way as on JVM.
  * @since 3.0
  */
-@Suppress("OPT_IN_USAGE")
-@JsExport
-abstract class PgStorage protected constructor() : AbstractStorage<PgConfig>() {
-
-    private var _adminMap: PgAdminCatalog? = null
+expect open class PgStorage: AbstractStorage<PgConfig> {
 
     /**
-     * The admin-map, set by [initStorage].
+     * Create a new instance and initialize it.
+     *
+     * This method actually is the same as:
+     * ```kotlin
+     * val i = new PgInstance()
+     * i.initStorage(config)
+     * ```
+     * @param config the configuration.
+     * @param create if not `null`, overrides [NakshaStorage.create].
+     * @param upgrade if not `null`, overrides [NakshaStorage.upgrade].
      * @since 3.0
      */
-    open val adminCatalog: PgAdminCatalog
-        get() = _adminMap ?: throw NakshaException(UNINITIALIZED, "Storage uninitialized")
+    constructor(config: PgConfig, create: Boolean? = null, upgrade: Boolean? = null)
 
     /**
-     * Private setter for the admin map, to be used in the deriving storage class.
+     * The [database][PgDatabase], set by [initStorage].
      * @since 3.0
      */
-    protected fun setAdminMap(adminMap: PgAdminCatalog) {
-        _adminMap = adminMap
-    }
+    override val database: PgDatabase
 
-    /**
-     * The default feature encoding to use for the storage.
-     * @since 3.0
-     */
-    internal val defaultDataEncoding: DataEncoding = DataEncoding.DEFAULT
-
-    override fun newWriteSession(options: SessionOptions?): IWriteSession =
-        newSession(options ?: SessionOptions.from(null), false)
-
-    override fun newReadSession(options: SessionOptions?): IWriteSession =
-        newSession(options ?: SessionOptions.from(null), true)
+    override fun newWriteSession(options: SessionOptions?): IWriteSession
+    override fun newReadSession(options: SessionOptions?): IWriteSession
+    override fun newStreamSession(options: SessionOptions?): IStreamSession
 
     /**
      * Returns a new PostgresQL session.
@@ -114,35 +99,37 @@ abstract class PgStorage protected constructor() : AbstractStorage<PgConfig>() {
      * @return the session.
      * @since 3.0
      */
-    open fun newSession(options: SessionOptions, readOnly: Boolean): PgSession = PgSession(this, options, readOnly)
+    open fun newSession(options: SessionOptions, readOnly: Boolean): PgSession
 
     /**
      * Opens a new PostgresQL database connection.
      *
      * A connection received through this method will not really close when [PgConnection.close] is invoked, but the wrapper returns the underlying JDBC connection to the connection pool of the instance it received it from. If really necessary, [PgConnection.terminate] can be used for this case (for example to ensure advisory locks are released).
      *
-     * If this is the [PLV8 engine](https://plv8.github.io/), then there is only one connection available, so calling this before closing
-     * a previously acquired connection will always cause an [naksha.base.NakshaError.TOO_MANY_CONNECTIONS].
+     * If this is the [PLV8 engine](https://plv8.github.io/), then there is only one connection available, so calling this will just return a new dummy wrapper around the only connection that exists.
      *
-     * The returned connection normally, unless a special [init] function was provided, initializes the search-path so that all naksha function are available, and the admin schema is at the top of the search-path (recommended setup).
+     * The returned connection normally initializes the search-path, so that all naksha function are available, auto-commit is off, and the `naksha~admin` schema is at the top of the search-path (recommended setup).
      *
-     * - Throws [naksha.base.NakshaError.TOO_MANY_CONNECTIONS], if no more connections are available.
+     * If an [init] function is provided, the normally used `SQL` code is given to this function, which can execute it, modify it before execution, skip the initialization _(like [SKIP_INIT])_, or do other initialization work.
+     *
+     * - Throws [TOO_MANY_CONNECTIONS][naksha.base.NakshaError.TOO_MANY_CONNECTIONS], if no more connections are available.
      * @param options the options for the connection.
      * @param readOnly if the connection should be read-only.
-     * @param init an optional initialization function, if given, then it will be called with the string to be used to initialize the connection. It may just use this string, perform arbitrary additional work, or suppress initialization completely.
+     * @param init an optional initialization function, if given, then it will be called with the string to be used to initialize the connection. It may just use this string, perform arbitrary additional work, or suppress initialization completely. If no initialization is wanted, use [SKIP_INIT].
      * @since 3.0
+     * @see SKIP_INIT
      */
-    abstract fun newConnection(options: SessionOptions, readOnly: Boolean, init: Fx2<PgConnection, String>? = null): PgConnection
+    open fun newConnection(options: SessionOptions, readOnly: Boolean, init: Fx2<PgConnection, String>? = null): PgConnection
+    override val configKlass: KClass<PgConfig>
+    override fun initStorage(config: PgConfig, create: Boolean?, upgrade: Boolean?)
+    override fun afterInit()
+    override fun shutdownStorage(dropCache: Boolean)
 
-    /**
-     * Opens an admin connection.
-     *
-     * This is the same as [newConnection], except that it can be implemented differently, for example on the [PLV8 engine](https://plv8.github.io/). Basically, this method acquires a special connection that is only used for a short moment of time to do some administrative work.
-     *
-     * **WARNING**: This method is only for internal purpose, to avoid breaking the code on `PLV8`.
-     *
-     * @return the admin connection that does not count against connection-limit, to be closed after usage.
-     * @since 3.0
-     */
-    abstract fun adminConnection(): PgConnection
+    companion object PgStorageCompanion {
+        /**
+         * A special function to be used with [initStorage] to suppress all initialization. This allows to use the connection as is.
+         * @since 3.0
+         */
+        val SKIP_INIT: Fx2<PgConnection, String>
+    }
 }

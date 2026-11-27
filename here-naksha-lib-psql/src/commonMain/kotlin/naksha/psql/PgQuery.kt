@@ -28,22 +28,22 @@ data class PgQuery(
     val argTypes: Array<String>,
 
     /**
-     * The storage-number of the storage from which the results are.
+     * The storage from which the results are.
      * @since 3.0
      */
-    val storageNumber: Long,
+    val pgStorage: PgStorage,
 
     /**
-     * The map-number of the map from which the results are.
+     * The catalog from which the results are.
      * @since 3.0
      */
-    val mapNumber: Int,
+    val pgCatalog: PgCatalog,
 
     /**
-     * If all results are from the same collection, then the collection-number of the collection from which the results are. If this is `null`, then the results are from multiple collections and each returned row contains `col_num`.
+     * The collection from which the results are.
      * @since 3.0
      */
-    val collectionNumber: Int?
+    val pgCollection: PgCollection
 ) {
 
     override fun equals(other: Any?): Boolean {
@@ -53,9 +53,9 @@ data class PgQuery(
         other as PgQuery
 
         if (sql != other.sql) return false
-        if (storageNumber != other.storageNumber) return false
-        if (mapNumber != other.mapNumber) return false
-        if (collectionNumber != other.collectionNumber) return false
+        if (pgStorage.id != other.pgStorage.id) return false
+        if (pgCatalog.id != other.pgCatalog.id) return false
+        if (pgCollection.id != other.pgCollection.id) return false
         if (!argValues.contentEquals(other.argValues)) return false
         if (!argTypes.contentEquals(other.argTypes)) return false
 
@@ -64,9 +64,9 @@ data class PgQuery(
 
     override fun hashCode(): Int {
         var result = sql.hashCode()
-        result = 31 * result + storageNumber.hashCode()
-        result = 31 * result + mapNumber
-        result = 31 * result + (collectionNumber ?: 0)
+        result = 31 * result + pgStorage.id.intValue
+        result = 31 * result + pgCatalog.id.intValue
+        result = 31 * result + pgCollection.id.intValue
         result = 31 * result + argValues.contentHashCode()
         result = 31 * result + argTypes.contentHashCode()
         return result

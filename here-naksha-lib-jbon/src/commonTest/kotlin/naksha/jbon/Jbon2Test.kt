@@ -979,7 +979,7 @@ class Jbon2Test {
     // -----------------------------------------------------------------------
 
     @Test
-    fun testMemberEncoderPathTrackingNested() {
+    fun testMemberReferencesNestedArrayPath() {
         val root = AnyObject()
         val a = AnyObject()
         val b = AnyList()
@@ -990,31 +990,20 @@ class Jbon2Test {
         a["b"] = b
         root["a"] = a
 
-        var cPath: Array<Any?>? = null
-        var cValue: Any? = null
-
-        val enc = JbEncoder2().withMemberEncoder(IMemberEncoder { path, pathEnd, value ->
-            if (pathEnd > 0 && path[pathEnd - 1] == "c" && value == 1) {
-                cPath = path.copyOf(pathEnd)
-                cValue = value
-            }
-            -1
-        })
-
-        enc.encodeValue(root)
-
-        assertNotNull(cPath)
-        assertEquals(4, cPath!!.size)
-        assertEquals("a", cPath!![0])
-        assertEquals("b", cPath!![1])
-        assertEquals(0, cPath!![2])
-        assertEquals("c", cPath!![3])
-        assertEquals(1, cValue)
+        val path = arrayOf<Any?>("a", "b", 0, "c")
+        val plan = JbMemberReferenceBuilder().add(path, 0).build()
+        val enc = JbEncoder2().withMemberReferences(plan)
+        val bytes = enc.buildTupleFromMap(root)
+        val book = HeapBook(BookType.MEMBER_BOOK).apply { put("c", 9) }
+        val dec = JbDecoder2(membersBook = book)
+        dec.mapBytes(bytes)
+        assertEquals(9, dec.toAnyObject().getPath(path))
+        assertEquals(1, cObj["c"], "Reference replacement does not mutate the input")
         assertEquals(0, enc.pathEnd)
     }
 
     @Test
-    fun testMemberEncoderPathResize() {
+    fun testMemberReferencesDeepPath() {
         var value: Any? = AnyObject().also { (it as AnyObject)["leaf"] = 1 }
         for (i in 19 downTo 0) {
             val obj = AnyObject()
@@ -1022,30 +1011,22 @@ class Jbon2Test {
             value = obj
         }
 
-        var leafPath: Array<Any?>? = null
-        val enc = JbEncoder2().withMemberEncoder(IMemberEncoder { path, pathEnd, v ->
-            if (pathEnd > 0 && path[pathEnd - 1] == "leaf" && v == 1) leafPath = path.copyOf(pathEnd)
-            -1
-        })
-
-        enc.encodeValue(value)
-
-        assertNotNull(leafPath)
-        assertEquals(21, leafPath!!.size)
-        assertEquals("k0", leafPath!![0])
-        assertEquals("k19", leafPath!![19])
-        assertEquals("leaf", leafPath!![20])
+        val leafPath = Array<Any?>(21) { if (it == 20) "leaf" else "k$it" }
+        val enc = JbEncoder2().withMemberReferences(JbMemberReferenceBuilder().add(leafPath, 0).build())
+        val bytes = enc.buildTupleFromMap(value as AnyObject)
+        val book = HeapBook(BookType.MEMBER_BOOK).apply { put("leaf", 7) }
+        val dec = JbDecoder2(membersBook = book)
+        dec.mapBytes(bytes)
+        assertEquals(7, dec.toAnyObject().getPath(leafPath))
         assertEquals(0, enc.pathEnd)
     }
 
     @Test
-    fun testMemberEncoderShortCircuitToMembersRef() {
+    fun testMemberReferencesShortCircuitToMembersRef() {
         val obj = AnyObject()
         obj["x"] = 123
 
-        val enc = JbEncoder2().withMemberEncoder(IMemberEncoder { path, pathEnd, _ ->
-            if (pathEnd > 0 && path[pathEnd - 1] == "x") 7 else -1
-        })
+        val enc = JbEncoder2().withMemberReferences(JbMemberReferenceBuilder().add(arrayOf("x"), 7).build())
         enc.encodeValue(obj)
 
         val lead0 = enc.getInt8(0).toInt() and 0xff

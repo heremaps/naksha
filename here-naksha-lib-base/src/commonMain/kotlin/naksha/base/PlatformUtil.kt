@@ -1,12 +1,15 @@
 package naksha.base
 
 import naksha.base.Platform.PlatformCompanion.random
+import naksha.base.PlatformListApi.PlatformListApiCompanion.array_get
+import naksha.base.PlatformListApi.PlatformListApiCompanion.array_get_length
+import naksha.base.PlatformMapApi.PlatformMapApiCompanion.map_iterator
 import kotlin.js.JsExport
+import kotlin.js.JsName
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
 import kotlin.jvm.JvmOverloads
 import kotlin.jvm.JvmStatic
-import kotlin.text.toInt
 
 /**
  * All utility functions that work cross-platform.
@@ -15,6 +18,30 @@ import kotlin.text.toInt
 @JsExport
 class PlatformUtil {
     companion object PlatformUtilCompanion {
+        /** Toggle only the sign bit of a 64-bit integer. */
+        @JsName("swapSignLong")
+        @JsStatic
+        @JvmStatic
+        fun swapSign(value: Long): Long = value xor Long.MIN_VALUE
+
+        /** Toggle only the sign bit of a 32-bit integer. */
+        @JsName("swapSignInt")
+        @JsStatic
+        @JvmStatic
+        fun swapSign(value: Int): Int = value xor Int.MIN_VALUE
+
+        /** Toggle only the sign bit of a 16-bit integer. */
+        @JsName("swapSignShort")
+        @JsStatic
+        @JvmStatic
+        fun swapSign(value: Short): Short = (value.toInt() xor 0x8000).toShort()
+
+        /** Toggle only the sign bit of an 8-bit integer. */
+        @JsName("swapSignByte")
+        @JsStatic
+        @JvmStatic
+        fun swapSign(value: Byte): Byte = (value.toInt() xor 0x80).toByte()
+
         /**
          * A switch to toggle debug logs (disabled by default).
          *
@@ -227,23 +254,35 @@ class PlatformUtil {
         }
 
         /**
-         * Calculates a hash code above all given values.
-         * @param values the value above which to calculate a hash-code.
-         * @return the calculated hash-code.
+         * Calculates an additive recursive hash code above all given values.
+         * @param values the value(s) above which to calculate a hash-code.
+         * @return the calculated additive hash-code.
          */
         @JvmStatic
         @JsStatic
         fun hashCodeOf(vararg values: Any?): Int = hashCodeOf(0, *values)
 
-        private fun hashCodeOf(hashInput: Int, vararg values: Any?): Int {
-            var hash = hashInput
-            for (v in values) {
+        private fun hashCodeOf(currentHash: Int, vararg values: Any?): Int {
+            var hash = currentHash
+            for (value in values) {
+                val v = if (value is Proxy) value.platformObject() else value
                 when (v) {
                     null -> hash *= 31
+                    is PlatformMap -> {
+                        val it = map_iterator(v)
+                        var next = it.next()
+                        while (!next.done) {
+                            hash = hashCodeOf(hash, next.value)
+                            next = it.next()
+                        }
+                    }
+                    is PlatformList -> for (i in 0 until array_get_length(v)) {
+                        hash = hashCodeOf(hash, array_get(v, i))
+                    }
                     is ByteArray -> hash = hash * 31 + v.contentHashCode()
-                    is Array<*> -> for (e in v) hash = hashCodeOf(e)
-                    is List<*> -> for (e in v) hash = hashCodeOf(e)
-                    is Map<*,*> -> for (e in v) hash = hashCodeOf(e.value)
+                    is Array<*> -> for (e in v) hash = hashCodeOf(hash, e)
+                    is List<*> -> for (e in v) hash = hashCodeOf(hash, e)
+                    is Map<*,*> -> for ((key, value) in v) hash = hashCodeOf(hash, key, value)
                     else -> hash = hash * 31 + v.hashCode()
                 }
             }
@@ -269,5 +308,40 @@ class PlatformUtil {
                 else -> obj1 == obj2  // Primitive types, or any other objects
             }
         }
+
+        /**
+         * Escapes the given string into a `JSON` compatible format.
+         * @param string the string to `JSON` escape.
+         * @param quotes if explicitly _false_, the first and last quote characters (`"`) are omitted _(useful when concat strings)_.
+         * @return the `JSON` escaped string, if the given string is `null`, then `null` _(always without quotes)_ is returned.
+         * @since 3.0
+         */
+        @JvmOverloads
+        @JvmStatic
+        @JsStatic
+        fun jsonString(string: String?, quotes: Boolean = true): String = if (string == null) "null"
+            else buildString(string.length + (string.length shr 2)) {
+                if (quotes) append('"')
+                for (c in string) {
+                    when (c) {
+                        '"' -> append("\\\"")
+                        '\\' -> append("\\\\")
+                        '\b' -> append("\\b")
+                        '\u000C' -> append("\\f")
+                        '\n' -> append("\\n")
+                        '\r' -> append("\\r")
+                        '\t' -> append("\\t")
+                        in '\u0000'..'\u001F' -> {
+                            append("\\u")
+                            append("0123456789abcdef"[(c.code shr 12) and 0xF])
+                            append("0123456789abcdef"[(c.code shr 8) and 0xF])
+                            append("0123456789abcdef"[(c.code shr 4) and 0xF])
+                            append("0123456789abcdef"[c.code and 0xF])
+                        }
+                        else -> append(c)
+                    }
+                }
+                if (quotes) append('"')
+            }
     }
 }

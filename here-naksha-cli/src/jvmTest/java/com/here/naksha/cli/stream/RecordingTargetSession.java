@@ -44,7 +44,7 @@ class RecordingTargetSession extends AbstractStreamSession {
             try {
                 Thread.sleep(ThreadLocalRandom.current().nextInt(3));
                 if (failWhen.test(chunk)) {
-                    chunk.fail(new NakshaError(NakshaError.EXCEPTION, "simulated write failure", null));
+                    chunk.fail(new NakshaError(NakshaError.EXCEPTION, "simulated write failure"));
                 } else {
                     written.addAll(List.of(chunk.tuples()));
                     chunk.acknowledge();

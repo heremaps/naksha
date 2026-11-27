@@ -29,6 +29,14 @@ public record TestStorageConfig(String mapId, PgConfig pgConfig) {
   @SuppressWarnings("SameParameterValue")
   public static @NotNull TestStorageConfig configFromFileOrEnv(
       @NotNull String filename, @NotNull String envName, @NotNull String mapId) {
+    // The aggregate test task already validated the shared URL. Never route its fixtures to a local override file.
+    if (Boolean.getBoolean("naksha.test.sharedDatabaseRequired")) {
+      String sharedUrl = System.getenv("NAKSHA_TEST_DB_URL");
+      if (sharedUrl == null || !sharedUrl.startsWith("jdbc:postgresql://")) {
+        throw new IllegalStateException("The aggregate test run requires NAKSHA_TEST_DB_URL");
+      }
+      return new TestStorageConfig(mapId, new PgConfig(NakshaHubAdminStorageIdentifiers.getHubAdminStorageId()).withMasterUri(sharedUrl));
+    }
     try {
       final LoadedBytes loadedBytes = IoHelp.readBytesFromHomeOrResource(filename, true, "naksha");
       final byte[] bytes = loadedBytes.getBytes();

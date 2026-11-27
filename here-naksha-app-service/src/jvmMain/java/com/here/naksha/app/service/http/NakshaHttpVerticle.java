@@ -549,44 +549,8 @@ public final class NakshaHttpVerticle extends AbstractNakshaHubVerticle {
     }
   }
 
-  // TODO CASL-681: switch to NakshaHttpErrorResponse method
   private static @NotNull HttpResponseStatus mapErrorCodeToHttpStatus(final @NotNull String errorCode) {
-    switch (errorCode) {
-      case NakshaError.EXCEPTION -> {
-        return HttpResponseStatus.INTERNAL_SERVER_ERROR;
-      }
-      case NakshaError.NOT_IMPLEMENTED -> {
-        return HttpResponseStatus.NOT_IMPLEMENTED;
-      }
-      case NakshaError.ILLEGAL_ARGUMENT -> {
-        return HttpResponseStatus.BAD_REQUEST;
-      }
-      case NakshaError.PAYLOAD_TOO_LARGE -> {
-        return HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE;
-      }
-      case NakshaError.BAD_GATEWAY -> {
-        return HttpResponseStatus.BAD_GATEWAY;
-      }
-      case NakshaError.CONFLICT -> {
-        return HttpResponseStatus.CONFLICT;
-      }
-      case NakshaError.UNAUTHORIZED -> {
-        return HttpResponseStatus.UNAUTHORIZED;
-      }
-      case NakshaError.FORBIDDEN -> {
-        return HttpResponseStatus.FORBIDDEN;
-      }
-      case NakshaError.TOO_MANY_REQUESTS -> {
-        return HttpResponseStatus.TOO_MANY_REQUESTS;
-      }
-      case NakshaError.TIMEOUT -> {
-        return HttpResponseStatus.GATEWAY_TIMEOUT;
-      }
-      case NakshaError.NOT_FOUND, NakshaError.FEATURE_NOT_FOUND -> {
-        return NOT_FOUND;
-      }
-    }
-    throw new IllegalArgumentException("Unknown error, unable to map to http status: " + errorCode);
+    return HttpXyzErrorResponse.mapErrorCodeToHttpStatus(errorCode);
   }
 
   /**

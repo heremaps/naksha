@@ -8,7 +8,7 @@ import kotlin.test.assertNotNull
 class PsqlInstanceTest {
     @Test
     fun testParsing() {
-        val instance = PsqlInstance.get("jdbc:postgresql://localhost/unimap?user=postgres&password=secret")
+        val instance = PgInstance.get("jdbc:postgresql://localhost/unimap?user=postgres&password=secret")
         assertNotNull(instance)
         assertEquals("localhost", instance.host)
         assertEquals(5432, instance.port)
@@ -20,7 +20,7 @@ class PsqlInstanceTest {
 
     @Test
     fun testDeclaring() {
-        val instance = PsqlInstance.get("localhost", 5432, "unimap", "postgres", "secret")
+        val instance = PgInstance.get("localhost", 5432, "unimap", "postgres", "secret")
         assertNotNull(instance)
         assertEquals("localhost", instance.host)
         assertEquals(5432, instance.port)

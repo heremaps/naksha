@@ -9,6 +9,7 @@ import naksha.base.PlatformDataViewApi.PlatformDataViewApiCompanion.dataview_get
 import naksha.base.PlatformDataViewApi.PlatformDataViewApiCompanion.dataview_get_int64
 import naksha.base.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 import naksha.base.NakshaException
+import naksha.base.Id
 import naksha.base.TupleNumber
 import naksha.model.request.FeatureTupleList
 import kotlin.js.JsExport
@@ -281,7 +282,7 @@ data class TupleNumberBinaryArray(
      * @return the partition-number (`0..65535`).
      * @since 3.0
      */
-    fun getPartitionNumber(index: Int): Int = Naksha.partitionNumber(getFeatureNumber(index))
+    fun getPartitionNumber(index: Int): Int = Id.partitionNumber(getFeatureNumber(index))
 
     /**
      * Returns the transaction-number from the given index.

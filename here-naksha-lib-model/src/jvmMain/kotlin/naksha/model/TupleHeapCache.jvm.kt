@@ -32,6 +32,7 @@ actual class TupleHeapCache : ITupleCache {
             loaded++
             featureTuple.tuple = cached
             featureTuple.source = this
+            featureTuple.onTupleLoaded()
         }
         return loaded
     }
@@ -68,7 +69,7 @@ actual class TupleHeapCache : ITupleCache {
     }
 
     actual override fun clear(storage: IStorage) {
-        tuplesByStorage.remove(storage.number)
+        tuplesByStorage.remove(storage.id.number)
     }
 
     actual override fun gc() {

@@ -2,6 +2,7 @@
 
 package naksha.base
 
+import naksha.base.Platform.PlatformCompanion.UNDEFINED
 import naksha.base.PlatformListApi.PlatformListApiCompanion.array_get
 import naksha.base.PlatformListApi.PlatformListApiCompanion.array_get_length
 import naksha.base.PlatformMapApi.PlatformMapApiCompanion.map_clear
@@ -54,7 +55,7 @@ open class MapProxy<K : Any, V : Any>(val keyKlass: KClass<out K>, val valueKlas
      * @param alternative the alternative to set and return, when the value is not of the expected type.
      * @return the value.
      */
-    fun <T : Any> getOrSet(key: K, alternative: T): T {
+    open fun <T : Any> getOrSet(key: K, alternative: T): T {
         val data = platformObject()
         val raw = map_get(data, key)
         var value = box(raw, Platform.klassOf(alternative))
@@ -73,7 +74,7 @@ open class MapProxy<K : Any, V : Any>(val keyKlass: KClass<out K>, val valueKlas
      * @param init the initialize method to invoke, when the value is not of the expected type.
      * @return the value.
      */
-    fun <T : Any, KEY : K, SELF : MapProxy<K, V>> getOrInit(
+    open fun <T : Any, KEY : K, SELF : MapProxy<K, V>> getOrInit(
         key: KEY,
         klass: KClass<out T>,
         init: Fn2<out T, in SELF, in KEY>
@@ -100,7 +101,7 @@ open class MapProxy<K : Any, V : Any>(val keyKlass: KClass<out K>, val valueKlas
      * @param init the initialize method to invoke, when the value is not of the expected type.
      * @return The value.
      */
-    fun <T : Any, KEY : K, SELF : MapProxy<K, V>> getOrCreate(
+    open fun <T : Any, KEY : K, SELF : MapProxy<K, V>> getOrCreate(
         key: KEY,
         klass: KClass<out T>,
         init: Fn2<out T?, in SELF, in KEY>? = null
@@ -135,7 +136,7 @@ open class MapProxy<K : Any, V : Any>(val keyKlass: KClass<out K>, val valueKlas
      * @return The value as expected type or `null`, if no such key exists, or the value can't be proxied as the desired type.
      * @see [getOrNull]
      */
-    fun <T : Any> getAs(key: K, klass: KClass<out T>): T? =
+    open fun <T : Any> getAs(key: K, klass: KClass<out T>): T? =
         box(map_get(platformObject(), key), klass)
 
     /**
@@ -145,7 +146,7 @@ open class MapProxy<K : Any, V : Any>(val keyKlass: KClass<out K>, val valueKlas
      * @return The value as expected type or `null`, if no such key exists, or the value can't be proxied as the desired type.
      * @see [getAs]
      */
-    fun <T : Any> getOrNull(key: K, klass: KClass<out T>): T? =
+    open fun <T : Any> getOrNull(key: K, klass: KClass<out T>): T? =
         box(map_get(platformObject(), key), klass)
 
     /**
@@ -227,13 +228,19 @@ open class MapProxy<K : Any, V : Any>(val keyKlass: KClass<out K>, val valueKlas
 
     override fun isEmpty(): Boolean = map_size(platformObject()) == 0
 
-    override fun remove(key: K): V? = toValue(key, map_remove(platformObject(), key))
+    override fun remove(key: K): V? {
+        val map = platformObject()
+        if (!map_contains_key(map, key)) return null // Avoid box checking for null.
+        return toValue(key, map_remove(map, key))
+    }
 
     override fun putAll(from: Map<out K, V?>) {
+        if (from.isEmpty()) return
         from.onEach { (key, value) -> put(key, value) }
     }
 
-    fun addAll(vararg items: Any?) {
+    open fun addAll(vararg items: Any?) {
+        if (items.isEmpty()) return
         val data = platformObject()
         var i = 0
         while (i < items.size) {
@@ -257,7 +264,7 @@ open class MapProxy<K : Any, V : Any>(val keyKlass: KClass<out K>, val valueKlas
      * @since 3.0
      */
     @JvmOverloads
-    fun getId(key: K, update: Boolean = false): Id? {
+    open fun getId(key: K, update: Boolean = false): Id? {
         val v = map_get(platformObject(), key)
         if (v is Id) return v
         if (v !is String) return null
@@ -271,7 +278,7 @@ open class MapProxy<K : Any, V : Any>(val keyKlass: KClass<out K>, val valueKlas
      * @param key The key to read.
      * @return The raw value, being either a scalar or [PlatformObject].
      */
-    fun getRaw(key: Any): Any? = map_get(platformObject(), key)
+    open fun getRaw(key: Any): Any? = map_get(platformObject(), key)
 
     /**
      * Sets the raw value stored in the underlying base map.
@@ -279,21 +286,21 @@ open class MapProxy<K : Any, V : Any>(val keyKlass: KClass<out K>, val valueKlas
      * @param value The value to set.
      * @return The previously set value.
      */
-    fun setRaw(key: Any, value: Any?): Any? = map_set(platformObject(), key, unbox(value))
+    open fun setRaw(key: Any, value: Any?): Any? = map_set(platformObject(), key, unbox(value))
 
     /**
      * Tests if the underlying base map stored the given key.
      * @param key The key to test.
      * @return _true_ if the underlying map contains the given key; _false_ otherwise.
      */
-    fun hasRaw(key: Any): Boolean = map_contains_key(platformObject(), key)
+    open fun hasRaw(key: Any): Boolean = map_contains_key(platformObject(), key)
 
     /**
      * Removes the key from the underlying base map.
      * @param key The key to remove.
      * @return The value that was removed; _null_ if either the value was _null_ or no such key existed.
      */
-    fun removeRaw(key: Any): Any? = map_remove(platformObject(), key)
+    open fun removeRaw(key: Any): Any? = map_remove(platformObject(), key)
 
     override fun containsValue(value: V?): Boolean = map_contains_value(platformObject(), value)
 

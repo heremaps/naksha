@@ -50,10 +50,6 @@ open class JbEncoder2(var global: IBook? = null) : Binary() {
     }
 
     companion object JbEncoder2Companion {
-        @JvmField
-        @JsStatic
-        val EMPTY_PATH: Array<Any?> = emptyArray()
-
         /**
          * Characters that belong to a **word** when auto-splitting strings for the local book.
          * Identical to the JBON1 behaviour: letters and the colon.
@@ -88,46 +84,53 @@ open class JbEncoder2(var global: IBook? = null) : Binary() {
     private var localDictByIndex: ArrayList<String>? = null
     private var localDictNextIndex: Int = 0
 
-    /** Current container path, root is empty. */
-    var path: Array<Any?> = EMPTY_PATH
-        internal set
-
-    /** End pointer into [path]. */
+    /** Current traversal depth; no full path array or per-value callback is retained. */
     var pathEnd: Int = 0
         internal set
 
-    /** Optional hook to replace encoded values by members-book references. */
-    var memberEncoder: IMemberEncoder? = null
-        internal set
+    private var memberReferences: JbMemberReferencePlan? = null
+    private var referenceNode = 0
+    private var referenceDepth = 0
+    private var unmatchedDepth = 0
+    private var referenceParents = IntArray(0)
 
-    fun withMemberEncoder(memberEncoder: IMemberEncoder?): JbEncoder2 {
-        this.memberEncoder = memberEncoder
+    /** Bind a reusable immutable mapping. Each encoder owns its own traversal state; configuration cannot change while traversing a value. @since 3.0 */
+    fun withMemberReferences(plan: JbMemberReferencePlan?): JbEncoder2 {
+        if (pathEnd != 0) throw illegalState("Member references cannot change during encoding")
+        memberReferences = plan
+        referenceNode = 0
+        referenceDepth = 0
+        unmatchedDepth = 0
         return this
     }
 
-    internal fun ensurePathSpace(amount: Int) {
-        require(amount >= 0) { "amount must be >= 0: $amount" }
-        val required = pathEnd + amount
-        if (required <= path.size) return
-        // We divide by 8, add one, then multiply by 16.
-        // For example when 15 are needed, we add 32. When 1 is needed, we add 16.
-        val newSize = path.size + (((amount shr 3) + 1) shl 4)
-        path = path.copyOf(newSize)
-    }
-
     internal fun pushPath(index: Int) {
-        ensurePathSpace(1)
-        path[pathEnd++] = index
+        advanceReference(index)
     }
 
     internal fun pushPath(key: String) {
-        ensurePathSpace(1)
-        path[pathEnd++] = key
+        advanceReference(key)
+    }
+
+    private fun advanceReference(key: Any?) {
+        pathEnd++
+        val plan = memberReferences ?: return
+        if (unmatchedDepth > 0) {
+            unmatchedDepth++
+            return
+        }
+        if (referenceDepth == referenceParents.size) referenceParents = referenceParents.copyOf(maxOf(4, referenceDepth * 2))
+        referenceParents[referenceDepth++] = referenceNode
+        referenceNode = plan.child(referenceNode, key)
+        if (referenceNode < 0) unmatchedDepth = 1
     }
 
     internal fun popPath() {
-        require(pathEnd > 0) { "pop, but path is empty: $pathEnd" }
-        path[--pathEnd] = null
+        if (pathEnd <= 0) throw illegalState("pop, but path is empty: $pathEnd")
+        pathEnd--
+        if (memberReferences == null) return
+        if (unmatchedDepth > 0 && --unmatchedDepth > 0) return
+        referenceNode = referenceParents[--referenceDepth]
     }
 
     internal fun getLocalDictByString(): HashMap<String, Int> {
@@ -156,8 +159,11 @@ open class JbEncoder2(var global: IBook? = null) : Binary() {
         localDictByName = null
         localDictByIndex = null
         localDictNextIndex = 0
-        if (path.size <= 256) path.fill(null) else path = EMPTY_PATH
         pathEnd = 0
+        referenceNode = 0
+        referenceDepth = 0
+        unmatchedDepth = 0
+        if (referenceParents.size > 256) referenceParents = IntArray(0)
         return reset()
     }
 
@@ -440,8 +446,8 @@ open class JbEncoder2(var global: IBook? = null) : Binary() {
         var source = start + 5
         var target = writeStringHeader(this, start, size)
         if (target < source) {
-            while (source < pos) setInt8(target++, getInt8(source++))
-            pos = target
+            moveBytes(source, target, pos - source)
+            pos = target + size
         }
         end = pos
         return start
@@ -570,8 +576,9 @@ open class JbEncoder2(var global: IBook? = null) : Binary() {
         var source = start + headerReservedSize
         var target = writeStringHeader(this, start, size)
         if (target < source) {
-            while (source < pos) setInt8(target++, getInt8(source++))
-            pos = target
+            val count = pos - source
+            moveBytes(source, target, count)
+            pos = target + count
         }
         end = pos
         return start
@@ -638,9 +645,8 @@ open class JbEncoder2(var global: IBook? = null) : Binary() {
         writeStructHeader(structType, contentSize)
         var source = contentStart
         if (end < source) {
-            var e = this.end
-            while (source < contentEnd) setInt8(e++, getInt8(source++))
-            this.end = e
+            moveBytes(source, this.end, contentSize)
+            this.end += contentSize
         } else {
             // Header exactly consumed the 5 reserved bytes (contentSize >= 65536);
             // content is already in place — just advance end past it.
@@ -851,9 +857,9 @@ open class JbEncoder2(var global: IBook? = null) : Binary() {
     @Suppress("UNCHECKED_CAST")
     fun encodeValue(value: Any?): Int {
         val start = end
-        val m = memberEncoder
-        if (m != null) {
-            val memberIndex = m.encode(path, pathEnd, value)
+        val references = memberReferences
+        if (references != null && referenceNode >= 0) {
+            val memberIndex = references.reference(referenceNode)
             if (memberIndex >= 0) {
                 encodeRef(memberIndex, JB2_REF_BOOK_MEMBERS)
                 return start
@@ -911,10 +917,8 @@ open class JbEncoder2(var global: IBook? = null) : Binary() {
         writeStructHeader(JB2_STRUCT_DICTIONARY, payloadSize)
         val headerEnd = end
         if (headerEnd < payloadStart) {
-            var source = payloadStart
-            var target = headerEnd
-            while (source < payloadEnd) setInt8(target++, getInt8(source++))
-            end = target
+            moveBytes(payloadStart, headerEnd, payloadSize)
+            end = headerEnd + payloadSize
         } else {
             end = payloadEnd
         }
@@ -978,21 +982,38 @@ open class JbEncoder2(var global: IBook? = null) : Binary() {
         val headerSize = if (withHeader) JB2_MAGIC.size else 0
         val targetSize = headerSize + tupleHeaderSize + tupleContentSize
         val target = ByteArray(targetSize)
-        val targetView = DataViewProxy(target)
         var t = 0
 
         if (withHeader) {
-            for (b in JB2_MAGIC) targetView.setInt8(t++, b)
+            JB2_MAGIC.copyInto(target)
+            t = JB2_MAGIC.size
         }
         // tuple header
-        var source = tupleHeaderStart
-        while (source < tupleHeaderEnd) targetView.setInt8(t++, getInt8(source++))
+        copyBytes(tupleHeaderStart, target, t, tupleHeaderSize)
+        t += tupleHeaderSize
         // feature object
-        source = featureStart
-        while (source < featureEnd) targetView.setInt8(t++, getInt8(source++))
+        copyBytes(featureStart, target, t, featureSize)
+        t += featureSize
         // local book
-        source = localBookStart
-        while (source < localBookEnd) targetView.setInt8(t++, getInt8(source++))
+        copyBytes(localBookStart, target, t, localBookSize)
         return target
+    }
+
+    /** Compact an already-written range. Validate mapped-view bounds/readonly state once; ByteArray.copyInto is overlap-safe and respects the view's backing-array offset. @since 3.0 */
+    private fun moveBytes(source: Int, target: Int, count: Int) {
+        if (count == 0) return
+        prepareRead(source, count, byteLength)
+        prepareWrite(target, count, false)
+        val bytes = byteArray
+        val offset = byteOffset
+        bytes.copyInto(bytes, offset + target, offset + source, offset + source + count)
+    }
+
+    /** Copy an already-written range into a fresh tuple result, not a caller-owned payload. @since 3.0 */
+    private fun copyBytes(source: Int, target: ByteArray, targetOffset: Int, count: Int) {
+        if (count == 0) return
+        prepareRead(source, count, byteLength)
+        val offset = byteOffset
+        byteArray.copyInto(target, targetOffset, offset + source, offset + source + count)
     }
 }

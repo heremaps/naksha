@@ -11,6 +11,9 @@ import kotlin.jvm.JvmName
  * A read session will acquire a connection from a connection pools whenever a read is performed, and release the connections instantly after the read is done.
  *
  * A write session will acquire a connection when the first write operation is executed, and stick with it until `commit`, `rollback` or [close] invoked. All reads after write will always utilize this single connection to ensure consistency. Before the first write operation, the optimizer is free to utilize multiple connections to read in parallel, but after the first write execution, a single connection must be used for all reading and writing, to guarantee consistency. Therefore, it is recommended to first perform all reads, then to perform the writes. The parallel reading can be disabled, if needed, using the [SessionOptions.parallel] switch.
+ *
+ * ## Warning — Sessions are not thread safe!
+ * @since 3.0
  */
 @JsExport
 interface ISession : AutoCloseable {

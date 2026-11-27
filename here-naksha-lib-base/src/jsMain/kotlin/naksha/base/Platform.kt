@@ -2,6 +2,7 @@
 
 package naksha.base
 
+import naksha.base.fn.Fn1
 import kotlin.math.round
 import kotlin.reflect.KClass
 import kotlin.reflect.KFunction
@@ -271,6 +272,25 @@ actual class Platform {
         private val convertView: dynamic = js("new DataView(new ArrayBuffer(16))")
 
         @JsStatic
+        actual fun swapLong(value: Long): Long {
+            val view = convertView
+            view.setBigInt64(0, value, false)
+            return view.getBigInt64(0, true).unsafeCast<Long>()
+        }
+
+        @JsStatic
+        actual fun swapInt(value: Int): Int {
+            convertView.setInt32(0, value, false)
+            return convertView.getInt32(0, true).unsafeCast<Int>()
+        }
+
+        @JsStatic
+        actual fun swapShort(value: Short): Short {
+            convertView.setInt16(0, value.toInt(), false)
+            return convertView.getInt16(0, true).unsafeCast<Int>().toShort()
+        }
+
+        @JsStatic
         actual fun toInt64RawBits(d: Double): Long = d.toRawBits()
 
         @JsStatic
@@ -512,42 +532,44 @@ if (typeof k==='function') instance=Object.create(k.prototype);""")
 
         @JsStatic
         actual fun <T> copy(obj: T?, recursive: Boolean): T? = js("""
-if (typeof obj !== 'object' || obj === null) return obj;
-if (Array.isArray(obj)) {
-  if (recursive) {
+return (function copyValue(value, deep) {
+if (typeof value !== 'object' || value === null) return value;
+if (Array.isArray(value)) {
+  if (deep) {
     var copy = [];
-    for (v in obj) copy.push(arguments.callee(item, true));
+    for (var item of value) copy.push(copyValue(item, true));
     return copy;
   }
-  return obj.slice();
+  return value.slice();
 }
-if (obj instanceof Map) {
-  if (recursive) {
+if (value instanceof Map) {
+  if (deep) {
     var map = new Map();
-    var it = obj[Symbol.iterator]();
+    var it = value[Symbol.iterator]();
     var e = it.next();
     while (!e.done) {
-      map.set(e.value[0], arguments.callee(e.value[1], true));
+      map.set(e.value[0], copyValue(e.value[1], true));
       e = it.next();
     }
     return map;
   }
-  return new Map(obj);
+  return new Map(value);
 }
-if (obj instanceof DataView) {
-  return new DataView(obj.buffer.slice(0));
+if (value instanceof DataView) {
+  return new DataView(value.buffer.slice(0));
 }
-if (obj instanceof Object) {
-  if (recursive) {
+if (value instanceof Object) {
+  if (deep) {
     var map = new Map();
-    for (key in obj) {
-        if (obj.hasOwnProperty(key)) map.set(key, arguments.callee(obj[key], true));
+    for (var key in value) {
+        if (Object.prototype.hasOwnProperty.call(value, key)) map.set(key, copyValue(value[key], true));
     }
     return map;
   }
-  return new Map(Object.entries(v));
+  return new Map(Object.entries(value));
 }
-return obj;
+return value;
+})(obj, recursive);
 """).unsafeCast<T?>()
 
         @JsName("toJson")
@@ -624,7 +646,7 @@ return obj;
          */
         @Suppress("NON_EXPORTABLE_TYPE")
         @JsStatic
-        actual fun <T : Proxy> proxy(pobject: PlatformObject, klass: KClass<T>, doNotOverride: Boolean): T {
+        actual fun <T : Proxy> proxy(pobject: PlatformObject, klass: KClass<out T>, doNotOverride: Boolean): T {
             val o = pobject.asDynamic()
             val sym = Symbols.of(klass)
             val p = o[sym]
@@ -744,7 +766,7 @@ return obj;
          */
         @JsStatic
         actual fun md5(text: String): ByteArray {
-            if (isPlv8()) return js("plv8.execute(\"SELECT digest(\$1,'md5') as i\",[text])[0].i").unsafeCast<ByteArray>()
+            if (isPlv8()) return js("plv8.execute(\"SELECT public.digest(\$1,'md5') as i\",[text])[0].i").unsafeCast<ByteArray>()
             // TODO: Use SubtleCrypto-API in the browser: https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto
             throw UnsupportedOperationException("md5 is not implemented in the current environment")
         }
@@ -758,7 +780,7 @@ return obj;
         @JsName("md5Bytes")
         @JsStatic
         actual fun md5(bytes: ByteArray): ByteArray {
-            if (isPlv8()) return js("plv8.execute(\"SELECT digest(\$1,'md5') as i\",[bytes])[0].i").unsafeCast<ByteArray>()
+            if (isPlv8()) return js("plv8.execute(\"SELECT public.digest(\$1,'md5') as i\",[bytes])[0].i").unsafeCast<ByteArray>()
             // TODO: Use SubtleCrypto-API in the browser: https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto
             throw UnsupportedOperationException("md5 is not implemented in the current environment")
         }
@@ -794,9 +816,9 @@ return obj;
          */
         @JsStatic
         actual fun gzipDeflate(raw: ByteArray): ByteArray {
-            if (isPlv8()) js("""plv8.execute('SELECT gzip($1::bytea)::bytea as c',[raw])[0].c""").unsafeCast<ByteArray>()
+            if (isPlv8()) return js("new Int8Array(require('pako').gzip(new Uint8Array(raw)))").unsafeCast<ByteArray>()
             // TODO: Use Stream-API in the browser: https://developer.mozilla.org/en-US/docs/Web/API/Streams_API
-            throw UnsupportedOperationException("lz4Inflate is not implemented in the current environment")
+            throw UnsupportedOperationException("gzipDeflate is not implemented in the current environment")
         }
 
         /**
@@ -806,9 +828,9 @@ return obj;
          */
         @JsStatic
         actual fun gzipInflate(compressed: ByteArray): ByteArray {
-            if (isPlv8()) js("""plv8.execute('SELECT gunzip($1::bytea)::bytea as c',[compressed])[0].c""").unsafeCast<ByteArray>()
+            if (isPlv8()) return js("new Int8Array(require('pako').ungzip(new Uint8Array(compressed)))").unsafeCast<ByteArray>()
             // TODO: Use Stream-API in the browser: https://developer.mozilla.org/en-US/docs/Web/API/Streams_API
-            throw UnsupportedOperationException("lz4Inflate is not implemented in the current environment")
+            throw UnsupportedOperationException("gzipInflate is not implemented in the current environment")
         }
 
         @JsStatic
@@ -880,6 +902,34 @@ return {
             if (n < 1) return ""
             val location = callerLocation(n) ?: return ""
             return "[" + location.file + ":" + location.line + "] "
+        }
+
+        @JsStatic
+        actual fun primaryLocalIp(): String {
+            val rs = js("plv8").execute("SELECT pg_catalog.inet_server_addr()::text AS ip")
+            // Internal background workers and Unix-socket sessions have no network address. Never return SQL NULL through this non-null platform contract.
+            if (rs is Array<dynamic> && rs.length == 1) {
+                val ip: Any? = rs[0].ip
+                if (ip is String && ip.isNotEmpty()) return ip
+            }
+            return "plv8"
+        }
+
+        @JsStatic
+        actual fun yield() {
+        }
+
+        actual fun <A, Z> runParallel(a: Array<A>, o: Array<Z?>, process: Fn1<Z?, A>): Array<Z?> {
+            val COUNT = a.size
+            val result = if (o.size < COUNT) o.copyOf(COUNT) else {
+                o.fill(null)
+                o
+            }
+
+            for (i in 0 until COUNT) {
+                result[i] = process.call(a[i])
+            }
+            return result
         }
     }
 }

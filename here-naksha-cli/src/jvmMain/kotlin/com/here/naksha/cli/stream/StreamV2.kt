@@ -17,7 +17,6 @@ import naksha.model.streaming.StreamRequest
 import naksha.model.streaming.StreamTransaction
 import naksha.model.streaming.StreamTuple
 import naksha.psql.PgPlan
-import naksha.psql.PsqlPlan
 import java.lang.Long.parseLong
 import java.sql.SQLException
 import java.sql.SQLTimeoutException
@@ -232,7 +231,7 @@ SELECT jsondata, ST_AsEWKB(geo) AS geo FROM schema.col_hst hst, min_txn n
     /** Must hold [_readLock]. Returns `null` if the query was cancelled (timeout or close); state is then unchanged. */
     private fun readChunk(queryTimeoutSec: Int): StreamChunk? {
         val plan = if (request.ignoreTransactions) headPlan() else txnPlan()
-        (plan as PsqlPlan).stmt.queryTimeout = queryTimeoutSec   // plans are reused, so set it on every call; 0 = no limit
+        plan.stmt.queryTimeout = queryTimeoutSec   // plans are reused, so set it on every call; 0 = no limit
         val cursor = try {
             throwIfFailed()
             if (_closed) return null
@@ -373,7 +372,7 @@ SELECT jsondata, ST_AsEWKB(geo) AS geo FROM schema.col_hst hst, min_txn n
             try {
                 // Repeat: JDBC cancel() can do nothing just before execute() starts.
                 while (!_readLock.tryLock(10L, TimeUnit.MILLISECONDS)) {
-                    _plan?.let { (it as PsqlPlan).stmt.cancel() }
+                    _plan?.let { it.stmt.cancel() }
                 }
             } finally {
                 // Release the plan even if cancellation or lock waiting fails.

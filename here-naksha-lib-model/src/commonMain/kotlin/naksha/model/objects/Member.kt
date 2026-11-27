@@ -3,6 +3,10 @@
 package naksha.model.objects
 
 import naksha.base.AnyObject
+import naksha.base.Id
+import naksha.base.IdTextType
+import naksha.base.illegalId
+import naksha.base.JsEnum
 import naksha.base.ListProxy
 import naksha.base.MapProxy
 import naksha.base.NotNullEnum
@@ -16,13 +20,20 @@ import naksha.base.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 import naksha.base.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
 import naksha.base.NakshaException
 import naksha.base.Platform.PlatformCompanion.UNDEFINED
-import naksha.model.NakshaIdType.INTERNAL_MEMBER
+import naksha.base.PlatformIterator
+import naksha.base.PlatformMapApi
+import naksha.base.PlatformMapApi.PlatformMapApiCompanion.map_iterator
+import naksha.base.PlatformUtil
+import naksha.base.PlatformUtil.PlatformUtilCompanion.hashCodeOf
 import naksha.model.TagList
 import naksha.model.TagMap
 import naksha.model.Tuple
 import naksha.base.TupleNumber
+import naksha.base.illegalState
+import naksha.base.platformHash
 import kotlin.js.JsExport
 import kotlin.js.JsName
+import kotlin.jvm.JvmOverloads
 
 // TODO: We need an immutable version of this, because this actually allows mutation.
 
@@ -31,11 +42,13 @@ import kotlin.js.JsName
  *
  * At write time, the storage walks the feature using [path], extracts the value, coerces it to the [dataType], and stores it in a storage-specific location derived from the [name]. The value is removed from the feature, and instead of the actual value a reference into the dedicated storage place is added, so that when decoding the feature, it can be copied back.
  *
- * The [name] must be a valid Naksha identifier (see [naksha.model.Naksha.verifyId]). Mandatory members are injected by the storage and **must not** be redeclared by the client with a different type. Mandatory members are:
+ * The [name] must be a valid Naksha identifier. Mandatory members are injected by the storage and **must not** be redeclared by the client with a different type, but they can be relocated to a different [JsonPath]. Mandatory members are:
  * - [Tuple-Number][naksha.model.objects.StandardMembers.StandardMembers_C.Tn]
+ * - [Id][naksha.model.objects.StandardMembers.StandardMembers_C.Id]
+ * - [Feature-Number][naksha.model.objects.StandardMembers.StandardMembers_C.FeatureNumber]
+ * - [Feature-Version][naksha.model.objects.StandardMembers.StandardMembers_C.FeatureVersion]
  * - [NextVersion][naksha.model.objects.StandardMembers.StandardMembers_C.NextVersion]
  * - [GlobalBookFeatureNumber][naksha.model.objects.StandardMembers.StandardMembers_C.GlobalBookFeatureNumber]
- * - [Id][naksha.model.objects.StandardMembers.StandardMembers_C.Id]
  * - [Feature][naksha.model.objects.StandardMembers.StandardMembers_C.FeatureBytes]
  *
  * If [path] is not explicitly set, the implicit path defaults to `["properties", <name>]`.
@@ -51,23 +64,24 @@ open class Member() : AnyObject(), Comparator<Member> {
      * @param path the JSON path to read the value from; defaults to `["properties", name]` when null.
      * @since 3.0
      */
-    @JsName("of")
+    @JvmOverloads
+    @JsName("MemberNew")
     constructor(name: String, dataType: MemberType = MemberType.STRING, path: JsonPath? = null) : this() {
-        this.name = INTERNAL_MEMBER.verify(name)
+        this.name = name
         this.dataType = dataType
         this.path = path ?: JsonPath("properties", name)
         this.path.validate()
     }
 
     /**
-     * Construct a member copy with a different path, used to relocate standard members to different places.
+     * Construct a member copy with a different path, used to relocate the member to a different place.
      *
      * Specifically, this is used to relocate the Tuple-Number and other mandatory members into the deprecated XYZ namespace.
      * @param origin The member to create a copy of.
      * @param path The new path to relocate the member to.
      * @since 3.0
      */
-    @JsName("relocate")
+    @JsName("MemberRelocateTo")
     constructor(origin: Member, path: JsonPath) : this() {
         if (origin.isVirtual()) throw NakshaException(ILLEGAL_ARGUMENT, "Virtual members can't be copied")
         this.name = origin.name
@@ -77,11 +91,37 @@ open class Member() : AnyObject(), Comparator<Member> {
     }
 
     /**
-     * The column name. Must be a valid Naksha identifier and must not conflict with a reserved built-in
-     * column unless it is declared with exactly the same [dataType].
+     * The logical member/book name, preserved without normalization or storage-specific aliasing. Accepts classifications through [IdTextType.UNSAFE]; internal, reserved and illegal names are rejected. Must not conflict with a built-in member unless declared with exactly the same [dataType].
      * @since 3.0
      */
-    var name: String by NAME
+    var name: String
+        get() = declaredName
+        set(value) {
+            if (!IdTextType.UNSAFE.accepts(IdTextType.classify(value))) throw illegalId("Invalid custom member name")
+            declaredName = value
+        }
+
+    private var declaredName: String by NAME
+    private var _id_org: String? = null
+    private var _id_val: Id? = null
+
+    /**
+     * Hidden virtual identifier derived on demand from [name], never added to the serialized member map. Reuses the same [Id] instance while the name has the same string identity; a different name instance refreshes the cache, even when its text is equal.
+     * @throws NakshaException with [naksha.base.NakshaError.ILLEGAL_ID] for an invalid custom member name, including names loaded directly into the underlying map.
+     * @since 3.0
+     */
+    val id: Id
+        get() {
+            val name = this.name
+            val cached = _id_val
+            @Suppress("StringReferentialEquality")
+            if (cached != null && name === _id_org) return cached
+            val id = Id(name)
+            if (!IdTextType.UNSAFE.accepts(id.textType)) throw illegalId("Invalid custom member name")
+            _id_org = name
+            _id_val = id
+            return id
+        }
 
     /** True iff the underlying map has an entry for [name]. */
     fun hasName(): Boolean = hasRaw("name")
@@ -142,6 +182,40 @@ open class Member() : AnyObject(), Comparator<Member> {
     }
 
     /**
+     * The retain option of the member, defaulting to [ON][MemberRetain.ON].
+     *
+     * Defines what happens to member values, when extracting the values. Possible options are:
+     * - [ON][MemberRetain.ON] — Keep the value in the object when extraction fails or would lose information _(default)_
+     * - [OFF][MemberRetain.OFF] — Do not keep the value in the object, no matter if the extraction succeeded or failed _(potential data loss)_.
+     * - [ALWAYS][MemberRetain.ALWAYS] — Always keep the value in the object, no matter if the extraction succeeded or failed _(data duplication)_.
+     * @since 3.0
+     * @see MemberRetain
+     */
+    var retain: MemberRetain by RETAIN
+
+    /** Fluent setter for [retain]; returns this for chaining. */
+    fun withRetain(value: MemberRetain?): Member {
+        retain = value ?: MemberRetain.ON
+        return this
+    }
+
+    /**
+     * If the index should be build conditional, so, if the value is `null` excludes the member from indexing _(defaults to **true**)_.
+     *
+     * An index being conditional makes the index actually free of cost as long as the member value is no valid value. However, it means that the index can only be utilized if searching for a value that is not `null`, that means for example a member query like [is null][naksha.model.request.ops.IsNull] will not use the index. When your application does not care for `null` values, you should leave the setting to the default to avoid storage and indexing cost for `null` values.
+     *
+     * You can explicitly turn this feature _off_, if you need to query for `null` values.
+     * @since 3.0
+     */
+    var conditional: Boolean by BOOLEAN_TRUE
+
+    /** Fluent setter for [conditional]; returns this for chaining. */
+    fun withConditional(value: Boolean): Member {
+        conditional = value
+        return this
+    }
+
+    /**
      * Read this member from the given proxy using the [path] of this member.
      * @param proxy The proxy to read.
      * @return the value of member in that proxy.
@@ -152,12 +226,20 @@ open class Member() : AnyObject(), Comparator<Member> {
      * Whether this member is a storage-managed mandatory member. When `true`, the storage controls the DDL for this member. Defaults to `false`.
      * @since 3.0
      */
-    private var mandatory: Boolean by MANDATORY
+    private var mandatory: Boolean by BOOLEAN_FALSE
+
+    /** Fluent setter for [mandatory]; returns this for chaining. */
+    internal fun withMandatory(value: Boolean = true): Member {
+        mandatory = value
+        return this
+    }
 
     /** True if this member is mandatory. */
     fun isMandatory(): Boolean = mandatory
 
-    private var virtual: Boolean by VIRTUAL
+    private var virtual: Boolean by BOOLEAN_FALSE
+
+    /** Fluent setter for [virtual]; returns this for chaining. */
     internal fun withVirtual(): Member {
         this.virtual = true
         return this
@@ -168,18 +250,6 @@ open class Member() : AnyObject(), Comparator<Member> {
      */
     fun isVirtual(): Boolean = virtual
 
-    /** Remove [mandatory] from the underlying map; returns this for chaining. */
-    internal fun removeMandatory(): Member {
-        removeRaw("mandatory")
-        return this
-    }
-
-    /** Fluent setter for [mandatory]; returns this for chaining. */
-    internal fun withMandatory(value: Boolean = true): Member {
-        mandatory = value
-        return this
-    }
-
     /**
      * Check if this member is the same as the given one, so [name] and [dataType] match.
      * @param other the other member to test against.
@@ -189,11 +259,13 @@ open class Member() : AnyObject(), Comparator<Member> {
     infix fun eq(other: Member?): Boolean = isSameAs(other)
 
     /**
-     * Ensures that the given `found` member is the same as the `expected` member, allow different path.
+     * Tests if this member has the same [name] and [dataType] as the given `other` member, optionally comparing the [path][Member.path] as well.
      * @param other The member to compare this member with.
      * @param comparePath If the path must be the same as well, defaults to _false_.
      * @return _true_ if the two members are the same; _false_ otherwise.
+     * @since 3.0
      */
+    @JvmOverloads
     fun isSameAs(other: Member?, comparePath: Boolean = false): Boolean {
         if (other == null) return false
         if (this === other) return true
@@ -205,11 +277,11 @@ open class Member() : AnyObject(), Comparator<Member> {
     }
 
     /**
-     * Ensures that the given `other` member is the same as this.
+     * Ensures that the given `other` member is the same as this, so with the same [name], [dataType], and optionally the same [path].
      *
-     * The purpose of the method is generally to do:
+     * The purpose of the method is generally to do somthing like this:
      * ```kotlin
-     * val member = StandardMember.Id.asSame(someCustomMember)
+     * val member = Id.asOther(members["id"])
      * ```
      * Which will return the given custom member, ensuring that it still is the standard `id` member, but allows different paths.
      * @param other The member to compare this with.
@@ -217,18 +289,19 @@ open class Member() : AnyObject(), Comparator<Member> {
      * @return The `other` member, if it is the same as this.
      * @throws NakshaException with error [ILLEGAL_STATE], when the given `other` members does not match this member.
      */
-    fun asSame(other: Member?, comparePath: Boolean = false): Member {
-        if (other == null) throw NakshaException(ILLEGAL_STATE, "The other member is NULL")
+    @JvmOverloads
+    fun asOther(other: Member?, comparePath: Boolean = false): Member {
+        if (other == null) throw illegalState("The other member is NULL")
         if (other === this) return other
         // We require same name and data-type, but not same JSON path.
         if (name != other.name) {
-            throw NakshaException(ILLEGAL_STATE, "The other member has different name: '${other.name}', expected: '${name}'")
+            throw illegalState("The other member has different name: '${other.name}', expected: '${name}'")
         }
-        if (dataType != other.dataType) {
-            throw NakshaException(ILLEGAL_STATE, "The other member has wrong data type: '${other.dataType}', expected '${dataType}'")
+        if (dataType !== other.dataType) {
+            throw illegalState("The other member has wrong data type: '${other.dataType}', expected '${dataType}'")
         }
         if (comparePath && !path.contentDeepEquals(other.path)) {
-            throw NakshaException(ILLEGAL_STATE, "The other member has a different path: '${other.path.joinToString("->")}', expected: '${path.joinToString("->")}'")
+            throw illegalState("The other member has a different path: '${other.path.joinToString("->")}', expected: '${path.joinToString("->")}'")
         }
         return other
     }
@@ -265,6 +338,20 @@ open class Member() : AnyObject(), Comparator<Member> {
     fun readString(feature: MapProxy<*,*>): String? {
         val raw = feature.getPath(path)
         if (raw is String) return raw
+        return null
+    }
+
+    /**
+     * Reads the [id][StandardMembers.Id] from the [path] of the given feature.
+     * @param feature The feature to read from.
+     * @return the read [Id] or `null`, if the feature does not store a valid value at the [path].
+     * @since 3.0
+     */
+    fun readId(feature: MapProxy<*,*>): Id? {
+        val raw = feature.getPath(path)
+        if (raw is Id) return raw
+        if (raw is String) return Id(raw)
+        if (raw is Long) return Id(raw)
         return null
     }
 
@@ -382,6 +469,22 @@ open class Member() : AnyObject(), Comparator<Member> {
     }
 
     /**
+     * Reads the current member as [Id] from the given [Tuple].
+     * @param tuple The tuple to read from.
+     * @return the read [Id] or `null`, if the member does not store an identifier.
+     * @since 3.0
+     */
+    @JsName("getIdFromTuple")
+    fun readId(tuple: Tuple): Id? {
+        if (this.name == StandardMembers.Id.name) return tuple.id
+        val raw = tuple.membersBook[this.name]
+        if (raw is Id) return raw
+        if (raw is String) return Id(raw)
+        if (raw is Long) return Id(raw)
+        return null
+    }
+
+    /**
      * Helper to read a 64-bit integer from the given tuple.
      * @param tuple The tuple to read from.
      * @return the read value or `null`, if the tuple does not store a valid value for this member.
@@ -481,15 +584,23 @@ open class Member() : AnyObject(), Comparator<Member> {
      */
     fun delete(feature: MapProxy<*,*>): Any? = feature.setPath(UNDEFINED, path)
 
-    override fun compare(a: Member, b: Member): Int = a.dataType.sortOrder - b.dataType.sortOrder
+    override fun compare(a: Member, b: Member): Int = a.dataType.byteAlignment - b.dataType.byteAlignment
 
     companion object Member_C {
-        private val NAME = NotNullProperty<Member, String>(String::class) { _, _ -> "" }
+        private val NAME = NotNullProperty<Member, String>(String::class, name = "name") { _, _ -> "" }
         private val DATA_TYPE = NotNullEnum<Member, MemberType>(MemberType::class) { _, _ -> MemberType.STRING }
         private val INDEX = NullableProperty<Member, Int>(Int::class)
         private val PATH = NotNullProperty<Member, JsonPath>(JsonPath::class) { self, _ -> JsonPath("properties", self.name) }
-        private val MANDATORY = NotNullProperty<Member, Boolean>(Boolean::class) { _, _ -> false }
-        private val VIRTUAL = NotNullProperty<Member, Boolean>(Boolean::class) { _, _ -> false }
+        private val RETAIN = NotNullProperty<Member, MemberRetain>(MemberRetain::class) { self, name ->
+            val raw = self.getRaw(name)
+            if (raw != null) {
+                val value = JsEnum.getDefined(raw, MemberRetain::class)
+                if (value != null) return@NotNullProperty value
+            }
+            MemberRetain.ON
+        }
+        private val BOOLEAN_FALSE = NotNullProperty<Member, Boolean>(Boolean::class) { _, _ -> false }
+        private val BOOLEAN_TRUE = NotNullProperty<Member, Boolean>(Boolean::class) { _, _ -> true }
     }
 
     /**
@@ -532,5 +643,11 @@ open class Member() : AnyObject(), Comparator<Member> {
     fun asTagMapMember(): TagMapMember = proxy(TagMapMember::class)
     fun asTagListMember(): TagListMember = proxy(TagListMember::class)
 
+    override fun hashCode(): Int = this.platformHash()
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other is Member) return this.platformHash() == other.platformHash()
+        return false
+    }
     override fun toString(): String = name
 }

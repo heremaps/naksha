@@ -1,0 +1,1310 @@
+package naksha.psql
+
+import naksha.base.Id.IdCompanion.ADMIN_CATALOG_QUOTED
+
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.number
+import kotlinx.datetime.toLocalDateTime
+import naksha.base.*
+import naksha.base.NakshaError.NakshaErrorCompanion.EXCEPTION
+import naksha.base.NakshaError.NakshaErrorCompanion.STORAGE_ID_MISMATCH
+import naksha.base.Platform.PlatformCompanion.logger
+import naksha.base.fn.Fn0
+import naksha.base.fn.Fx0
+import naksha.model.Naksha
+import naksha.model.NakshaVersion
+import naksha.model.NewTuple
+import naksha.model.Tuple
+import naksha.model.objects.NakshaAdmin
+import naksha.model.objects.NakshaDatabase
+import naksha.psql.PgUtil.PgUtilCompanion.quoteIdent
+import kotlin.js.JsExport
+import kotlin.time.Instant
+
+// Two-int advisory keys use a separate namespace from the bigint collection/feature guards. PostgreSQL scopes these keys to the current database, independently of client storage IDs and versions.
+internal const val PG_ADMIN_INSTALL_LOCK_CLASS = 0x4e414b53
+internal const val PG_ADMIN_INSTALL_LOCK_KEY = 0x41444d49
+
+/**
+ * A database is a logical concept in Naksha, see [NakshaDatabase].
+ *
+ * To keep the code more maintainable, we move all DDL _(data definition language)_ and SQL code into this class. So, mutation of the PostgresQL schema, tables, indices, and inserting, updating, delete rows. This class should deal with the physical reality of PostgresQL, not with the logical level of the Naksha storage concept. Therefore, this class works with `schema`, `table`, `partition` and `rows`. It should not have any knowledge about the logical part, like that a `row` represents a [Tuple][naksha.model.Tuple], it must not know about books or JBON encoding.
+ *
+ * Its purpose is to manage low level database entities like `schema`, `table`, `partition` and `rows`. It is fixed to the Naksha needs, so it assumes a primary key above (`nv`, `fn`, `version`). It is strictly tied up to the Naksha storage model. So it requires the three columns `nv`, `fn`, and `version` and it allows arbitrary `PgColumn`. It will understand how the history works, without making any assumptions about the content of a row, so it basically manages rows, each having a unique address, linked to partitioned history.
+ * @since 3.0
+ * @see PgDatabaseImpl
+ */
+@JsExport
+abstract class PgDatabase(
+  /**
+   * The storage in which the database is located.
+   * @since 3.0
+   */
+  override val storage: PgStorage,
+
+  /**
+   * The identifier of the database.
+   *
+   * This is installed into the admin-schema `naksha~admin` in the functions `naksha_storage_id()` and `naksha_storage_number()`.
+   *
+   * In the current implementation, this matches [IStorage.id][naksha.model.IStorage.id].
+   * @since 3.0
+   */
+  override val id: Id = storage.id
+): PgCache(), NakshaDatabase {
+  override val isMaster: Boolean = true
+  override val isReplica: Boolean = false
+  override val parent: PgCache? = null
+
+  /**
+   * The page-size of the database (`current_setting('block_size')`).
+   * @since 3.0.0
+   */
+  val pageSize: Int
+    get() = if (_pageSize == -1) throw notInitialized("PgDatabase") else _pageSize
+  private var _pageSize: Int = -1
+
+  /**
+   * The maximum size of a row.
+   * @since 3.0.0
+   */
+  val maxTupleSize: Int
+    get() = if (_maxTupleSize == -1) throw notInitialized("PgDatabase") else _maxTupleSize
+  private var _maxTupleSize: Int = -1
+
+  /**
+   * If the [pgsql-gzip][https://github.com/pramsey/pgsql-gzip] extension is installed, therefore PostgresQL supported `gzip`/`gunzip` as standalone SQL function by the database. Note, that if this is not the case, we're installing code that is implemented in JavaScript.
+   * @since 3.0.0
+   */
+  val gzipExtension: Boolean
+    get() = _gzipExtension ?: throw notInitialized("PgDatabase")
+  private var _gzipExtension: Boolean? = null
+
+  /**
+   * The PostgresQL version, e.g. `18.6`.
+   * @since 3.0.0
+   */
+  val postgresVersion: NakshaVersion
+    get() = _postgresVersion ?: throw notInitialized("PgDatabase")
+  private var _postgresVersion: NakshaVersion? = null
+
+  /**
+   * The OID of the current HEAD version.
+   * @since 3.0.0
+   */
+  val versionSequenceOid: Int
+    get() = if (_versionSequenceOid == -1) throw notInitialized("PgDatabase") else _versionSequenceOid
+  private var _versionSequenceOid: Int = -1
+
+  /**
+   * The `OID` of the admin-map aka admin schema.
+   * @since 3.0.0
+   */
+  val schemaOid: Int
+    get() = if (_schemaOid == -1) throw notInitialized("PgDatabase") else _schemaOid
+  private var _schemaOid: Int = -1
+
+  /**
+   * The admin-catalog itself _(`naksha~admin`)_.
+   * @since 3.0.0
+   */
+  override val pgAdmin: PgCatalog
+    get() = _pgAdmin ?: throw notInitialized("PgDatabase")
+  private var _pgAdmin: PgCatalog? = null
+
+  /**
+   * The collections' collection _(`naksha~collections`)_, should exist in any schema, including the admin-schema (`naksha~admin`).
+   * @since 3.0.0
+   */
+  override val pgAdminCollections: PgCollection
+    get() = _pgAdminCollections ?: throw notInitialized("PgDatabase")
+  private var _pgAdminCollections: PgCollection? = null
+
+  /**
+   * The transactions' collection _(`naksha~transactions`)_ only in the admin-schema (`naksha~admin`).
+   * @since 3.0.0
+   */
+  override val pgAdminTransactions: PgCollection
+    get() = _pgAdminTransactions ?: throw notInitialized("PgDatabase")
+  private var _pgAdminTransactions: PgCollection? = null
+
+  /**
+   * The catalogs' collection _(`naksha~catalogs`)_ only in the admin-schema (`naksha~admin`).
+   * @since 3.0.0
+   */
+  override val pgAdminCatalogs: PgCollection
+    get() = _pgAdminCatalogs ?: throw notInitialized("PgDatabase")
+  private var _pgAdminCatalogs: PgCollection? = null
+
+  /**
+   * The books' collection _(`naksha~books`)_ only in the admin-schema (`naksha~admin`).
+   * @since 3.0.0
+   */
+  override val pgAdminBooks: PgCollection
+    get() = _pgAdminBooks ?: throw notInitialized("PgDatabase")
+  private var _pgAdminBooks: PgCollection? = null
+
+  /**
+   * Opens and initialized the database.
+   *
+   * Depending on parameters, installs SQL code, creates extensions, create `naksha~admin` schema, create admin collections, inserting the immutable features for the standard admin collections. Eventually commits the successfully created or updated database.
+   * @param doOverride Can be set to _true_ to force the storage to reinstall the admin-map, even when the existing installed version of Naksha code is up-to-date (matches the code coming together with the library).
+   * @param doCreate If the storage will create missing structures when opening a database. If explicitly _false_ and the database is not initialized, the storage will throw an [INITIALIZATION_FAILED][naksha.base.NakshaError.INITIALIZATION_FAILED].
+   * @param doUpgrade If the storage should automatically upgrade the admin-structures (e.g. stored procedures) of a database, when necessary; otherwise the initialization does not modify the admin-structure of the database. However, it will throw an [INITIALIZATION_FAILED][naksha.base.NakshaError.INITIALIZATION_FAILED] if there are incompatibilities that prevent the usage of the found database without upgrade of admin-structures.
+   * @param attachExisting validate an installed runtime without installation, session settings or commit; requires creation, upgrade and override disabled.
+   * @since 3.0
+   */
+  internal fun init(
+    doOverride: Boolean = storage.config.override ?: false,
+    doCreate: Boolean = storage.config.create,
+    doUpgrade: Boolean = storage.config.upgrade,
+    attachExisting: Boolean = false
+  ) {
+    if (attachExisting && (doOverride || doCreate || doUpgrade)) throw illegalArg("Existing database attachment cannot install or upgrade objects")
+    val config = storage.config
+    val config_version = config.version
+    val psql_version = if (config_version != null) NakshaVersion.of(config_version) else adminVersion
+
+    // Bootstrap the infrastructure.
+    val naksha_admin = NakshaAdmin(this.id)
+    val collection = naksha_admin.collections
+    for (adminCollection in arrayOf(collection, naksha_admin.catalogs, naksha_admin.transactions, naksha_admin.books)) {
+      PgCollection.resolveLayout(adminCollection)
+    }
+    _pgAdmin = PgCatalog( Tuple.encodeObject(naksha_admin, collection, 1L).tuple)
+    _pgAdminCatalogs = PgCollection(pgAdmin.id, Tuple.encodeObject(naksha_admin.catalogs, collection, 1L).tuple)
+    _pgAdminCollections = PgCollection(pgAdmin.id, Tuple.encodeObject(naksha_admin.collections, collection, 1L).tuple)
+    _pgAdminTransactions = PgCollection(pgAdmin.id, Tuple.encodeObject(naksha_admin.transactions, collection, 1L).tuple)
+    _pgAdminBooks = PgCollection(pgAdmin.id, Tuple.encodeObject(naksha_admin.books, collection, 1L).tuple)
+
+    // Switch to admin context.
+    val conn = storage.newConnection(Naksha.useAdminOptions(), false)
+    conn.use {
+      logger.info("Start initStorage of database {}", conn.toUri())
+      conn.autoCommit = false
+
+      if (!initializeAdmin(conn, psql_version, doOverride, doCreate, doUpgrade, attachExisting, install = false)) {
+        // The optimistic probe did not mutate the database. End its transaction before waiting, releasing all read locks while preserving the connection's SET SESSION options.
+        conn.commit()
+        // The lock query itself may wait. A READ COMMITTED statement snapshot is essential so the subsequent probe sees the preceding installer's commit, even if the connection default is REPEATABLE READ.
+        conn.execute("SET TRANSACTION ISOLATION LEVEL READ COMMITTED").close()
+        conn.execute("SELECT pg_catalog.pg_advisory_xact_lock($1::int4, $2::int4)",
+          arrayOf(PG_ADMIN_INSTALL_LOCK_CLASS, PG_ADMIN_INSTALL_LOCK_KEY)).close()
+        initializeAdmin(conn, psql_version, doOverride, doCreate, doUpgrade, attachExisting, install = true)
+      }
+      if (!attachExisting) conn.execute("SET search_path = $ADMIN_CATALOG_QUOTED, topology, hint_plan, public").close()
+      logger.info("Load OID of '$NAKSHA_VERSION_SEQ' from admin schema (schema-oid=$schemaOid)")
+      val SQL = "SELECT oid FROM pg_catalog.pg_class WHERE relnamespace = $schemaOid AND relname = '$NAKSHA_VERSION_SEQ'"
+      conn.execute(SQL).fetch().use { cursor -> _versionSequenceOid = cursor["oid"] }
+      logger.info("Storage ${config.id} / ${config.databaseNumber} initialized, version-seq-oid=$versionSequenceOid, commit")
+      if (!attachExisting) conn.commit()
+    }
+  }
+
+  /**
+   * Probe the installed admin state, validating identity, permissions and compatibility on every call. Return false when installation is required but not yet authorized by the database advisory lock. The locked call re-reads all state before executing DDL; the unlocked call is read-only. Existing PLV8 attachment never acquires the lock or ends its caller's transaction.
+   * @since 3.0
+   */
+  private fun initializeAdmin(
+    conn: PgConnection,
+    psql_version: NakshaVersion,
+    doOverride: Boolean,
+    doCreate: Boolean,
+    doUpgrade: Boolean,
+    attachExisting: Boolean,
+    install: Boolean
+  ): Boolean {
+    val id = this.id.text
+    val number = this.id.number
+    logger.info("Query basic database information")
+    val has_naksha_version: Boolean?
+    val has_naksha_storage_id: Boolean?
+    val has_naksha_storage_number: Boolean?
+    val admin_schema_oid: Int?
+    conn.execute(
+      """
+WITH basics AS (SELECT
+  current_setting('block_size')::int4 AS bs,
+  (SELECT oid FROM pg_catalog.pg_namespace WHERE nspname = 'naksha~admin') AS admin_oid,
+  (SELECT oid FROM pg_catalog.pg_extension WHERE extname = 'gzip') AS gzip_oid,
+  version() AS version
+), procs AS (SELECT
+  (SELECT true FROM pg_catalog.pg_proc, basics WHERE pronamespace = basics.admin_oid AND proname = 'naksha_version') AS has_naksha_version,
+  (SELECT true FROM pg_catalog.pg_proc, basics WHERE pronamespace = basics.admin_oid AND proname = 'naksha_storage_id') AS has_naksha_storage_id,
+  (SELECT true FROM pg_catalog.pg_proc, basics WHERE pronamespace = basics.admin_oid AND proname = 'naksha_storage_number') AS has_naksha_storage_number
+)
+SELECT basics.*, procs.* FROM basics, procs;
+"""
+    ).fetch().use { cursor ->
+      _pageSize = cursor["bs"]
+      val tupleSize = pageSize - 32
+      _maxTupleSize = if (tupleSize > MAX_POSTGRES_TOAST_TUPLE_TARGET) {
+        MAX_POSTGRES_TOAST_TUPLE_TARGET
+      } else if (tupleSize < MIN_POSTGRES_TOAST_TUPLE_TARGET) {
+        MIN_POSTGRES_TOAST_TUPLE_TARGET
+      } else {
+        tupleSize
+      }
+      _gzipExtension = cursor.column("gzip_oid") is Int
+      val v: String = cursor["version"]
+      val start = v.indexOf(' ') + 1
+      val end = v.indexOf(' ', start)
+      _postgresVersion = NakshaVersion.of(v.substring(start, end))
+
+      admin_schema_oid = cursor.column("admin_oid") as Int?
+      has_naksha_version = cursor.column("has_naksha_version") as Boolean?
+      has_naksha_storage_id = cursor.column("has_naksha_storage_id") as Boolean?
+      has_naksha_storage_number = cursor.column("has_naksha_storage_number") as Boolean?
+    }
+
+    if (admin_schema_oid == null) {
+      if (!doCreate) throw forbidden("Creation of 'naksha~admin' needed, but forbidden by config")
+      if (!install) return false
+      logger.info("Install Naksha admin-map in version $psql_version for storage $id / $number")
+      _schemaOid = upsert_naksha_admin(conn, this.id, psql_version, null, null)
+      return true
+    }
+    _schemaOid = admin_schema_oid
+    if (has_naksha_version != true) {
+      throw illegalState("The storage '$id' does have a schema 'naksha~admin', but it is broken, because function `naksha_version` is missing")
+    }
+    if (has_naksha_storage_id != true) {
+      throw illegalState("The storage '$id' does have a schema 'naksha~admin', but it is broken, because function `naksha_storage_id` is missing")
+    }
+    if (has_naksha_storage_number != true) {
+      throw illegalState("The storage '$id' does have a schema 'naksha~admin', but it is broken, because function `naksha_storage_number` is missing")
+    }
+    val installed_version: NakshaVersion
+    val installed_storage_id: String
+    val installed_storage_number: Long
+    conn.execute("SELECT $ADMIN_CATALOG_QUOTED.naksha_version() AS v, $ADMIN_CATALOG_QUOTED.naksha_storage_id() AS id, $ADMIN_CATALOG_QUOTED.naksha_storage_number() AS n").fetch().use { cursor ->
+      try {
+        val v: Long = cursor["v"]
+        installed_version = NakshaVersion(v)
+        installed_storage_id = cursor["id"]
+        installed_storage_number = cursor["n"]
+      } catch (pe: Exception) {
+        throw illegalState(
+          "The storage '$id' does have an admin schema, but it is broken, because reading storage version, id, and/or number failed",
+          pe
+        )
+      }
+    }
+    if (installed_storage_id != id) {
+      throw NakshaException(
+        STORAGE_ID_MISMATCH,
+        "Failed to initialize storage, the 'naksha_storage_id()' is '$installed_storage_id', but was expected to be '$id'"
+      )
+    }
+    if (installed_storage_number != number) {
+      throw NakshaException(
+        STORAGE_ID_MISMATCH,
+        "Failed to initialize the storage, the 'naksha_storage_number()' is '$installed_storage_number', but was expected to be '$number'"
+      )
+    }
+    if (installed_version == psql_version) {
+      logger.info("The admin-map of '$id' is up-to-date: $psql_version")
+      return true
+    }
+    if (attachExisting) throw illegalState("Installed admin version does not match the attached runtime")
+    logger.info("The admin-map of '$id' is in version $installed_version, this library uses version $psql_version")
+    if (doOverride) {
+      if (!install) return false
+      logger.warn("Forcefully upgrade storage '$id' admin-map (current=$installed_version, new=$psql_version)")
+      upsert_naksha_admin(conn, this.id, psql_version, admin_schema_oid, installed_version)
+      return true
+    }
+    if (installed_version > psql_version) {
+      throw illegalState("The storage '$id' is in a newer version ($installed_version) than this library ($psql_version), access denied (otherwise we risk damaging the storage)")
+    }
+    if (installed_version < minAdminVersion && !doUpgrade) {
+      throw illegalState("The storage '$id' uses admin version $installed_version, but this library requires at least $minAdminVersion; enable upgrade before accessing the storage")
+    }
+    if (doUpgrade) {
+      if (!install) return false
+      logger.info("Upgrade Naksha admin-map from $installed_version to $psql_version for storage $id")
+      upsert_naksha_admin(conn, this.id, psql_version, admin_schema_oid, installed_version)
+    } else {
+      logger.info("In storage '$id' admin-map is in version $installed_version, this library is version $psql_version, but we should not upgrade the storage, and are okay working with the older version")
+    }
+    return true
+  }
+
+  // ——————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————
+  // The following methods do only low-level PostgresQL actions. They do not care about the logical part, so about the
+  // corresponding administrative objects, the features representing a schema (PgCatalog), a table (PgCollection), a
+  // column (PgColumn), or an index (PgIndex).
+  // ——————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————
+
+  /**
+   * Return a list of the names of all database available _(not necessarily all being Naksha databases)_.
+   * @return the list of the names of all databases available in the storage.
+   * @since 3.0
+   */
+  internal fun list_databases(conn: PgConnection): List<PgDatabaseName> {
+    val list = ArrayList<PgDatabaseName>()
+    conn.execute("SELECT datname FROM pg_database WHERE datallowconn AND NOT datistemplate").use { cursor: PgCursor ->
+      while (cursor.next()) {
+        list.add(PgDatabaseName.checked(cursor["datname"] as String))
+      }
+    }
+    return list
+  }
+
+  /**
+   * Returns the current version-number, so the last used one.
+   *
+   * **Beware**: The returned version-number can be located long in the past, days or month ago.
+   * @param conn the connection to use to access the database.
+   * @return the next _(yet unused)_ version-number.
+   * @since 3.0
+   * @see Version
+   */
+  fun get_version(conn: PgConnection): Long {
+    conn.execute("SELECT currval($1) as txn", arrayOf(versionSequenceOid)).fetch().use { cursor ->
+      val seq: Long = cursor["txn"]
+      return seq
+    }
+  }
+
+  /**
+   * Allocate a new version and return the details of it.
+   *
+   * ### Warning
+   * The method will invoke `commit` on the given database connection, before returning the new version information.
+   * @param conn the connection to use to access the database.
+   * @return the allocated version.
+   * @since 3.0.0
+   */
+  fun new_version(conn: PgConnection): PgTxn {
+    while (true) {
+      // Note: We read the current _(real)_ time from the server as `time`, not the transaction time, which
+      //       would be the start-time of the transaction.
+      val QUERY = "SELECT nextval($1) as version, (extract(epoch from clock_timestamp())*1000)::int8 as time, (extract(epoch from transaction_timestamp())*1000)::int8 as txn"
+      val cursor = conn.execute(QUERY, arrayOf(versionSequenceOid)).fetch()
+      cursor.use {
+        var txn: Long = cursor["txn"]
+        var postgresClock: Long = cursor["time"]
+        var postgresInstant = Instant.fromEpochMilliseconds(postgresClock.toLong())
+        var postgresDate = postgresInstant.toLocalDateTime(TimeZone.UTC)
+        var year = postgresDate.year
+        var month = postgresDate.month.number
+        var day = postgresDate.day
+        var versionNumber: Long = cursor["version"]
+        var version = Version(versionNumber)
+        if (version.isBehind(year, month, day)) {
+          logger.info("Transaction sequence ({}/{}/{}-{}) lags behind real date ({}/{}/{}), acquire advisory lock",
+            version.month, version.day, version.year, version.seq, month, day, year)
+          conn.execute("SELECT pg_advisory_lock($1)", arrayOf(PgUtil.TXN_LOCK_ID)).close()
+          try {
+            logger.info("Holding advisory lock now")
+            val c2 = conn.execute(QUERY, arrayOf(versionSequenceOid)).fetch()
+            c2.use {
+              txn = c2["txn"]
+              postgresClock = c2["time"]
+              postgresInstant = Instant.fromEpochMilliseconds(postgresClock.toLong())
+              postgresDate = postgresInstant.toLocalDateTime(TimeZone.UTC)
+              year = postgresDate.year
+              month = postgresDate.month.number
+              day = postgresDate.day
+              versionNumber = c2["version"]
+              version = Version(versionNumber)
+            }
+            if (version.isBehind(year, month, day)) {
+              logger.info("Transaction sequence ({}/{}/{}-{}) still lags behind real date ({}/{}/{}), rollover to next day as we now hold the advisory lock",
+                version.month, version.day, version.year, version.seq, month, day, year)
+              version = Version.auto(year, month, day, 0L, Action.VERSION)
+              versionNumber = version.number
+              conn.execute("SELECT setval($1, $2)", arrayOf(versionSequenceOid, versionNumber)).close()
+              // SELECT setval($1, $2); — Next nextval will return $2 + Increment, currval will return $2, no need to add 4!
+              // See: https://www.postgresql.org/docs/current/functions-sequence.html
+            }
+            logger.info("Release advisory lock")
+            conn.execute("SELECT pg_advisory_unlock($1)", arrayOf(PgUtil.TXN_LOCK_ID)).close()
+          } catch (e: Throwable) {
+            logger.error("Fatal exception while holding an advisory lock, terminating connection: {}", e)
+            // This must not happen, to release the advisory lock, we need to terminate the connection!
+            conn.terminate()
+            throw NakshaException(
+              EXCEPTION,
+              "Failed to increment 'txn', exception while holding advisory lock, terminating connection"
+            )
+          }
+        }
+        logger.debug("Final transaction version is: {} - {}/{}/{}-{}", version, version.month, version.day, version.year, version.seq)
+        // Note: We know, that we only get a new transaction number before we start a transaction.
+        //       Doing a commit here is necessary to avoid that we get a lock to the txn sequence!
+        //       Even while sequences are normally not locked, it can happen under circumstances.
+        conn.commit()
+        return PgTxn(versionNumber, txn, version)
+      }
+    }
+  }
+
+  /**
+   * Update or create the admin schema `naksha~admin`.
+   *
+   * This method will create the schema, tables, install the SQL code, create extensions, ... Therefore, this method can only be implemented in Java, the `PLv8` version should just throw a [UNSUPPORTED_OPERATION][naksha.base.NakshaError.UNSUPPORTED_OPERATION].
+   * @param conn the connection to use to create or upgrade.
+   * @param id the [Id] of the database.
+   * @param psql_version the version of this library that is being installed.
+   * @param schema_oid if the schema `naksha~admin` exists already and should be upgraded; `null` if we should create a new one.
+   * @param installed_version if the schema `naksha~admin` exists already, the version that exists to only apply needed changes.
+   * @return the `OID` of the `naksha~admin` schema created, should be the same as `schemaOid`, if given.
+   * @since 3.0
+   */
+  protected abstract fun upsert_naksha_admin(
+    conn: PgConnection,
+    id: Id,
+    psql_version: NakshaVersion,
+    schema_oid: Int?,
+    installed_version: NakshaVersion?
+  ): Int
+
+  /**
+   * Execute the given SQL code, when throwing, this method will catch all exceptions and ensure that a valid [NakshaException] is thrown.
+   * @param schema the schema being used.
+   * @param table the table being used.
+   * @param code the function that executes SQL code, it does not need to use any exception handling.
+   * @return the result `code` function.
+   * @throws NakshaException if the code raised any exception, converting especially SQL exceptions into correct [NakshaError] objects.
+   */
+  protected abstract fun <R> execute_sql_nullable(schema: PgSchemaName? = null, table: PgTableName? = null, code: Fn0<R?>): R?
+
+  /**
+   * Execute the given SQL code, when throwing, this method will catch all exceptions and ensure that a valid [NakshaException] is thrown.
+   * @param schema the schema being used.
+   * @param table the table being used.
+   * @param code the function that executes SQL code, it does not need to use any exception handling.
+   * @return the result `code` function.
+   * @throws NakshaException if the code raised any exception, converting especially SQL exceptions into correct [NakshaError] objects.
+   */
+  protected abstract fun <R> execute_sql_notnull(schema: PgSchemaName? = null, table: PgTableName? = null, code: Fn0<R>): R
+
+  /**
+   * Execute the given SQL code, when throwing, this method will catch all exceptions and ensure that a valid [NakshaException] is thrown.
+   * @param schema the schema being used.
+   * @param table the table being used.
+   * @param code the function that executes SQL code, it does not need to use any exception handling.
+   * @throws NakshaException if the code raised any exception, converting especially SQL exceptions into correct [NakshaError] objects.
+   */
+  protected abstract fun execute_sql(schema: PgSchemaName? = null, table: PgTableName? = null, code: Fx0)
+
+  //
+  // Note: We can't ensure that another schema or table with a different name, but same number is created.
+  // To prevent collisions, we need to reply upon the `naksha~catalogs` or `naksha~collections` and we need
+  // to ensure that the feature-number in there is truncated to 32-bit!
+  //
+
+  /**
+   * Returns the `OID` of the schema with the given name.
+   *
+   * Looks up the physical PostgreSQL namespace without creating it or loading Naksha metadata.
+   * The unsigned PostgreSQL OID is represented as a positive [Long].
+   * @param conn the caller-owned connection; this method does not commit or close it.
+   * @param name the unquoted name of the schema.
+   * @return if the schema exists, the 32-bit unsigned `OID` of the schema; `-1` if no such schema exists.
+   * @since 3.0
+   */
+  internal fun catalog_get_schema_oid(conn: PgConnection, name: PgSchemaName): Long {
+    return execute_sql_notnull(schema = name) {
+      conn.execute("SELECT oid::text AS oid FROM pg_catalog.pg_namespace WHERE nspname = $1", arrayOf(name)).use { cursor ->
+        if (cursor.next()) cursor.get<String>("oid").toLong() else -1L
+      }
+    }
+  }
+
+  /**
+   * Create the physical schema of a catalog, if it does not yet exist.
+   *
+   * Internal tables are created separately through [collection_create_table_if_not_exists].
+   * Identifier collisions are checked by the caller's administrative writes.
+   * An existing schema is reused without modifying its contents. Creation participates in the
+   * caller's transaction; the signed return value distinguishes creation from reuse.
+   * Existing schemas retain only a shared catalog guard, compatible with concurrent collection operations. Missing schemas take an exclusive catalog lock and are rechecked before creation. If a schema disappears between the initial lookup and shared guard, the caller must retry the transaction; no shared-to-exclusive upgrade is attempted. Requires an open caller transaction; READ COMMITTED permits reuse after a concurrent commit. External creators or stale higher-isolation snapshots can still cause a database error, which is propagated without recovery here.
+   * @param conn the caller-owned connection; this method does not commit or close it.
+   * @param name the unquoted name of the schema.
+   * @param originalName the original logical catalog name to retain as a schema comment when created. Existing schema comments are not modified.
+   * @return the 32-bit unsigned `OID` of the created schema, returns a negative `OID` if the schema existed already.
+   * @since 3.0
+   */
+  internal fun catalog_get_or_create_schema(conn: PgConnection, name: PgSchemaName, originalName: String): Long {
+    return execute_sql_notnull(schema = name) {
+      if (conn.autoCommit) throw illegalState("Schema creation requires a caller-owned transaction")
+      if (catalog_get_schema_oid(conn, name) > 0) {
+        PgPartitions.lockCatalog(conn, name, shared = true)
+        val existing = catalog_get_schema_oid(conn, name)
+        if (existing <= 0) throw illegalState("Schema disappeared while acquiring catalog guard; retry transaction")
+        return@execute_sql_notnull -existing
+      }
+      PgPartitions.lockCatalog(conn, name)
+      val existing = catalog_get_schema_oid(conn, name)
+      if (existing > 0) -existing else {
+        val ident = quoteIdent(name)
+        conn.execute("CREATE SCHEMA $ident").close()
+        conn.execute("COMMENT ON SCHEMA $ident IS ${PgUtil.quoteLiteral(originalName)}").close()
+        val oid = catalog_get_schema_oid(conn, name)
+        if (oid <= 0) throw internalError("Created schema has no OID")
+        oid
+      }
+    }
+  }
+
+  /**
+   * Drops the catalog schema cascading _(recursive, so including all tables, indices, ...)_.
+   *
+   * An absent schema is a successful no-op. Logical catalog metadata is the caller's concern; dropping the admin schema is allowed and leaves the storage unusable. No separate partition registry exists.
+   * An exclusive catalog guard excludes collection operations in this schema without locking unrelated catalogs. Maintenance skips the busy catalog; PostgreSQL's cascading drop locks suffice without iterating roots.
+   * @param conn the caller-owned connection; requires autoCommit false and does not commit, roll back or close it.
+   * @param name the unquoted name of the schema; must contain 1..63 UTF-8 bytes without NUL.
+   * @since 3.0
+   */
+  internal fun catalog_drop_schema(conn: PgConnection, name: PgSchemaName) {
+    execute_sql(schema = name) {
+      if (conn.autoCommit) throw illegalState("Schema drop requires a caller-owned transaction")
+      PgPartitions.lockCatalog(conn, name)
+      conn.execute("DROP SCHEMA IF EXISTS ${quoteIdent(name)} CASCADE").close()
+    }
+  }
+
+  /**
+   * Create a collection's physical root table, partitions, and indexes if the root does not exist.
+   *
+   * Shared Kotlin creates a RANGE (nv) root, restricted HEAD and optional fn leaves. Permanent storage is currently supported, with initial HEAD/history fillfactors 50/100. Creation synchronously maintains initial coverage using the supplied options before the metadata row is published. Later sweeps discover committed collections from metadata and read physical settings from PostgreSQL catalogs. Initial coverage uses the greater of the server UTC date and installed allocator watermark, without allocating a version.
+   * An existing root with the same logical owner is left unchanged; unrelated or unowned relations are rejected. The caller must roll back on failure, including failures after partial DDL.
+   * A shared catalog guard and exclusive collection lock allow unrelated collections to proceed concurrently; maintenance skips this busy collection.
+   *
+   * @param conn the caller-owned connection; DDL is part of its transaction and is not committed here.
+   * @param schema the unquoted name of the schema in which to create the table; must exist already.
+   * @param table the unquoted name of the root table; creation is skipped if it exists.
+   * @param columns the physical column definitions, including mandatory `fn`, `version`, and `nv`.
+   * @param indices custom index descriptors; mandatory keys are created intrinsically.
+   * @param options create-only history, range coverage, durability, tablespace, and TOAST settings.
+   * @param logicalCatalog original catalog identity, retained with [logicalCollection] as the table owner comment.
+   * @param logicalCollection original collection identity. Member comments retain original member names.
+   * @throws NakshaException if the creation failed.
+   * @since 3.0
+   */
+  internal fun collection_create_table_if_not_exists(
+    conn: PgConnection,
+    schema: PgSchemaName,
+    table: PgTableName,
+    columns: Array<PgColumn>,
+    indices: Array<PgIndex>,
+    options: PgCollectionCreateOptions,
+    logicalCatalog: String,
+    logicalCollection: String
+  ) {
+    execute_sql(schema = schema, table = table) {
+      if (conn.autoCommit) throw illegalState("Collection creation requires a caller-owned transaction")
+      if (options.storageClass != PgStorageClass.Consistent) throw unsupportedOp("Only permanent collection creation is implemented")
+      val names = HashSet<String>()
+      val definitions = StringBuilder()
+      for (column in columns) {
+        val name = column.columnName
+        if (!names.add(name)) throw illegalId("Duplicate physical column name: $name")
+        if (definitions.isNotEmpty()) definitions.append(",\n")
+        definitions.append(column.sql)
+      }
+      for (name in arrayOf("fn", "version", "nv")) {
+        if (name !in names) throw illegalArg("Missing mandatory column: $name")
+      }
+      val indexNames = HashSet<String>()
+      for (index in indices) {
+        index.validate()
+        val name = index.id.indexName(table)
+        if (name in arrayOf("$table\$pkey", "$table\$unique", "$table\$version", "$table\$id") || !indexNames.add(name)) throw illegalId("Duplicate physical index name: $name")
+      }
+      val target = "${quoteIdent(schema)}.${quoteIdent(table)}"
+      val owner = "${quoteIdent(logicalCatalog)}.${quoteIdent(logicalCollection)}"
+      PgPartitions.lockCollection(conn, schema, table)
+      conn.execute("SELECT pg_catalog.obj_description(c.oid, 'pg_class') AS owner FROM pg_catalog.pg_class c JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace WHERE n.nspname = $1 AND c.relname = $2", arrayOf(schema, table)).use { cursor ->
+        if (cursor.next()) {
+          if (cursor.column("owner") != owner) throw illegalId("Physical collection $target belongs to another logical identity")
+          return@execute_sql
+        }
+      }
+      conn.execute("CREATE TABLE $target ($definitions, CONSTRAINT ${quoteIdent("$table\$pkey")} PRIMARY KEY (nv, fn, version), CHECK (nv >= 0 AND nv <= ${Version.HEAD.number})) PARTITION BY RANGE (nv)").close()
+      conn.execute("ALTER TABLE $target ALTER COLUMN nv SET DEFAULT ${Version.HEAD.number}").close()
+      conn.execute("CREATE UNIQUE INDEX ${quoteIdent("$table\$unique")} ON $target (fn, nv) INCLUDE (version)").close()
+      conn.execute("CREATE INDEX ${quoteIdent("$table\$version")} ON $target (version, nv) INCLUDE (fn)").close()
+      for (column in columns) {
+        if (column.name == "id") conn.execute("CREATE INDEX ${quoteIdent("$table\$id")} ON $target (${column.ident}) INCLUDE (fn, version, nv)").close()
+      }
+      conn.execute("COMMENT ON TABLE $target IS ${PgUtil.quoteLiteral(owner)}").close()
+      for (column in columns) conn.execute("COMMENT ON COLUMN $target.${column.ident} IS ${PgUtil.quoteLiteral(column.name)}").close()
+      for (index in indices) collection_create_index(conn, schema, table, index)
+      if (!options.storeHistory) {
+        PgPartitions.head(conn, schema, table, options.partitions, options.toastTupleTarget, 50, options.tablespace)
+        return@execute_sql
+      }
+      // Metadata is published later in this transaction. Initialize synchronously from the creation descriptor, never wait for the background sweep.
+      PgPartitions.maintain(conn, schema, table, PgPartitions.currentVersion(conn), options)
+    }
+  }
+
+  /**
+   * Provision HEAD, the range containing [version], and up to three future finite ranges; repair missing leaves on retained ranges. Uses active collection metadata unless explicit creation options are provided. Never allocates versions or recreates missing roots.
+   *
+   * Requires a caller-owned transaction; advisory and DDL locks last until its completion. The caller must provision coverage before writing finite next-versions outside existing ranges. Automatic allocator/scheduler selection is separate from this core. No commit, rollback, retention or connection closure occurs here.
+   * @since 3.0
+   */
+  internal fun collection_maintain_partitions(conn: PgConnection, schema: PgSchemaName, table: PgTableName, version: Long, options: PgCollectionCreateOptions? = null) {
+    execute_sql(schema = schema, table = table) {
+      val resolved = options ?: (PgMaintenance.find(this, conn, schema, table)
+        ?: throw collectionNotFound("Collection $schema.$table has no active metadata")).creationOptions(storage.config, maxTupleSize)
+      PgPartitions.maintain(conn, schema, table, version, resolved)
+    }
+  }
+
+  /**
+   * Discover active collections and reserved descriptors from uncached metadata and maintain them in deterministic physical-name order. Busy metadata/roots are skipped without waiting. No-op attempts release all attempt-local guards without requesting exclusive table locks; only DDL attempts retain exclusive locks. Requires a caller-owned READ COMMITTED transaction; errors other than contention require caller rollback. Never allocates a logical version or commits.
+   * @since 3.0
+   */
+  internal fun maintain_partitions(conn: PgConnection): Int = execute_sql_notnull {
+    PgMaintenance.maintainAll(this, conn)
+  }
+
+  /**
+   * Drops the table cascading, if it exists. Does not fail, if the table does not exist.
+   *
+   * Removes the physical root and dependent HEAD/history leaves and indexes. Logical collection metadata and owner comments are not consulted or modified; the higher-level writer owns metadata deletion in the same transaction.
+   * A shared catalog guard and exclusive collection lock allow unrelated collections to proceed concurrently; maintenance skips this busy collection.
+   * @param conn the caller-owned connection; requires autoCommit false and does not commit, roll back or close it.
+   * @param schema the unquoted schema name; may be absent and must contain 1..63 UTF-8 bytes without NUL.
+   * @param table the unquoted root table name; may be absent and must contain 1..29 UTF-8 bytes without NUL.
+   * @since 3.0
+   */
+  internal fun collection_drop_if_exists(conn: PgConnection, schema: PgSchemaName, table: PgTableName) {
+    execute_sql(schema = schema, table = table) {
+      if (conn.autoCommit) throw illegalState("Collection drop requires a caller-owned transaction")
+      PgPartitions.lockCollection(conn, schema, table)
+      conn.execute("DROP TABLE IF EXISTS ${quoteIdent(schema)}.${quoteIdent(table)} CASCADE").close()
+    }
+  }
+
+  /**
+   * Create a custom root index, including the configuration needed by future partitions.
+   * [schema] and [table] are unquoted physical names; [index] is a descriptor, not a table object.
+   * Mandatory indexes are intrinsic to collection creation.
+   * A shared catalog guard and exclusive collection lock serialize DDL for this collection; maintenance skips it while busy.
+   *
+   * Creates/attaches the index for existing children and updates the supported partition-management
+   * configuration so future children receive it. Index method and INCLUDE rules must be validated
+   * before issuing DDL; the per-method contract is agreed separately.
+   * @param conn the caller-owned connection; this method does not commit or close it.
+   * @param schema the unquoted physical schema containing the root.
+   * @param table the unquoted physical collection root name, not a partition name.
+   * @param index the custom key columns/order, includes, and conditional predicate descriptor.
+   * @throws NakshaException if index validation or DDL fails.
+   * @since 3.0
+   */
+  internal fun collection_create_index(conn: PgConnection, schema: PgSchemaName, table: PgTableName, index: PgIndex) {
+    execute_sql(schema = schema, table = table) {
+      val definition = index.definition()
+      val indexName = index.id.indexName(table)
+      PgPartitions.lockCollection(conn, schema, table)
+      // A parent index covers existing partitions and is inherited by future PARTITION OF children.
+      conn.execute("CREATE INDEX ${quoteIdent(indexName)} ON ${quoteIdent(schema)}.${quoteIdent(table)} $definition").close()
+    }
+  }
+
+  /**
+   * Drop a custom root index, its attached child indexes, and its future-partition configuration.
+   * An absent index is a successful no-op. This operation does not remove mandatory collection keys.
+   * A shared catalog guard and exclusive collection lock serialize DDL for this collection; maintenance skips it while busy.
+   * @param conn the caller-owned connection; this method does not commit or close it.
+   * @param schema the unquoted physical schema containing the root.
+   * @param table the unquoted physical collection root name.
+   * @param index the descriptor identifying the custom index to remove.
+   * @throws NakshaException if the DDL fails.
+   * @since 3.0
+   */
+  internal fun collection_drop_index(conn: PgConnection, schema: PgSchemaName, table: PgTableName, index: PgIndex) {
+    execute_sql(schema = schema, table = table) {
+      val indexName = index.id.indexName(table)
+      PgPartitions.lockCollection(conn, schema, table)
+      conn.execute("DROP INDEX IF EXISTS ${quoteIdent(schema)}.${quoteIdent(indexName)}").close()
+    }
+  }
+
+  // Row-operation boundary (NAKSHA-33, db-01-c/db-01-g):
+  // - schema/table are the catalog/collection [Id] of the target; the database identity is this
+  //   instance's [id]. conn belongs to the caller; these functions never commit or roll back.
+  // - Inputs are immutable: new-state operations take [NewTuple] wrappers, selection operations
+  //   take feature [Id]s or [Guid]s. Cached tuples and inputs are never mutated.
+  // - storeHistory selects archival (change the predecessor `nv`) versus current-only mutation.
+  // - version is the caller's transaction version; delete/purge need it to archive or create states.
+  // - Result order is the input order (with the agreed DELETE omissions and PURGE null positions);
+  //   SQL row order is never assumed.
+  // - Failures construct a [NakshaError], wrap it in [NakshaException], and throw; there is no
+  //   nullable-error return. An exception may follow partial mutation: the caller rolls back.
+  // - Validate target identity with id.number, schema.intValue, table.intValue and featureNumber;
+  //   never reconstruct Ids from text for validation. Conflicts preserve full versions in errors.
+  // - Mutations close internal plans/cursors, never the connection. Preserve caller-controlled
+  //   SQL logging and planning-only EXPLAIN; EXPLAIN ANALYZE would execute the mutation.
+
+  /**
+   * Insert new HEAD states. Every input [NewTuple] must carry a `null` predecessor; a non-null
+   * predecessor is an illegal argument, rejected before any mutation.
+   *
+   * For each feature, an existing DELETE HEAD is archived by changing its `nv` when [storeHistory] is enabled, otherwise replaced in place. A live CREATE/UPDATE HEAD is an
+   * error. New states are inserted through the root with `nv = Version.HEAD.number` and CREATE
+   * action. Re-creation requires a strictly newer transaction version than the DELETE HEAD. Returns the supplied tuple states in input order.
+   *
+   * Preconditions: the caller has opened a savepoint, validated transaction-wide feature
+   * uniqueness, and sorted inputs into the deterministic locking order. The entire batch is validated before SQL. The caller must provision finite history partition coverage for incoming versions before archiving tombstones; no maintenance locks are acquired here. No commit/rollback here.
+   * @param conn the caller-owned mutable connection; it is not closed by this method.
+   * @param schema the catalog [Id] of the target collection.
+   * @param table the collection [Id] of the target.
+   * @param tuples the fully encoded new states; each predecessor must be `null`.
+   * @param storeHistory whether replaced DELETE states are archived instead of overwritten.
+   * @param columns the complete physical column definitions for the target collection.
+   * @return the supplied tuple states, in input order.
+   * @throws NakshaException wrapping a [NakshaError] on any failure.
+   * @since 3.0
+   */
+  internal fun rows_insert(
+    conn: PgConnection, schema: Id, table: Id, tuples: List<NewTuple>, storeHistory: Boolean, columns: Array<PgColumn>
+  ): List<Tuple> = execute_sql_notnull(schema.schemaName(), table.tableName()) {
+    try {
+      if (conn.autoCommit) throw illegalState("Row insertion requires a caller-owned transaction")
+      val head = Version.HEAD.number
+      val databaseNumber = id.number
+      val catalogNumber = schema.intValue
+      val collectionNumber = table.intValue
+      for (incoming in tuples) {
+        val tuple = incoming.tuple
+        val tn = tuple.tupleNumber
+        val reason = when {
+          incoming.previousTupleNumber != null -> "Row insertion requires a null predecessor"
+          tn.databaseNumber != databaseNumber || tn.catalogNumber != catalogNumber || tn.collectionNumber != collectionNumber -> "Inserted tuple does not belong to the target collection"
+          tn.action != Action.CREATE -> "Row insertion requires CREATE action"
+          tuple.nextVersion != head -> "Row insertion requires a HEAD state"
+          tuple.featureBytes.isEmpty() -> "Row insertion requires a fully encoded tuple"
+          tn.version < 0L || tn.version >= head -> "Row insertion requires a finite version"
+          else -> null
+        }
+        if (reason != null) {
+          throw NakshaException(NakshaError(
+            code = NakshaError.ILLEGAL_ARGUMENT,
+            msg = reason,
+            id = tuple.id.text,
+            collection = table.text,
+            catalog = schema.text,
+            database = id.text
+          ))
+        }
+      }
+      val result = ArrayList<Tuple>(tuples.size)
+      val inputs = ArrayList<PgMutationInput>(tuples.size)
+      for (tuple in tuples) inputs.add(PgMutationInput.fromTuple(PgMutationOp.CREATE, tuple))
+      for (outcome in PgBatchMutation(id, schema, table, columns, storeHistory).execute(conn, inputs)) {
+        result.add(outcome.state ?: throw illegalState("CREATE did not return a state"))
+      }
+      result
+    } catch (e: NakshaException) {
+      val error = e.error
+      if (error.database == null) error.database = id.text
+      if (error.catalog == null) error.catalog = schema.text
+      if (error.collection == null) error.collection = table.text
+      throw e
+    }
+  }
+
+  /**
+   * Replace current HEAD states or insert missing ones. A supplied predecessor is validated for
+   * target identity first and never conditions phase 1. Phase 1 inserts into an absent HEAD or
+   * replaces a DELETE HEAD. Only a live CREATE/UPDATE HEAD selects phase 2, which updates
+   * unconditionally or, when a predecessor is supplied, conditionally on its masked version.
+   *
+   * The input states carry the CREATE action; the UPDATE branch stores and returns them with the
+   * UPDATE action bit set, while the INSERT branch keeps CREATE. With [storeHistory] enabled a
+   * replaced HEAD is archived by changing its `nv` to the new version; otherwise it is replaced in
+   * place. Replacing any HEAD requires a strictly newer transaction version, ignoring action bits; otherwise a structured conflict is thrown. The complete input batch is validated before SQL.
+   *
+   * Returns, per input, a [NewTuple] whose `previousTupleNumber` is set when UPDATE was performed
+   * and `null` when INSERT was performed (including re-creation after a DELETE HEAD), in input order.
+   *
+   * Preconditions: the caller has opened a savepoint, validated transaction-wide feature
+   * uniqueness, and sorted inputs into the deterministic locking order. No commit/rollback here.
+   * @param conn the caller-owned mutable connection; it is not closed by this method.
+   * @param schema the catalog [Id] of the target collection.
+   * @param table the collection [Id] of the target.
+   * @param tuples the fully encoded new states with their expected predecessors.
+   * @param storeHistory whether replaced HEAD states are archived rather than discarded.
+   * @param columns the physical column descriptors of the target collection.
+   * @return the final states with predecessor set only for the UPDATE branch, in input order.
+   * @throws NakshaException wrapping a [NakshaError] on any failure.
+   * @since 3.0
+   */
+  internal fun rows_upsert(
+    conn: PgConnection, schema: Id, table: Id, tuples: List<NewTuple>, storeHistory: Boolean, columns: Array<PgColumn>
+  ): List<NewTuple> = execute_sql_notnull(schema.schemaName(), table.tableName()) {
+    try {
+      if (conn.autoCommit) throw illegalState("Row upsert requires a caller-owned transaction")
+      val head = Version.HEAD.number
+      val databaseNumber = id.number
+      val catalogNumber = schema.intValue
+      val collectionNumber = table.intValue
+      for (incoming in tuples) {
+        val tuple = incoming.tuple
+        val tn = tuple.tupleNumber
+        val prev = incoming.previousTupleNumber
+        val reason = when {
+          prev != null && (prev.databaseNumber != databaseNumber || prev.catalogNumber != catalogNumber || prev.collectionNumber != collectionNumber || prev.featureNumber != tn.featureNumber) -> "Upsert predecessor does not belong to the target feature"
+          tn.databaseNumber != databaseNumber || tn.catalogNumber != catalogNumber || tn.collectionNumber != collectionNumber -> "Upserted tuple does not belong to the target collection"
+          tn.action != Action.CREATE -> "Row upsert requires CREATE action"
+          tuple.nextVersion != head -> "Row upsert requires a HEAD state"
+          tuple.featureBytes.isEmpty() -> "Row upsert requires a fully encoded tuple"
+          tn.version < 0L || tn.version >= head -> "Row upsert requires a finite version"
+          else -> null
+        }
+        if (reason != null) throw NakshaException(NakshaError(
+          code = NakshaError.ILLEGAL_ARGUMENT,
+          msg = reason,
+          id = tuple.id.text,
+          collection = table.text,
+          catalog = schema.text,
+          database = id.text
+        ))
+      }
+      val result = ArrayList<NewTuple>(tuples.size)
+      val inputs = ArrayList<PgMutationInput>(tuples.size)
+      for (tuple in tuples) inputs.add(PgMutationInput.fromTuple(PgMutationOp.UPSERT, tuple))
+      for (outcome in PgBatchMutation(id, schema, table, columns, storeHistory).execute(conn, inputs)) {
+        result.add(NewTuple(outcome.state ?: throw illegalState("UPSERT did not return a state"), outcome.previous))
+      }
+      result
+    } catch (e: NakshaException) {
+      val error = e.error
+      if (error.database == null) error.database = id.text
+      if (error.catalog == null) error.catalog = schema.text
+      if (error.collection == null) error.collection = table.text
+      throw e
+    }
+  }
+
+  /**
+   * Replace existing live HEAD states. An input [NewTuple] with a non-null predecessor requests an
+   * atomic UPDATE conditioned on the predecessor's version (low two action bits masked); `null`
+   * selects an unconditional UPDATE. A missing HEAD, a DELETE HEAD, or a mismatching predecessor
+   * is a structured error. A successor must have a strictly newer transaction version, ignoring action bits. The input states carry the UPDATE action and are stored unchanged.
+   *
+   * With [storeHistory] enabled the old HEAD is archived by changing its `nv`; otherwise the HEAD
+   * row is updated in place. Returns, per input, a [NewTuple] whose `previousTupleNumber` is the
+   * actual replaced live HEAD and whose [NewTuple.tuple] is the supplied new state, in input order.
+   *
+   * Preconditions: the caller has opened a savepoint, validated transaction-wide feature
+   * uniqueness, and sorted inputs into the deterministic locking order. No commit/rollback here.
+   * @param conn the caller-owned mutable connection; no commit, rollback, or close is performed here.
+   * @param schema the catalog [Id] of the target collection.
+   * @param table the collection [Id] of the target.
+   * @param tuples the fully encoded new states with their expected predecessors.
+   * @param storeHistory whether replaced HEAD states are archived rather than overwritten.
+   * @param columns the physical column descriptors of the target collection.
+   * @return the new states with the actual replaced predecessor, in input order.
+   * @throws NakshaException wrapping a [NakshaError] on any failure.
+   * @since 3.0
+   */
+  internal fun rows_update(
+    conn: PgConnection, schema: Id, table: Id, tuples: List<NewTuple>, storeHistory: Boolean, columns: Array<PgColumn>
+  ): List<NewTuple> = execute_sql_notnull(schema.schemaName(), table.tableName()) {
+    try {
+      if (conn.autoCommit) throw illegalState("Row update requires a caller-owned transaction")
+      val head = Version.HEAD.number
+      val databaseNumber = id.number
+      val catalogNumber = schema.intValue
+      val collectionNumber = table.intValue
+      for (incoming in tuples) {
+        val tuple = incoming.tuple
+        val tn = tuple.tupleNumber
+        val prev = incoming.previousTupleNumber
+        val reason = when {
+          prev != null && (prev.databaseNumber != databaseNumber || prev.catalogNumber != catalogNumber || prev.collectionNumber != collectionNumber || prev.featureNumber != tn.featureNumber) -> "Update predecessor does not belong to the target feature"
+          tn.databaseNumber != databaseNumber || tn.catalogNumber != catalogNumber || tn.collectionNumber != collectionNumber -> "Updated tuple does not belong to the target collection"
+          tn.action != Action.UPDATE -> "Row update requires an UPDATE state"
+          tuple.nextVersion != head -> "Row update requires a HEAD state"
+          tuple.featureBytes.isEmpty() -> "Row update requires a fully encoded tuple"
+          tn.version < 0L || tn.version >= head -> "Row update requires a finite version"
+          else -> null
+        }
+        if (reason != null) throw NakshaException(NakshaError(
+          code = NakshaError.ILLEGAL_ARGUMENT,
+          msg = reason,
+          id = tuple.id.text,
+          collection = table.text,
+          catalog = schema.text,
+          database = id.text
+        ))
+      }
+      val result = ArrayList<NewTuple>(tuples.size)
+      val inputs = ArrayList<PgMutationInput>(tuples.size)
+      for (tuple in tuples) inputs.add(PgMutationInput.fromTuple(PgMutationOp.UPDATE, tuple))
+      for (outcome in PgBatchMutation(id, schema, table, columns, storeHistory).execute(conn, inputs)) {
+        result.add(NewTuple(outcome.state ?: throw illegalState("UPDATE did not return a state"), outcome.previous))
+      }
+      result
+    } catch (e: NakshaException) {
+      val error = e.error
+      if (error.database == null) error.database = id.text
+      if (error.catalog == null) error.catalog = schema.text
+      if (error.collection == null) error.collection = table.text
+      throw e
+    }
+  }
+
+  /**
+   * Purge DELETE HEAD states for the given features, returning one nullable [Guid] per input in
+   * exactly the input order. Only HEAD states in DELETE action are purged: with [storeHistory]
+   * enabled the tombstone is archived by changing its `nv` to [version], otherwise it is removed.
+   * A live CREATE/UPDATE HEAD is left untouched and its current HEAD GUID is returned; a feature
+   * with no HEAD yields `null`. Purging a tombstone requires a strictly newer transaction version, including when history is disabled. This is a positional contract: `result[i]` describes
+   * `featureIds[i]` and the list size equals `featureIds.size`.
+   *
+    * Preconditions: the caller has opened a savepoint, validated transaction-wide feature
+    * uniqueness, and sorted inputs into the deterministic locking order. No commit/rollback here.
+    * @param conn the caller-owned mutable connection; no commit, rollback, or close is performed here.
+    * @param collection the target collection; its catalog id, collection id, columns and store-history flag are used.
+    * @param version the caller's transaction version used to archive purged tombstones.
+    * @param featureIds the features to purge, in the order results must be returned.
+    * @return one GUID (the purged tombstone or the unchanged live HEAD) or `null` (no HEAD), per input.
+    * @throws NakshaException wrapping a [NakshaError] on a genuine database failure.
+    * @since 3.0
+    */
+   internal fun rows_purge(
+     conn: PgConnection, collection: PgCollection, version: Long, featureIds: List<Id>
+   ): List<Guid?> = execute_sql_notnull(collection.catalogId.schemaName(), collection.id.tableName()) {
+     try {
+       if (conn.autoCommit) throw illegalState("Row purge requires a caller-owned transaction")
+        val inputs = ArrayList<PgMutationInput>(featureIds.size)
+        for (fid in featureIds) inputs.add(PgMutationInput(PgMutationOp.PURGE, fid.number, fid.text, version))
+        val result = ArrayList<Guid?>(inputs.size)
+        for (outcome in PgBatchMutation(id, collection.catalogId, collection.id, collection.columns, collection.storeHistory, collection).execute(conn, inputs)) {
+          val tuple = outcome.state
+          result.add(if (tuple == null) null else Guid(tuple.id.text, tuple.tupleNumber))
+        }
+        result
+     } catch (e: NakshaException) {
+       val error = e.error
+       if (error.database == null) error.database = id.text
+       if (error.catalog == null) error.catalog = collection.catalogId.text
+       if (error.collection == null) error.collection = collection.id.text
+       throw e
+     }
+   }
+
+  /**
+   * Delete live HEAD states by feature [Id] without returning their payload. A missing HEAD is
+   * omitted from the result; an already-deleted HEAD is returned as its existing GUID without being
+   * rewritten. The generated tombstone has DELETE action and `nv = Version.HEAD.number`; with
+   * [storeHistory] enabled the prior live state is archived. By default the old payload is retained
+   * in the tombstone; [emptyTombstone] makes every non-key column SQL NULL. A new tombstone requires a strictly newer transaction version than its live predecessor.
+   *
+    * Results preserve input order with missing features omitted. Preconditions: the caller has opened
+    * a savepoint, validated transaction-wide feature uniqueness, and sorted inputs into the
+    * deterministic locking order. No commit/rollback here.
+    * @param conn the caller-owned mutable connection; it is not closed by this method.
+    * @param collection the target collection; its catalog id, collection id, columns and store-history flag are used.
+    * @param version the caller's transaction version for the tombstone and any archival.
+    * @param featureIds the features to delete.
+    * @param emptyTombstone whether to null all non-key payload columns in the new tombstone.
+    * @return the GUIDs of the deleted (or already-deleted) features, in input order, omitting missing.
+    * @throws NakshaException wrapping a [NakshaError] on any failure.
+    * @since 3.0
+    */
+   internal fun rows_delete_by_id_without_result(
+     conn: PgConnection, collection: PgCollection, version: Long,
+     featureIds: List<Id>, emptyTombstone: Boolean = false
+   ): List<Guid> = execute_sql_notnull(collection.catalogId.schemaName(), collection.id.tableName()) {
+     try {
+       if (conn.autoCommit) throw illegalState("Row delete requires a caller-owned transaction")
+        val inputs = ArrayList<PgMutationInput>(featureIds.size)
+        for (fid in featureIds) inputs.add(PgMutationInput(PgMutationOp.DELETE, fid.number, fid.text, version, emptyTombstone = emptyTombstone))
+        val result = ArrayList<Guid>(inputs.size)
+        for (outcome in PgBatchMutation(id, collection.catalogId, collection.id, collection.columns, collection.storeHistory, collection).execute(conn, inputs)) {
+          val tuple = outcome.state
+          if (tuple != null) result.add(Guid(tuple.id.text, tuple.tupleNumber))
+        }
+        result
+     } catch (e: NakshaException) {
+       val error = e.error
+       if (error.database == null) error.database = id.text
+       if (error.catalog == null) error.catalog = collection.catalogId.text
+       if (error.collection == null) error.collection = collection.id.text
+       throw e
+     }
+   }
+
+  /**
+   * Delete live HEAD states by feature [Id], returning the deleted states. A missing HEAD is omitted;
+   * an already-deleted HEAD is returned unchanged with `previousTupleNumber = null`. The generated
+   * tombstone retains the old payload; with [storeHistory] enabled the prior live state is archived.
+   *
+    * Results preserve input order with missing features omitted. Preconditions: the caller has opened
+    * a savepoint, validated transaction-wide feature uniqueness, and sorted inputs into the
+    * deterministic locking order. No commit/rollback here.
+    * @param conn the caller-owned mutable connection; it is not closed by this method.
+    * @param collection the target collection; its catalog id, collection id, columns and store-history flag are used.
+    * @param version the caller's transaction version for the tombstone and any archival.
+    * @param featureIds the features to delete.
+    * @return the created tombstones (or existing deleted states) with predecessor references, in input order.
+    * @throws NakshaException wrapping a [NakshaError] on any failure.
+    * @since 3.0
+    */
+   internal fun rows_delete_by_id_with_result(
+     conn: PgConnection, collection: PgCollection, version: Long, featureIds: List<Id>
+   ): List<NewTuple> = execute_sql_notnull(collection.catalogId.schemaName(), collection.id.tableName()) {
+     try {
+       if (conn.autoCommit) throw illegalState("Row delete requires a caller-owned transaction")
+        val inputs = ArrayList<PgMutationInput>(featureIds.size)
+        for (fid in featureIds) inputs.add(PgMutationInput(PgMutationOp.DELETE, fid.number, fid.text, version))
+        val result = ArrayList<NewTuple>(inputs.size)
+        for (outcome in PgBatchMutation(id, collection.catalogId, collection.id, collection.columns, collection.storeHistory, collection).execute(conn, inputs)) {
+          val tuple = outcome.state
+          if (tuple != null) result.add(NewTuple(tuple, outcome.previous))
+        }
+        result
+     } catch (e: NakshaException) {
+       val error = e.error
+       if (error.database == null) error.database = id.text
+       if (error.catalog == null) error.catalog = collection.catalogId.text
+       if (error.collection == null) error.collection = collection.id.text
+       throw e
+     }
+   }
+
+  /**
+   * Conditionally delete live HEAD states by expected [Guid], returning GUIDs without payload. For a
+   * live HEAD the expected version must match (low two action bits masked); a mismatch or missing
+   * state is an error. An already-DELETE HEAD is accepted and returned even when its tuple number
+   * differs from the expectation, without being rewritten. Mirrors
+   * [rows_delete_by_id_without_result], including [emptyTombstone], but keys selection on GUIDs.
+   *
+    * Results preserve input order with missing features omitted. Preconditions: the caller has opened
+    * a savepoint, validated transaction-wide feature uniqueness, and sorted inputs into the
+    * deterministic locking order. No commit/rollback here.
+    * @param conn the caller-owned mutable connection; it is not closed by this method.
+    * @param collection the target collection; its catalog id, collection id, columns and store-history flag are used.
+    * @param version the caller's transaction version for the tombstone and any archival.
+    * @param guids the expected states to delete.
+    * @param emptyTombstone whether to null all non-key payload columns in the new tombstone.
+    * @return the GUIDs of the deleted (or already-deleted) features, in input order, omitting missing.
+    * @throws NakshaException wrapping a [NakshaError] on a mismatch or database failure.
+    * @since 3.0
+    */
+   internal fun rows_delete_by_guid_without_result(
+     conn: PgConnection, collection: PgCollection, version: Long,
+     guids: List<Guid>, emptyTombstone: Boolean = false
+   ): List<Guid> = execute_sql_notnull(collection.catalogId.schemaName(), collection.id.tableName()) {
+     try {
+       if (conn.autoCommit) throw illegalState("Row delete requires a caller-owned transaction")
+        val inputs = ArrayList<PgMutationInput>(guids.size)
+        for (guid in guids) inputs.add(PgMutationInput(PgMutationOp.DELETE, guid.tupleNumber.featureNumber, guid.id, version,
+          expected = guid.tupleNumber, emptyTombstone = emptyTombstone))
+        val result = ArrayList<Guid>(inputs.size)
+        for (outcome in PgBatchMutation(id, collection.catalogId, collection.id, collection.columns, collection.storeHistory, collection).execute(conn, inputs)) {
+          val tuple = outcome.state
+          if (tuple != null) result.add(Guid(tuple.id.text, tuple.tupleNumber))
+        }
+        result
+     } catch (e: NakshaException) {
+       val error = e.error
+       if (error.database == null) error.database = id.text
+       if (error.catalog == null) error.catalog = collection.catalogId.text
+       if (error.collection == null) error.collection = collection.id.text
+       throw e
+     }
+   }
+
+  /**
+   * Conditionally delete live HEAD states by expected [Guid], returning the deleted states. For a
+   * live HEAD the expected version must match (low two action bits masked); a mismatch or missing
+   * state is an error. An already-DELETE HEAD is returned with `previousTupleNumber = null` even
+   * when its tuple number differs from the expectation. Mirrors [rows_delete_by_id_with_result],
+   * but keys selection on GUIDs.
+   *
+    * Results preserve input order with missing features omitted. Preconditions: the caller has opened
+    * a savepoint, validated transaction-wide feature uniqueness, and sorted inputs into the
+    * deterministic locking order. No commit/rollback here.
+    * @param conn the caller-owned mutable connection; it is not closed by this method.
+    * @param collection the target collection; its catalog id, collection id, columns and store-history flag are used.
+    * @param version the caller's transaction version for the tombstone and any archival.
+    * @param guids the expected states to delete.
+    * @return the created tombstones (or existing deleted states) with predecessor references, in input order.
+    * @throws NakshaException wrapping a [NakshaError] on a mismatch or database failure.
+    * @since 3.0
+    */
+   internal fun rows_delete_by_guid_with_result(
+     conn: PgConnection, collection: PgCollection, version: Long, guids: List<Guid>
+   ): List<NewTuple> = execute_sql_notnull(collection.catalogId.schemaName(), collection.id.tableName()) {
+     try {
+       if (conn.autoCommit) throw illegalState("Row delete requires a caller-owned transaction")
+        val inputs = ArrayList<PgMutationInput>(guids.size)
+        for (guid in guids) inputs.add(PgMutationInput(PgMutationOp.DELETE, guid.tupleNumber.featureNumber, guid.id, version, expected = guid.tupleNumber))
+        val result = ArrayList<NewTuple>(inputs.size)
+        for (outcome in PgBatchMutation(id, collection.catalogId, collection.id, collection.columns, collection.storeHistory, collection).execute(conn, inputs)) {
+          result.add(NewTuple(outcome.state ?: throw illegalState("Atomic delete must return a state"), outcome.previous))
+        }
+        result
+     } catch (e: NakshaException) {
+       val error = e.error
+       if (error.database == null) error.database = id.text
+       if (error.catalog == null) error.catalog = collection.catalogId.text
+       if (error.collection == null) error.collection = collection.id.text
+       throw e
+     }
+   }
+
+  /**
+   * Write explicit HEAD tombstones. Each input [NewTuple] must encode DELETE action. Without a
+   * supplied predecessor the existing HEAD must be live (CREATE/UPDATE); with a predecessor it must
+   * be exactly that HEAD state (action-sensitive comparison). A missing or mismatching HEAD is an
+   * error; an existing unrelated tombstone is never reported as a successful creation. With
+   * [storeHistory] enabled the replaced live state is archived. The explicit state must have a strictly newer transaction version than HEAD; its version is never rewritten. The complete input batch is validated before SQL.
+   *
+    * Preconditions: the caller has opened a savepoint, validated transaction-wide feature
+     * uniqueness, and sorted inputs into the deterministic locking order. No commit/rollback here.
+    * @param conn the caller-owned mutable connection; it is not closed by this method.
+    * @param collection the target collection; its catalog id, collection id, columns and store-history flag are used.
+    * @param version the caller's transaction version for the tombstone and any archival.
+    * @param tuples the explicit tombstone states to create, with their expected predecessors.
+    * @return the created tombstones with predecessor references, in input order.
+    * @throws NakshaException wrapping a [NakshaError] on any failure.
+    * @since 3.0
+    */
+   internal fun rows_delete_with_new_state(
+     conn: PgConnection, collection: PgCollection, version: Long, tuples: List<NewTuple>
+   ): List<NewTuple> = execute_sql_notnull(collection.catalogId.schemaName(), collection.id.tableName()) {
+     try {
+       if (conn.autoCommit) throw illegalState("Row delete requires a caller-owned transaction")
+       val head = Version.HEAD.number
+       val databaseNumber = id.number
+       val catalogNumber = collection.catalogId.intValue
+       val collectionNumber = collection.id.intValue
+       for (incoming in tuples) {
+         val tuple = incoming.tuple
+         val tn = tuple.tupleNumber
+         val prev = incoming.previousTupleNumber
+         val reason = when {
+           prev != null && (prev.databaseNumber != databaseNumber || prev.catalogNumber != catalogNumber || prev.collectionNumber != collectionNumber || prev.featureNumber != tn.featureNumber) -> "Delete predecessor does not belong to the target feature"
+           tn.databaseNumber != databaseNumber || tn.catalogNumber != catalogNumber || tn.collectionNumber != collectionNumber -> "Deleted tuple does not belong to the target collection"
+           tn.action != Action.DELETE -> "Explicit row delete requires DELETE action"
+           tuple.nextVersion != head -> "Explicit row delete requires a HEAD state"
+           tuple.featureBytes.isEmpty() -> "Explicit row delete requires a fully encoded tuple"
+           tn.version < 0L || tn.version >= head -> "Explicit row delete requires a finite version"
+           else -> null
+         }
+         if (reason != null) throw NakshaException(NakshaError(
+           code = NakshaError.ILLEGAL_ARGUMENT, msg = reason, id = tuple.id.text,
+           collection = collection.id.text, catalog = collection.catalogId.text, database = id.text
+         ))
+       }
+        val inputs = ArrayList<PgMutationInput>(tuples.size)
+        for (tuple in tuples) inputs.add(PgMutationInput.fromTuple(PgMutationOp.EXPLICIT_DELETE, tuple))
+        val result = ArrayList<NewTuple>(inputs.size)
+        for (outcome in PgBatchMutation(id, collection.catalogId, collection.id, collection.columns, collection.storeHistory, collection).execute(conn, inputs)) {
+          result.add(NewTuple(outcome.state ?: throw illegalState("Explicit delete must return a state"), outcome.previous))
+        }
+        result
+     } catch (e: NakshaException) {
+       val error = e.error
+       if (error.database == null) error.database = id.text
+       if (error.catalog == null) error.catalog = collection.catalogId.text
+       if (error.collection == null) error.collection = collection.id.text
+       throw e
+     }
+   }
+
+  /**
+   * Prepare a physical SQL query without depending on the logical [PgQuery] wrapper.
+   * The caller binds values and closes the returned plan and its cursors.
+   * [schema] and [table] supply error context; [sql] contains the qualified query.
+   * This only prepares the query: it does not execute it, consume rows, or modify an input batch.
+   * @param conn the caller-owned connection on which the returned plan will execute.
+   * @param schema the unquoted physical schema for error reporting.
+   * @param table the unquoted physical root table for error reporting.
+   * @param sql the query text, with qualified/quoted relation names and parameter placeholders.
+   * @param argTypes the PostgreSQL parameter type names in placeholder order.
+   * @return the prepared plan; its lifetime must not exceed the connection's lifetime.
+   * @throws NakshaException if preparation fails; unlike mutations, this method returns a plan,
+   * not an error status.
+   * @since 3.0
+   */
+  internal fun rows_query(
+    conn: PgConnection, schema: PgSchemaName, table: PgTableName, sql: String, argTypes: Array<String>
+  ): PgPlan = TODO("db-09: prepare physical row query")
+}
+
+/**
+ * Extract the `lib-psql` name of the database from the given identifier.
+ *
+ * Preserve ordinary legal text up to 42 UTF-8 bytes, including UNSAFE text requiring SQL quoting. Otherwise generate an internal `d$` alias. INTERNAL and RESERVED text follows the normal alias acceptance policy.
+ * @return the identifier to be used in the database.
+ * @since 3.0
+ * @throws NakshaException with error [ILLEGAL_ID][NakshaError.ILLEGAL_ID], if the identifier text is illegal.
+ */
+internal fun Id.databaseName(): PgDatabaseName = PgDatabaseName.of(this)
+
+/**
+ * Extract the `lib-psql` name of the catalog from the given identifier.
+ *
+ * Preserve URL-safe names up to 25 UTF-8 bytes and reserved built-ins up to 32 bytes. Other legal names use an internal `s$` alias, with underscore for a negative integer.
+ * @return the identifier to be used in the database.
+ * @since 3.0
+ */
+internal fun Id.schemaName(): PgSchemaName = PgSchemaName.of(this)
+
+/**
+ * Extract the `lib-psql` name of the collection from the given identifier.
+ *
+ * Preserve URL-safe or reserved names up to 29 UTF-8 bytes. Longer names use an internal `t$` alias, including reserved names that would exhaust the generated child/index budget.
+ * @return the identifier to be used in the database.
+ * @since 3.0
+ */
+internal fun Id.tableName(): PgTableName = PgTableName.of(this)
+
+/**
+ * Extract the `lib-psql` name of the database from the given identifier.
+ *
+ * Preserve SAFE names up to 42 UTF-8 bytes; otherwise generate an internal `m$` alias. Logical member names are not modified.
+ * @return the identifier to be used in the database.
+ * @since 3.0
+ */
+internal fun Id.columnName(): String {
+  return textAlias(IdTextType.SAFE, 42, "m")
+}
+
+/**
+ * Returns the SQL quoted name of the identifier. This method will only quote when necessary.
+ * @return the identifier to be used in the database.
+ * @since 3.0
+ */
+internal fun Id.quotedName(): String {
+  return quoteIdent(text)
+}
+
+internal const val PG_IDENTIFIER_BYTES = 63
+internal const val PG_HISTORY_SUFFIX_BYTES = 16
+internal const val PG_PERFORMANCE_SUFFIX_BYTES = 4
+internal const val PG_INDEX_ALIAS_BYTES = 13
+internal const val PG_ROOT_NAME_BYTES = PG_IDENTIFIER_BYTES - PG_HISTORY_SUFFIX_BYTES - PG_PERFORMANCE_SUFFIX_BYTES - 1 - PG_INDEX_ALIAS_BYTES
+
+/**
+ * Returns a SAFE index alias within the fixed 13-byte budget, using prefix `i` for fallback. The worst-case alias is `i$_2147483648`; a full index identifier needs one additional dollar separator byte.
+ * @since 3.0
+ */
+internal fun Id.indexName(): String = PgIndexName.of(this).name
+
+/**
+ * Appends [indexName] to the physical [table] name with a dollar separator. Uses the same alias on roots and leaves and rejects oversized final names rather than truncating them.
+ * @since 3.0
+ */
+internal fun Id.indexName(table: PgTableName): String = PgIndexName.of(this).onTable(table)
+
+/**
+ * Names a finite history child as `{root}${version >> shift}${partitionIndex}` with dollar separators and optional performance index. Reserves 16 bytes for the history suffix and four for the performance suffix, including separators. Dated versions extract their year at shift 41.
+ * @since 3.0
+ */
+internal fun historyTableName(root: PgTableName, version: Long, shift: Int, partitionIndex: Int? = null): String =
+  root.historyName(version, shift, partitionIndex)

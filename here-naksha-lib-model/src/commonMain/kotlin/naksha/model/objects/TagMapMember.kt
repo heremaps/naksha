@@ -1,5 +1,6 @@
 package naksha.model.objects
 
+import naksha.base.AnyObject
 import naksha.model.TagMap
 import naksha.model.Tuple
 import naksha.base.illegalArg
@@ -34,7 +35,7 @@ class TagMapMember() : TypedMember<TagMapMember>() {
     }
 
     /** Retrieves the tag map value of this member from the given feature. */
-    fun get(feature: NakshaFeature): TagMap? = readTagMap(feature)
+    fun get(feature: AnyObject): TagMap? = readTagMap(feature)
 
     /**
      * Retrieves the tag map value of this member from the given tuple.
@@ -44,5 +45,5 @@ class TagMapMember() : TypedMember<TagMapMember>() {
     fun get(tuple: Tuple): TagMap? = readTagMap(tuple)
 
     /** Sets the tag map value of this member on the given feature. */
-    fun set(feature: NakshaFeature, value: TagMap): Any? = setPath(feature, path, value)
+    fun set(feature: AnyObject, value: TagMap): Any? = setPath(feature, path, value)
 }

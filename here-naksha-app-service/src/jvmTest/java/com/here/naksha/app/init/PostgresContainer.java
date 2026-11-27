@@ -16,7 +16,7 @@ import org.testcontainers.utility.DockerImageName;
 public class PostgresContainer {
 
   private static final Logger log = LoggerFactory.getLogger(PostgresContainer.class);
-  private static final String NAKSHA_POSTGRES_IMAGE = "ghcr.io/naksha-oss/naksha-postgres:v18.6";
+  private static final String NAKSHA_POSTGRES_IMAGE = "ghcr.io/naksha-oss/naksha-postgres:v18.6-rc1";
   private static final Integer POSTGRES_CONTAINER_PORT = 5432;
   private static final Integer LOCALHOST_PORT = 5432;
   private static final Duration STARTUP_TIMEOUT = Duration.ofSeconds(90);

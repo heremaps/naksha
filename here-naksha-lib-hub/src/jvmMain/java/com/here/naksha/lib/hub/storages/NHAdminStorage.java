@@ -18,6 +18,7 @@
  */
 package com.here.naksha.lib.hub.storages;
 
+import naksha.base.Id;
 import naksha.base.PlatformLock;
 import naksha.base.fn.Fn1;
 import naksha.base.fn.Fx1;
@@ -34,16 +35,23 @@ import static naksha.base.NakshaExceptionKt.unsupportedOp;
 
 public class NHAdminStorage implements IStorage {
 
+  @Override
+  public @NotNull naksha.model.objects.NakshaDatabase getDatabase() {
+    return psqlStorage.getDatabase();
+  }
+
   public static final String ID_PREFIX = "NH_ADMIN_STORAGE_";
 
   /**
    * Singleton instance of physical admin storage implementation
    */
   private final @NotNull IStorage psqlStorage;
+  private final @NotNull Id id;
 
   @ApiStatus.AvailableSince(NakshaVersion.v2_0_7)
   public NHAdminStorage(final @NotNull IStorage psqlStorage) {
     this.psqlStorage = psqlStorage;
+    this.id = new Id(ID_PREFIX + psqlStorage.getId().text());
   }
 
   @NotNull
@@ -60,8 +68,8 @@ public class NHAdminStorage implements IStorage {
 
   @NotNull
   @Override
-  public String getId() {
-    return ID_PREFIX + psqlStorage.getId();
+  public Id getId() {
+    return id;
   }
 
   @Override
@@ -77,11 +85,6 @@ public class NHAdminStorage implements IStorage {
   @Override
   public @NotNull NakshaStorage getConfig() {
     return psqlStorage.getConfig();
-  }
-
-  @Override
-  public long getNumber() {
-    return psqlStorage.getNumber();
   }
 
   public @NotNull DataEncoding getDataEncoding(@Nullable Object feature, @Nullable Object context) {

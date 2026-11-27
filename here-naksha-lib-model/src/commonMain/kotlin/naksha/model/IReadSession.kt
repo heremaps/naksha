@@ -14,14 +14,14 @@ import kotlin.js.JsExport
 
 /**
  * A read session.
- * @since 3.0.0
+ * @since 3.0
  */
 @JsExport
 interface IReadSession: ISession {
     /**
      * Execute the given [Request].
      *
-     * The read-only session will only be able to execute [ReadRequest]'s and throw an [naksha.base.NakshaError.UNSUPPORTED_OPERATION], when a [WriteRequest] is provided.
+     * The read-only session will only be able to execute [ReadRequest]'s and throw an [UNSUPPORTED_OPERATION][naksha.base.NakshaError.UNSUPPORTED_OPERATION], when a [WriteRequest] is provided.
      * @param request the request to execute.
      * @return the response.
      * @since 2.0.7

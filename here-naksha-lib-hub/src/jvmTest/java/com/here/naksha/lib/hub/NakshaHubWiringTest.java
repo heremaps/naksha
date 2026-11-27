@@ -57,6 +57,8 @@ import com.here.naksha.lib.hub.storages.NHSpaceStorage;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+
+import naksha.base.Id;
 import naksha.model.IStorage;
 import naksha.model.IWriteSession;
 import naksha.model.Naksha;
@@ -86,6 +88,8 @@ class NakshaHubWiringTest extends AbstractTest {
   @Mock
   static NakshaHub hub;
 
+  static final Id adminStorageId = new Id();
+
   @Mock
   static NHAdminStorage adminStorage;
 
@@ -102,16 +106,20 @@ class NakshaHubWiringTest extends AbstractTest {
   @BeforeEach
   void beforeEachTest() {
     MockitoAnnotations.openMocks(this);
+
     spyPipelineFactory = spy(new NakshaEventPipelineFactory(hub));
-    spaceStorage = new NHSpaceStorage(hub, spyPipelineFactory);
-    when(hub.getSpaceStorage()).thenReturn(spaceStorage);
     when(hub.getAdminStorage()).thenReturn(adminStorage);
+    when(adminStorage.getId()).thenReturn(adminStorageId);
     when(adminStorage.newReadSession(any())).thenReturn(adminStorageReader);
     when(adminStorage.newWriteSession(any())).thenReturn(adminStorageWriter);
     when(adminStorage.useReadSession(any(), any())).thenCallRealMethod();
     when(adminStorage.useWriteSession(any(), any())).thenCallRealMethod();
     doCallRealMethod().when(adminStorage).runInReadSession(any(), any());
     doCallRealMethod().when(adminStorage).runInWriteSession(any(), any());
+
+    spaceStorage = new NHSpaceStorage(hub, spyPipelineFactory);
+    when(hub.getSpaceStorage()).thenReturn(spaceStorage);
+
   }
 
   @Test
@@ -119,6 +127,7 @@ class NakshaHubWiringTest extends AbstractTest {
   void adminCollectionsUseSlimIndices() {
     final String adminMapId = "admin_map";
     final IStorage storage = mock(IStorage.class);
+    when(storage.getId()).thenReturn(new Id("admin_storage"));
     final IWriteSession writer = mock(IWriteSession.class);
     when(storage.newWriteSession(any())).thenReturn(writer);
     doCallRealMethod().when(storage).runInWriteSession(any(), any());
@@ -303,7 +312,7 @@ class NakshaHubWiringTest extends AbstractTest {
     assertTrue(requests.get(0) instanceof WriteRequest, "Expected WriteRequest type of request.");
     assertEquals(
         collectionId,
-        ((WriteRequest) requests.get(0)).getWrites().get(0).getCollectionId(),
+        ((WriteRequest) requests.get(0)).getWrites().get(0).getCollectionId().text(),
         "CollectionId mismatch for Write Feature request");
     // Verify: WriteCollection got called (to create missing table)
     assertTrue(requests.get(1) instanceof WriteRequest, "Expected WriteRequest type of request.");
@@ -312,7 +321,7 @@ class NakshaHubWiringTest extends AbstractTest {
         requests.get(1)
             .getWrites()
             .get(0)
-            .getId(),
+            .getId().text(),
         "CollectionId mismatch for Write Collection request");
     // Verify: WriteFeature into collectionId got called again
     assertTrue(
@@ -320,7 +329,7 @@ class NakshaHubWiringTest extends AbstractTest {
         "Expected WriteXyzFeatures type of request during reattempt.");
     assertEquals(
         collectionId,
-        requests.get(2).getWrites().get(0).getCollectionId(),
+        requests.get(2).getWrites().get(0).getCollectionId().text(),
         "CollectionId mismatch for reattempted Write Feature request");
   }
 }

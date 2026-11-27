@@ -86,7 +86,7 @@ open class NakshaFeature() : AnyObject() {
      * The unique identifier of the feature.
      * @since 3.0
      */
-    open var id by ID_RANDOM
+    open var id: String by ID_RANDOM
 
     /**
      * @see id
@@ -95,6 +95,16 @@ open class NakshaFeature() : AnyObject() {
         id = value
         return this
     }
+
+    /**
+     * Helper to get/set the [TupleNumber] of the collection-feature. All collection features follow the old XYZ-Hub style, therefore the location of the [TupleNumber] is clear at `properties->@ns:com:here:xyz->uuid`.
+     * @since 3.0
+     */
+    var tupleNumber: TupleNumber?
+        get() = XyzMembers.XyzTn.readTupleNumber(this)
+        set(value) {
+            XyzMembers.XyzTn.write(this, value)
+        }
 
     /**
      * The type of the feature, to be [GeoJSON](https://datatracker.ietf.org/doc/html/rfc7946) compatible, one of the following is expected:
@@ -245,4 +255,11 @@ open class NakshaFeature() : AnyObject() {
      * Human-readable description.
      */
     open var description by DESCRIPTION_NULL
+
+    /**
+     * The state of the feature, `null` if this feature is not yet persisted anywhere.
+     * @since 3.0
+     */
+    val action: Action?
+        get() = tupleNumber?.action
 }

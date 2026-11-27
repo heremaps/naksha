@@ -19,6 +19,7 @@
 package com.here.naksha.lib.view;
 
 import kotlin.reflect.KClass;
+import naksha.base.Id;
 import naksha.base.Platform;
 import naksha.jbon.JbDictionary;
 import naksha.model.AbstractStorage;
@@ -41,8 +42,8 @@ public class View extends AbstractStorage<NakshaStorage> implements IView {
   }
 
   @Override
-  public @NotNull String getId() {
-    return viewLayerCollection.getName();
+  public @NotNull Id getId() {
+    return viewLayerCollection.getId();
   }
 
   public View(@NotNull ViewLayerCollection viewLayerCollection) {
@@ -80,6 +81,11 @@ public class View extends AbstractStorage<NakshaStorage> implements IView {
   }
 
   @Override
+  public @NotNull naksha.model.objects.NakshaDatabase getDatabase() {
+    throw unsupportedOp("View.getDatabase");
+  }
+
+  @Override
   protected void afterInit() {
     // Nothing to do
   }
@@ -95,7 +101,7 @@ public class View extends AbstractStorage<NakshaStorage> implements IView {
   }
 
   @Override
-  protected void initStorage(@NotNull NakshaStorage nakshaStorage, @Nullable Boolean create, @Nullable Boolean upgrade) {
+  public void initStorage(@NotNull NakshaStorage nakshaStorage, @Nullable Boolean create, @Nullable Boolean upgrade) {
     // Nothing to do
   }
 

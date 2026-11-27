@@ -22,6 +22,9 @@ import static com.here.naksha.app.common.CommonApiTestSetup.setupHandlerAndSpace
 import static com.here.naksha.app.common.TestUtil.loadFileOrFail;
 import static com.here.naksha.app.common.TestUtil.parseJson;
 import static com.here.naksha.app.common.TestUtil.urlEncoded;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.here.naksha.app.common.ApiTest;
 import com.here.naksha.app.common.NakshaTestWebClient;
@@ -29,11 +32,19 @@ import com.here.naksha.app.common.assertions.ResponseAssertions;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.net.http.HttpResponse;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import naksha.model.XyzFeatureCollection;
+import org.json.JSONArray;
 import org.json.JSONException;
+import org.json.JSONObject;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.skyscreamer.jsonassert.JSONAssert;
+import org.skyscreamer.jsonassert.JSONCompareMode;
 
 class IterateFeaturesTest extends ApiTest {
 
@@ -79,6 +90,9 @@ class IterateFeaturesTest extends ApiTest {
     // Given: iterate parameters for first request
     final String limitQueryParam = "limit=3";
     final String firstExpectedBodyPart = loadFileOrFail("ReadFeatures/Iterate/TC1101_inTwoPages/iterate_response_1.json");
+    final String secondExpectedBodyPart = loadFileOrFail("ReadFeatures/Iterate/TC1101_inTwoPages/iterate_response_2.json");
+    final Map<String, JSONObject> expectedFeatures = featuresById(firstExpectedBodyPart, secondExpectedBodyPart);
+    final Set<String> returnedIds = new HashSet<>();
     final String firstStreamId = UUID.randomUUID().toString();
 
     // When: First iterate Features request is submitted to NakshaHub
@@ -86,12 +100,11 @@ class IterateFeaturesTest extends ApiTest {
     // Then: Perform assertions
     ResponseAssertions.assertThat(response)
         .hasStatus(200)
-        .hasStreamIdHeader(firstStreamId)
-        .hasJsonBody(firstExpectedBodyPart, "First Iterate response body doesn't match");
+        .hasStreamIdHeader(firstStreamId);
+    assertIteratePage(response, firstExpectedBodyPart, expectedFeatures, returnedIds);
 
     // Given: iterate parameters for second request
     final String handleQueryParam = "handle=" + urlEncoded(parseJson(response.body(), XyzFeatureCollection.class).getNextPageToken());
-    final String secondExpectedBodyPart = loadFileOrFail("ReadFeatures/Iterate/TC1101_inTwoPages/iterate_response_2.json");
     final String secondStreamId = UUID.randomUUID().toString();
 
     // When: Second iterate Features request is submitted to NakshaHub
@@ -100,8 +113,9 @@ class IterateFeaturesTest extends ApiTest {
     ResponseAssertions.assertThat(response)
         .hasStatus(200)
         .hasStreamIdHeader(secondStreamId)
-        .hasJsonBody(secondExpectedBodyPart, "Final Iterate response body doesn't match")
         .hasNoNextPageToken();
+    assertIteratePage(response, secondExpectedBodyPart, expectedFeatures, returnedIds);
+    assertEquals(expectedFeatures.keySet(), returnedIds, "Iteration did not return all features");
   }
 
   @Test
@@ -115,30 +129,33 @@ class IterateFeaturesTest extends ApiTest {
     // Given: iterate parameters for first request
     final String limitQueryParam = "limit=2";
     final String firstExpectedBodyPart = loadFileOrFail("ReadFeatures/Iterate/TC1102_inThreePages/iterate_response_1.json");
+    final String secondExpectedBodyPart = loadFileOrFail("ReadFeatures/Iterate/TC1102_inThreePages/iterate_response_2.json");
+    final String thirdExpectedBodyPart = loadFileOrFail("ReadFeatures/Iterate/TC1102_inThreePages/iterate_response_3.json");
+    final Map<String, JSONObject> expectedFeatures =
+        featuresById(firstExpectedBodyPart, secondExpectedBodyPart, thirdExpectedBodyPart);
+    final Set<String> returnedIds = new HashSet<>();
     final String firstStreamId = UUID.randomUUID().toString();
     // When: First iterate Features request is submitted to NakshaHub
     HttpResponse<String> response = nakshaClient.get("hub/spaces/" + SPACE_ID + "/iterate" + "?" + limitQueryParam, firstStreamId);
     // Then: Perform assertions
     ResponseAssertions.assertThat(response)
         .hasStatus(200)
-        .hasStreamIdHeader(firstStreamId)
-        .hasJsonBody(firstExpectedBodyPart, "First Iterate response body doesn't match");
+        .hasStreamIdHeader(firstStreamId);
+    assertIteratePage(response, firstExpectedBodyPart, expectedFeatures, returnedIds);
 
     // Given: iterate parameters for second request
     final String secondHandleQueryParam = "handle=" + urlEncoded(parseJson(response.body(), XyzFeatureCollection.class).getNextPageToken());
-    final String secondExpectedBodyPart = loadFileOrFail("ReadFeatures/Iterate/TC1102_inThreePages/iterate_response_2.json");
     final String secondStreamId = UUID.randomUUID().toString();
     // When: Second iterate Features request is submitted to NakshaHub
     response = nakshaClient.get("hub/spaces/" + SPACE_ID + "/iterate" + "?" + secondHandleQueryParam, secondStreamId);
     // Then: Perform assertions
     ResponseAssertions.assertThat(response)
         .hasStatus(200)
-        .hasStreamIdHeader(secondStreamId)
-        .hasJsonBody(secondExpectedBodyPart, "Second Iterate response body doesn't match");
+        .hasStreamIdHeader(secondStreamId);
+    assertIteratePage(response, secondExpectedBodyPart, expectedFeatures, returnedIds);
 
     // Given: iterate parameters for third request
     final String thirdHandleQueryParam = "handle=" + urlEncoded(parseJson(response.body(), XyzFeatureCollection.class).getNextPageToken());
-    final String thirdExpectedBodyPart = loadFileOrFail("ReadFeatures/Iterate/TC1102_inThreePages/iterate_response_3.json");
     final String thirdStreamId = UUID.randomUUID().toString();
     // When: Third iterate Features request is submitted to NakshaHub
     response = nakshaClient.get("hub/spaces/" + SPACE_ID + "/iterate" + "?" + thirdHandleQueryParam, thirdStreamId);
@@ -146,8 +163,9 @@ class IterateFeaturesTest extends ApiTest {
     ResponseAssertions.assertThat(response)
         .hasStatus(200)
         .hasStreamIdHeader(thirdStreamId)
-        .hasJsonBody(thirdExpectedBodyPart, "Final Iterate response body doesn't match")
         .hasNoNextPageToken();
+    assertIteratePage(response, thirdExpectedBodyPart, expectedFeatures, returnedIds);
+    assertEquals(expectedFeatures.keySet(), returnedIds, "Iteration did not return all features");
   }
 
 
@@ -172,7 +190,7 @@ class IterateFeaturesTest extends ApiTest {
   }
 
   @Test
-  void tc1104_testIterateInTwoPagesWithPropSelection() throws URISyntaxException, InterruptedException, IOException {
+  void tc1104_testIterateInTwoPagesWithPropSelection() throws URISyntaxException, InterruptedException, IOException, JSONException {
     // Test API : GET /hub/spaces/{spaceId}/iterate
     // Validate all features getting returned in two iterations, with:
     // - first iteration returning features and nextPageToken, selecting: 1 normal prop, 1 URI encoded prop, 1 prop not existing
@@ -184,6 +202,8 @@ class IterateFeaturesTest extends ApiTest {
     final String firstExpectedBodyPart = loadFileOrFail(
         "ReadFeatures/Iterate/TC1104_testIterateInTwoPagesWithPropSelection/iterate_response_1.json")
         .replaceAll("\\{\\{streamId}}", firstStreamId);
+    final Map<String, JSONObject> expectedFeatures = featuresById(
+        loadFileOrFail("ReadFeatures/Iterate/TC1104_testIterateInTwoPagesWithPropSelection/all_features.json"));
     final String selectionParams = "selection=p.speedLimit,p.unknown_prop,%s".formatted(urlEncoded("p.@ns:com:here:xyz.tags"));
 
     // When: First iterate Features request is submitted to NakshaHub
@@ -192,8 +212,8 @@ class IterateFeaturesTest extends ApiTest {
     // Then: Perform assertions
     ResponseAssertions.assertThat(response)
         .hasStatus(200)
-        .hasStreamIdHeader(firstStreamId)
-        .hasJsonBody(firstExpectedBodyPart, "First Iterate response body doesn't match", false);
+        .hasStreamIdHeader(firstStreamId);
+    assertIteratePage(response, firstExpectedBodyPart, expectedFeatures, new HashSet<>(), JSONCompareMode.STRICT);
 
     // Given: iterate parameters for second request
     final String handleQueryParam = "handle=" + urlEncoded(parseJson(response.body(), XyzFeatureCollection.class).getNextPageToken());
@@ -227,5 +247,55 @@ class IterateFeaturesTest extends ApiTest {
         .hasStatus(400)
         .hasStreamIdHeader(streamId)
         .hasJsonBody(expectedErrorBody, "Expected error body doesn't match");
+  }
+
+  /**
+   * Iterate does not guarantee any order, so the features of a page are only checked to be expected and not returned before.
+   *
+   * @param response         the iterate response.
+   * @param expectedPage     the expected page, defines the expected feature count and all other members (e.g. nextPageToken).
+   * @param expectedFeatures all features that may be returned, by id.
+   * @param returnedIds      the ids returned by previous pages; ids of this page are added.
+   */
+  private static void assertIteratePage(
+      HttpResponse<String> response,
+      String expectedPage,
+      Map<String, JSONObject> expectedFeatures,
+      Set<String> returnedIds) throws JSONException {
+    assertIteratePage(response, expectedPage, expectedFeatures, returnedIds, JSONCompareMode.LENIENT);
+  }
+
+  private static void assertIteratePage(
+      HttpResponse<String> response,
+      String expectedPage,
+      Map<String, JSONObject> expectedFeatures,
+      Set<String> returnedIds,
+      JSONCompareMode featureComparison) throws JSONException {
+    final JSONObject expected = new JSONObject(expectedPage);
+    final int expectedCount = expected.getJSONArray("features").length();
+    expected.remove("features");
+    JSONAssert.assertEquals("Iterate response body doesn't match", expected.toString(), response.body(), JSONCompareMode.LENIENT);
+    final JSONArray actualFeatures = new JSONObject(response.body()).getJSONArray("features");
+    assertEquals(expectedCount, actualFeatures.length(), "Unexpected number of features in iterate page");
+    for (int i = 0; i < actualFeatures.length(); i++) {
+      final JSONObject actualFeature = actualFeatures.getJSONObject(i);
+      final String id = actualFeature.getString("id");
+      final JSONObject expectedFeature = expectedFeatures.get(id);
+      assertNotNull(expectedFeature, "Unexpected feature returned: " + id);
+      assertTrue(returnedIds.add(id), "Feature returned more than once: " + id);
+      JSONAssert.assertEquals("Feature " + id + " doesn't match", expectedFeature, actualFeature, featureComparison);
+    }
+  }
+
+  private static Map<String, JSONObject> featuresById(String... featureCollections) throws JSONException {
+    final Map<String, JSONObject> featuresById = new HashMap<>();
+    for (String featureCollection : featureCollections) {
+      final JSONArray features = new JSONObject(featureCollection).getJSONArray("features");
+      for (int i = 0; i < features.length(); i++) {
+        final JSONObject feature = features.getJSONObject(i);
+        featuresById.put(feature.getString("id"), feature);
+      }
+    }
+    return featuresById;
   }
 }

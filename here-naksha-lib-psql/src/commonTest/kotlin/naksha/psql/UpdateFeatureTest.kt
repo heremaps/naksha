@@ -110,6 +110,7 @@ class UpdateFeatureTest : PgTestBase(collection = null, catalogId = "") {
             collectionId = collection.id
             featureIds += initialFeature.id
             queryHistory = true
+            versions = 10
         })
         assertEquals(2, readResp.length)
         val retrievedTuples = Naksha.cache.load(readResp.featureTupleList).toTupleList()
@@ -133,7 +134,7 @@ class UpdateFeatureTest : PgTestBase(collection = null, catalogId = "") {
         assertEquals("some_value", updatedTuple.decodeFeature(null)?.properties["new_attr"])
         assertEquals(createdTuple.getLong(naksha.model.objects.XyzMembers.XyzCreatedAt)?.let { if (it == 0L) null else it } ?: createdTuple.getLong(naksha.model.objects.XyzMembers.XyzUpdatedAt), updatedTuple.getLong(naksha.model.objects.XyzMembers.XyzCreatedAt)?.let { if (it == 0L) null else it })
         assertNotEquals(updatedTuple.getLong(naksha.model.objects.XyzMembers.XyzCreatedAt), updatedTuple.getLong(naksha.model.objects.XyzMembers.XyzUpdatedAt))
-        assertNull(createdTuple.getLong(naksha.model.objects.XyzMembers.XyzCreatedAt)?.let { if (it == 0L) null else it })
+        assertNotNull(createdTuple.getLong(naksha.model.objects.XyzMembers.XyzCreatedAt))
         assertNotNull(createdTuple.getLong(naksha.model.objects.XyzMembers.XyzUpdatedAt))
         assertEquals(createdTuple.getInt(naksha.model.objects.XyzMembers.XyzHereTile), updatedTuple.getInt(naksha.model.objects.XyzMembers.XyzHereTile))
         assertEquals(Action.UPDATE, updatedTuple.tupleNumber.action)
@@ -160,7 +161,7 @@ class UpdateFeatureTest : PgTestBase(collection = null, catalogId = "") {
         testWithCollection("atomicUpdateNotExistingWithFakeUuid")
 
         val featureId = "feature_not_existing"
-        val fakeUUID = TupleNumber(storage.number, catalog.catalogNumber, collection.collectionNumber, Naksha.featureNumber(featureId), Version.now(1L, Action.CREATE).number)
+        val fakeUUID = TupleNumber(storage.id.number, catalog.catalogNumber, collection.collectionNumber, Naksha.featureNumber(featureId), Version.now(1L, Action.CREATE).number)
         val feature = NakshaFeature().apply {
             id = featureId
             properties.xyz.setRaw("uuid", fakeUUID)

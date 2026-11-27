@@ -29,6 +29,8 @@ import com.here.naksha.app.common.TestUtil;
 import com.here.naksha.app.service.models.FeatureCollectionRequest;
 import java.net.http.HttpResponse;
 import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
 import naksha.model.XyzFeatureCollection;
 import naksha.model.mom.MomReference;
@@ -37,6 +39,8 @@ import naksha.model.objects.NakshaProperties;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.json.JSONException;
+import org.json.JSONArray;
+import org.json.JSONObject;
 import org.junit.jupiter.api.Assertions;
 import org.skyscreamer.jsonassert.Customization;
 import org.skyscreamer.jsonassert.JSONAssert;
@@ -111,6 +115,39 @@ public class ResponseAssertions {
     Assertions.assertNotNull(actualBody, "Response body is null");
     try {
       JSONAssert.assertEquals(failureMessage, expectedJsonBody, actualBody, jsonComparator);
+    } catch (JSONException e) {
+      Assertions.fail("Unable to parse response body", e);
+    }
+    return this;
+  }
+
+  /**
+   * Compares a feature collection by feature ID, with exact object fields and strictly ordered arrays inside each feature (notably geometry coordinates).
+   * @since 3.0
+   */
+  public ResponseAssertions hasJsonBodyWithUnorderedFeatures(String expectedJsonBody, String failureMessage) {
+    try {
+      JSONObject expected = new JSONObject(expectedJsonBody);
+      JSONObject actual = new JSONObject(subject.body());
+      JSONArray expectedFeatures = expected.getJSONArray("features");
+      JSONArray actualFeatures = actual.getJSONArray("features");
+      assertEquals(expectedFeatures.length(), actualFeatures.length(), failureMessage + ": feature count");
+      Map<String, JSONObject> byId = new HashMap<>();
+      for (int i = 0; i < actualFeatures.length(); i++) {
+        JSONObject feature = actualFeatures.getJSONObject(i);
+        String id = feature.getString("id");
+        assertNull(byId.put(id, feature), "Duplicate feature ID: " + id);
+      }
+      for (int i = 0; i < expectedFeatures.length(); i++) {
+        JSONObject feature = expectedFeatures.getJSONObject(i);
+        String id = feature.getString("id");
+        JSONObject matched = byId.remove(id);
+        assertNotNull(matched, "Missing feature ID: " + id);
+        JSONAssert.assertEquals(failureMessage + ": feature " + id, feature, matched, JSONCompareMode.STRICT);
+      }
+      expected.remove("features");
+      actual.remove("features");
+      JSONAssert.assertEquals(failureMessage, expected, actual, JSONCompareMode.STRICT);
     } catch (JSONException e) {
       Assertions.fail("Unable to parse response body", e);
     }

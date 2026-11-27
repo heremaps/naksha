@@ -12,10 +12,11 @@ import kotlin.js.JsName
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
 import kotlin.jvm.JvmName
+import kotlin.jvm.JvmOverloads
 import kotlin.jvm.JvmStatic
 
 /**
- * A wrapper for Naksha identifiers.
+ * An immutable wrapper for Naksha identifiers.
  *
  * Invoking the constructor without arguments will create a new random identifier.
  *
@@ -57,7 +58,7 @@ import kotlin.jvm.JvmStatic
 class Id private constructor(
     private var _number: Long,
     private var _text: String?,
-) : Comparable<Id?>, CharSequence {
+) : Attributable(), Comparable<Id?>, CharSequence {
 
     /**
      * Creates a numeric identifier, requires the given `number` to be a positive integer.
@@ -86,7 +87,20 @@ class Id private constructor(
     constructor() : this(0L, randomString())
 
     /**
-     * The numeric representation of the `id`, when not given, automatically calculated from the [text].
+     * Creates a new identifier by specifying textual and numeric representation.
+     * @param text the textual representation; must not be `null`.
+     * @param number the numeric representation.
+     * @param skipVerification if the verification of the numeric representation should be skipped _(risky)_, only do it when reading from verified sources.
+     * @throws NakshaException if `skipVerification` is _true_ and the given number is not valid for the given text.
+     * @since 3.0
+     */
+    @JsName("newId")
+    @JvmOverloads
+    constructor(text: String, number: Long, skipVerification: Boolean = false)
+        : this(if (skipVerification) number else verifyNumber(text, number), text)
+
+    /**
+     * The 64-bit numeric representation of the identifier, when not given, automatically calculated from the [text].
      *
      * ### Catalogs and Collections
      * For catalogs and collections this number will be the full number, so the 64-bit value. However, only the lower 32-bit, as returned by [intValue], are significant. This means, internally the storages will trim the number down to 32-bit and when two catalogs or collections have the same lower 32-bit, they are treated as being the same. This is done, because only the 32-bit value is encoded in [tuple-numbers][TupleNumber]. In other words, the amount of collisions for catalogs and collections is much higher. However, it is not expected to have millions of catalogs in the same database, or millions of collections in the same catalog, therefore this is a fair tradeoff between encoding size of [TupleNumber] and collision resistance.
@@ -133,12 +147,43 @@ class Id private constructor(
         }
 
     /**
-     * Returns the [number] as 32-bit integer, needed for catalogs and collections.
+     * The implementation-neutral classification of [text]. This does not authorize access or modification and does not limit length, except for the reserved-name pattern. See [IdTextType].
+     * @since 3.0
+     */
+    val textType: IdTextType
+        get() = IdTextType.classify(text)
+
+    /**
+     * Returns [text] unchanged when [expectedTextType] accepts its classification and its UTF-8 encoding occupies at most [maxBytes] bytes. Otherwise returns an internal alias: [prefix], a dollar sign, and [intValue] in decimal, replacing a leading minus with underscore (for example `m$_12345`).
      *
-     * The method will keep the lower 31-bit of the [number] intact and copy the sign-bit to them, so that the resulting 32-bit value will match the lower 31-bit plus the sign of [number]. This guarantees that negative numbers stay negative, and positive numbers stay positive. In case of a negative number, it effectively returns the 32-bit at offset `12` of the [MD5](https://en.wikipedia.org/wiki/MD5) hash above the `id` string, with a set sign-bit.
+     * The alias is the documented alternative to the requested type and size: neither [prefix] nor the generated alias's type or length is validated. The caller owns prefix selection, length/suffix budgets and collision detection. Internal and reserved names follow the same acceptance and length checks as ordinary names; neither bypasses them. Illegal text is rejected rather than aliased. No case folding or Unicode normalization is performed.
+     * @param expectedTextType the most permissive accepted classification; see [IdTextType.accepts].
+     * @param maxBytes the maximum UTF-8 size for preserving the original text, not a limit on the generated alias.
+     * @param prefix the caller-selected prefix for a generated internal alias.
+     * @throws NakshaException with [NakshaError.ILLEGAL_ID] if the text is illegal.
+     * @since 3.0
+     */
+    fun textAlias(expectedTextType: IdTextType, maxBytes: Int, prefix: String): String {
+        val text = this.text
+        val type = IdTextType.classify(text)
+        if (type === IdTextType.ILLEGAL) throw illegalId("Illegal identifier text")
+        if (expectedTextType.accepts(type) && text.encodeToByteArray().size <= maxBytes) return text
+        val alias = StringBuilder().append(prefix).append('$').append(intValue)
+        val numberStart = prefix.length + 1
+        if (alias[numberStart] == '-') alias[numberStart] = '_'
+        return alias.toString()
+    }
+
+    /**
+     * Returns the [number] as 32-bit integer, used for catalogs and collections.
+     *
+     * The method will keep the lower 31-bit of the [number] intact and copy the sign-bit to them, so that the resulting 32-bit value will match the lower 31-bit of the [number], plus the sign of the [number]. This guarantees that negative numbers stay negative, and positive numbers stay positive.
+     *
+     * In case of a negative number, it effectively returns the 32-bit _(big-endian)_ at offset `12` of the [MD5](https://en.wikipedia.org/wiki/MD5) hash above the `id` string, with a set sign-bit _(therefore, only 31-bit of the hash are significant)_.
      * @since 3.0
      * @see Id.numberToInt
      * @see Id.textToInt
+     * @see number
      */
     @get:JvmName("intValue")
     val intValue: Int
@@ -153,35 +198,125 @@ class Id private constructor(
         get() = number >= 0
 
     /**
-     * The number of the partition in which this identifier will be located.
+     * Tests if the identifier belongs to an internal identifier with a special meaning.
+     * @since 3.0
+     */
+    @get:JvmName("isInternal")
+    val isInternal: Boolean
+        get() = textToNumberMap[text] == number
+
+    /**
+     * The unsigned low byte of the logical feature-number, between 0 and 255.
      *
      * Beware that the final partition index is dependent on the number of total partitions.
      * @see partitionIndex
+     * @since 3.0
      */
     @JvmField
-    val partitionNumber: Int = number.toInt() and 0xffff
+    val partitionNumber: Int = partitionNumber(number)
 
     /**
-     * Returns the real partition index of this identifier.
-     * @param partitions the total number of partitions as specified in `NakshaCollection`.
-     * @return the real partition index of this identifier for the given amount of partitions.
+     * Returns the contiguous range partition index of this identifier, not a modulo bucket. Partition i owns logical low bytes from `floor(i * 256 / partitions)` inclusive to `floor((i + 1) * 256 / partitions)` exclusive. This matches PostgreSQL ranges over byte-swapped, sign-normalized feature-numbers.
+     * @param partitions the total number of partitions, between 1 and 256.
+     * @return the partition index between 0 and `partitions - 1`; 0 for one partition.
      * @see partitionNumber
+     * @since 3.0
      */
-    fun partitionIndex(partitions: Int): Int = partitionNumber % partitions
+    fun partitionIndex(partitions: Int): Int = partitionIndex(number, partitions)
+
+    /**
+     * The feature-ordinal of this identifier: the byte-swapped feature-number with the sign-bit flipped. This is the physical storage encoding in which contiguous [partitionNumber]s form contiguous ordinal ranges.
+     * @since 3.0
+     * @see featureNumberToOrdinal
+     */
+    val featureNumberToOrdinal: Long
+        get() = featureNumberToOrdinal(number)
+
+    /**
+     * The lowest ordinal (inclusive) of the 2^56-wide ordinal block owned by this identifier's [partitionNumber].
+     * @since 3.0
+     * @see partitionMinOrd
+     */
+    val partitionMinOrd: Long
+        get() = partitionMinOrd(partitionNumber)
+
+    /**
+     * The highest ordinal (inclusive) of the 2^56-wide ordinal block owned by this identifier's [partitionNumber].
+     * @since 3.0
+     * @see partitionMaxOrd
+     */
+    val partitionMaxOrd: Long
+        get() = partitionMaxOrd(partitionNumber)
+
+    /**
+     * Returns the lowest partition-number (inclusive) of the partition this identifier belongs to, for the given number of partitions.
+     * @param partitions the total number of partitions, between 1 and 256.
+     * @return the lowest partition-number of this identifier's partition.
+     * @since 3.0
+     * @see partitionIndex
+     */
+    fun partitionNumberMin(partitions: Int): Int = partitionNumberMin(partitionIndex(partitions), partitions)
+
+    /**
+     * Returns the highest partition-number (inclusive) of the partition this identifier belongs to, for the given number of partitions.
+     * @param partitions the total number of partitions, between 1 and 256.
+     * @return the highest partition-number of this identifier's partition.
+     * @since 3.0
+     * @see partitionIndex
+     */
+    fun partitionNumberMax(partitions: Int): Int = partitionNumberMax(partitionIndex(partitions), partitions)
+
+    /**
+     * Returns the lowest ordinal (inclusive) of the partition this identifier belongs to, for the given number of partitions. This is the PostgreSQL range lower bound for that partition.
+     * @param partitions the total number of partitions, between 1 and 256.
+     * @return the lowest ordinal of this identifier's partition.
+     * @since 3.0
+     * @see partitionIndexMin
+     */
+    fun partitionIndexMin(partitions: Int): Long = partitionIndexMin(partitionIndex(partitions), partitions)
+
+    /**
+     * Returns the highest ordinal (inclusive) of the partition this identifier belongs to, for the given number of partitions. This is one less than the PostgreSQL range upper bound for that partition.
+     * @param partitions the total number of partitions, between 1 and 256.
+     * @return the highest ordinal of this identifier's partition.
+     * @since 3.0
+     * @see partitionIndexMax
+     */
+    fun partitionIndexMax(partitions: Int): Long = partitionIndexMax(partitionIndex(partitions), partitions)
 
     override fun equals(other: Any?): Boolean {
         if (other === this) return true
         if (other !is Id) return false
         return number == other.number
     }
+
+    /**
+     * Returns the same as [intValue].
+     * @return the same as [intValue].
+     * @since 3.0
+     * @see intValue
+     */
     override fun hashCode(): Int = intValue
+
+    /**
+     * Returns the same as [text].
+     * @return the same as [text].
+     * @return since 3.0
+     * @see text
+     */
     override fun toString(): String = text
-    override fun compareTo(other: Id?): Int {
-        // We order `null` at the end of lists/arrays.
-        if (other == null) return -1
-        if (this === other) return 0
-        return number.compareTo(other.number)
-    }
+
+    /**
+     * Compares this identifier with the specified identifier **for order**.
+     *
+     * Returns zero if this `id` is equal to the specified `other`, a negative number if it's less than `other`, or a positive number if it's greater than `other`.
+     *
+     * @param other the other identifier to compare this against.
+     * @return zero if this `id` is equal to the specified `other`, a negative number if this is less than `other`, or a positive number if this is greater than `other`.
+     * @since 3.0
+     * @see compareFeatureNumber
+     */
+    override fun compareTo(other: Id?): Int = compareFeatureNumber(this.number, other?.number)
 
     // ---------------------------------------------< CharSequence >------------------------------------------------------
     override val length: Int
@@ -400,6 +535,14 @@ class Id private constructor(
             return sign or low
         }
 
+        private fun verifyNumber(text: String, number: Long): Long {
+            val realNumber = textToNumber(text)
+            if (number != realNumber) {
+                throw illegalArg("The calculated number $realNumber is not equal to $number for identifier $text")
+            }
+            return number
+        }
+
         /**
          * Ensures that the given number is positive.
          * @param number the number to verify.
@@ -501,7 +644,7 @@ class Id private constructor(
         /**
          * Returns the partition-number from the given feature-id.
          *
-         * This is basically just an unsigned 16-bit integer, extracted from the lowest 16-bit of the feature-number. When there are less than 65536 partitions, the value must be divided by the number of real partitions, and the rest indexes the partition, for example for 4 partitions do `partitionNumber(featureNumber) % 4`, what will be a value between 0 and 3.
+         * The unsigned lowest byte of the logical feature-number. Use [partitionIndex] to map it to a contiguous range for a specific partition count, rather than taking a remainder.
          * @param id the feature-id.
          * @return the partition-number.
          * @since 3.0
@@ -516,7 +659,7 @@ class Id private constructor(
         /**
          * Returns the partition-number from the given feature-number.
          *
-         * This is basically just an unsigned 16-bit integer, extracted from the lowest 16-bit of the feature-number. When there are less than 65536 partitions, the value must be divided by the number of real partitions, and the rest indexes the partition, for example for 4 partitions do `partitionNumber(featureNumber) % 4`, what will be a value between 0 and 3.
+         * The unsigned lowest byte of the logical feature-number. Use [partitionIndex] to map it to a contiguous range for a specific partition count, rather than taking a remainder.
          * @param number the feature-number.
          * @return the partition-number.
          * @since 3.0
@@ -525,6 +668,190 @@ class Id private constructor(
          */
         @JsStatic
         @JvmStatic
-        fun partitionNumber(number: Long): Int = number.toInt() and 0xffff
+        fun partitionNumber(number: Long): Int = number.toInt() and 0xff
+
+        /**
+         * Maps a logical feature-number to the contiguous range whose byte bounds are `floor(i * 256 / partitions)` and `floor((i + 1) * 256 / partitions)`. The inverse below handles uneven groups without gaps or overlaps; all intermediate values fit in Int.
+         * @param number the logical feature-number, never its physical storage encoding.
+         * @param partitions the partition count, between 1 and 256.
+         * @return the partition index, between 0 and `partitions - 1`.
+         * @since 3.0
+         */
+        @JsStatic
+        @JvmStatic
+        fun partitionIndex(number: Long, partitions: Int): Int {
+            if (partitions !in 1..256) throw illegalArg("partitions must be in 1..256, got $partitions")
+            return ((partitionNumber(number) + 1) * partitions - 1) / 256
+        }
+
+        /**
+         * Returns the feature-ordinal of the given feature-number: the byte-swapped value with the sign-bit flipped. In this encoding contiguous partition-numbers form contiguous ordinal ranges, so PostgreSQL can range-partition directly on the stored value.
+         * @param number the logical feature-number, never its physical storage encoding.
+         * @return the byte-swapped, sign-normalized ordinal.
+         * @since 3.0
+         */
+        @JsStatic
+        @JvmStatic
+        fun featureNumberToOrdinal(number: Long): Long = Platform.swapLong(number) xor Long.MIN_VALUE
+
+        /**
+         * Returns the logical feature-number from its byte-swapped, sign-normalized storage ordinal.
+         * @param ordinal the physical feature-ordinal.
+         * @return the original logical feature-number.
+         * @since 3.0
+         */
+        @JsStatic
+        @JvmStatic
+        fun ordinalToFeatureNumber(ordinal: Long): Long = Platform.swapLong(ordinal xor Long.MIN_VALUE)
+
+        /**
+         * Returns the lowest ordinal (inclusive) that has the given partition-number, i.e. the start of the 2^56-wide ordinal block that partition-number owns.
+         * @param partitionNumber the partition-number, between 0 and 255.
+         * @return the lowest ordinal of that block.
+         * @since 3.0
+         * @see featureNumberToOrdinal
+         */
+        @JsStatic
+        @JvmStatic
+        fun partitionMinOrd(partitionNumber: Int): Long = (partitionNumber xor 0x80).toLong() shl 56
+
+        /**
+         * Returns the highest ordinal (inclusive) that has the given partition-number.
+         * @param partitionNumber the partition-number, between 0 and 255.
+         * @return the highest ordinal of that block.
+         * @since 3.0
+         * @see partitionMinOrd
+         */
+        @JsStatic
+        @JvmStatic
+        fun partitionMaxOrd(partitionNumber: Int): Long = partitionMinOrd(partitionNumber) or 0x00ffffffffffffffL
+
+        /**
+         * Returns the lowest partition-number (inclusive) that belongs to the given partition-index, for a contiguous, non-modulo distribution across [partitions].
+         * @param index the partition-index, between 0 and `partitions - 1`.
+         * @param partitions the total number of partitions, between 1 and 256.
+         * @return the lowest partition-number of that partition.
+         * @since 3.0
+         * @see partitionIndex
+         */
+        @JsStatic
+        @JvmStatic
+        fun partitionNumberMin(index: Int, partitions: Int): Int {
+            if (partitions !in 1..256) throw illegalArg("partitions must be in 1..256, got $partitions")
+            if (index !in 0 until partitions) throw illegalArg("index must be in 0 until partitions, got $index")
+            return index * 256 / partitions
+        }
+
+        /**
+         * Returns the highest partition-number (inclusive) that belongs to the given partition-index, for a contiguous, non-modulo distribution across [partitions].
+         * @param index the partition-index, between 0 and `partitions - 1`.
+         * @param partitions the total number of partitions, between 1 and 256.
+         * @return the highest partition-number of that partition.
+         * @since 3.0
+         * @see partitionIndex
+         */
+        @JsStatic
+        @JvmStatic
+        fun partitionNumberMax(index: Int, partitions: Int): Int {
+            if (partitions !in 1..256) throw illegalArg("partitions must be in 1..256, got $partitions")
+            if (index !in 0 until partitions) throw illegalArg("index must be in 0 until partitions, got $index")
+            return if (index == partitions - 1) 255 else (index + 1) * 256 / partitions - 1
+        }
+
+        /**
+         * Returns the lowest ordinal (inclusive) that belongs to the given partition-index, for a contiguous distribution across [partitions]. This is the PostgreSQL range lower bound for that partition.
+         * @param index the partition-index, between 0 and `partitions - 1`.
+         * @param partitions the total number of partitions, between 1 and 256.
+         * @return the lowest ordinal of that partition.
+         * @since 3.0
+         * @see partitionMinOrd
+         */
+        @JsStatic
+        @JvmStatic
+        fun partitionIndexMin(index: Int, partitions: Int): Long = partitionMinOrd(partitionNumberMin(index, partitions))
+
+        /**
+         * Returns the highest ordinal (inclusive) that belongs to the given partition-index, for a contiguous distribution across [partitions]. This is one less than the PostgreSQL range upper bound for that partition.
+         * @param index the partition-index, between 0 and `partitions - 1`.
+         * @param partitions the total number of partitions, between 1 and 256.
+         * @return the highest ordinal of that partition.
+         * @since 3.0
+         * @see partitionMaxOrd
+         */
+        @JsStatic
+        @JvmStatic
+        fun partitionIndexMax(index: Int, partitions: Int): Long = partitionMaxOrd(partitionNumberMax(index, partitions))
+
+        /**
+         * Compares two given feature-numbers against each other.
+         *
+         * This will order `null` last. It pre-sorts [`naksha~admin`][Id.ADMIN_CATALOG_ID], then [`naksha~catalogs`][Id.CATALOGS_COL_ID], and finally [`naksha~collections`][Id.COLLECTIONS_COL_ID]. The rest is ordered by the lower `31`-bit first _([numberToInt])_, then by the bits `31` to `63` _(inclusive)_. The reason for doing this is that we want to ensure that conflicting collections are sorted behind each other.
+         *
+         * @param self this feature-number to compare against `other`.
+         * @param other the other feature-number to compare `self` against.
+         * @return zero if `self` is equal to `other`, a negative number if `self` is less than `other`, or a positive number if `self` is greater than `other`.
+         */
+        fun compareFeatureNumber(self: Long?, other: Long?): Int {
+            // We order `null` at the end, because it is and invalid value.
+            // This allows users to optionally simply truncate entities with no id.
+            if (self == other) return 0
+            if (other == null) return -1
+            if (self == null) return 1
+
+            // Note that for catalogs and collections only the sign-bit and the lower 31-bit are significant.
+            val this_int = numberToInt(self)
+            val other_int = numberToInt(other)
+
+            //
+            // We order first: `naksha~admin`, `naksha~catalogs`, then `naksha~collections`.
+            //
+
+            // We order all modifications done in `naksha~admin` first.
+            if (this_int == ADMIN_CATALOG_ID.intValue) {
+                if (this_int != other_int) return -1
+                return self.compareTo(other)
+            }
+            if (other_int == ADMIN_CATALOG_ID.intValue) {
+                if (other_int != this_int) return 1
+                return self.compareTo(other)
+            }
+
+            // We order all modifications done in `naksha~catalogs` second.
+            if (this_int == CATALOGS_COL_ID.intValue) {
+                if (this_int != other_int) return -1
+                return self.compareTo(other)
+            }
+            if (other_int == CATALOGS_COL_ID.intValue) {
+                if (other_int != this_int) return 1
+                return self.compareTo(other)
+            }
+
+            // We order all modifications done in `naksha~collections` third.
+            if (this_int == COLLECTIONS_COL_ID.intValue) {
+                if (this_int != other_int) return -1
+                return self.compareTo(other)
+            }
+            if (other_int == COLLECTIONS_COL_ID.intValue) {
+                if (other_int != this_int) return 1
+                return self.compareTo(other)
+            }
+
+            //
+            // Now, order normal catalogs, collections, books, features, ...
+            //
+
+            // If the lower 31-bit and the sign-bit are the same, compare by bit 31..63.
+            if (this_int == other_int) return self.compareTo(other)
+
+            // Otherwise, compare by partition first, so lowest 8-bit
+            val this_partition = partitionNumber(self)
+            val other_partition = partitionNumber(other)
+            if (this_partition < other_partition) return -1
+            if (this_partition > other_partition) return 1
+
+            // If both are in the same partition, compare the rest (bit 8..15).
+            // Note: They can't be equal, we checked that before.
+            return if (this_int < other_int) -1 else 1
+        }
     }
 }

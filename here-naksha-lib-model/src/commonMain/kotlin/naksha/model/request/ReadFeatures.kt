@@ -231,7 +231,6 @@ open class ReadFeatures : ReadRequest() {
     /**
      * @see version
      */
-    @JsName("withVersion")
     fun withVersion(version: Version?): ReadFeatures {
         this.version = version?.number
         return this

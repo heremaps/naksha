@@ -11,6 +11,15 @@ import java.sql.SQLException
 
 actual class PgExceptionMapper {
     actual companion object PgExceptionMapper_C {
+        internal actual fun sqlState(throwable: Throwable): String? {
+            var failure: Throwable? = throwable
+            var depth = 0
+            while (failure != null && depth++ < 16) {
+                if (failure is java.sql.SQLException && failure.sqlState != null) return failure.sqlState
+                failure = failure.cause
+            }
+            return null
+        }
         @JvmOverloads
         actual fun map(throwable: Throwable, sql: String?): NakshaException {
             if (throwable is NakshaException) return throwable
@@ -35,9 +44,9 @@ actual class PgExceptionMapper {
 
 
         /**
-         * Internal variant of [nakshaExceptionFrom].
+         * Internal variant of [map].
          *
-         * The difference (and the reason for this being private) is [topLevelCause], that is internally handled as potential cause to override the [NakshaException.cause] - needed for cases like [BatchUpdateException].
+         * The difference _(and the reason for this being private)_ [topLevelCause], needed for recursive calls, internally handled as potential cause to override the [NakshaException.cause] — needed for cases like [BatchUpdateException].
          *
          * @param throwable original [Throwable] to map.
          * @param topLevelCause potential cause to override the [NakshaException.cause].

@@ -14,10 +14,10 @@ public class RequestTypesUtilTest extends AbstractTest {
   public void testIsCollectionsRequestType() {
     //Given: WriteRequest for only NakshaCollection
     final WriteRequest writeRequest = new WriteRequest();
-    writeRequest.add(new Write().createCollection(new NakshaCollection("test_collection")));
+    writeRequest.add(new Write().createCollection(new NakshaCollection("test_collection", getMapId())));
     Assertions.assertTrue(RequestTypesUtil.isOnlyWriteCollections(writeRequest));
     Assertions.assertFalse(RequestTypesUtil.isOnlyWriteFeatures(writeRequest));
-    writeRequest.add(new Write().createCollection(new NakshaCollection("test_collection2")));
+    writeRequest.add(new Write().createCollection(new NakshaCollection("test_collection2", getMapId())));
     Assertions.assertTrue(RequestTypesUtil.isOnlyWriteCollections(writeRequest));
     Assertions.assertFalse(RequestTypesUtil.isOnlyWriteFeatures(writeRequest));
   }

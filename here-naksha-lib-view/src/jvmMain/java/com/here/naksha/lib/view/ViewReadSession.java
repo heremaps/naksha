@@ -140,10 +140,23 @@ public class ViewReadSession implements IReadSession, AutoCloseable {
     Merging: [ <featureId_1, [Layer0_Feature1, Layer1_Feature1, Layer2_Feature1]> ]
     into final result:  [ Feature1 ]
      */
-    List<FeatureTuple> mergedRows =
-        multiLayerRows.values().stream().map(mergeOperation::apply).collect(toList());
+    List<FeatureTuple> mergedRows = new ArrayList<>(multiLayerRows.size());
+    Set<String> inheritedFeatureIds = new HashSet<>();
+    for (Map.Entry<String, List<ViewLayerFeature>> entry : multiLayerRows.entrySet()) {
+      List<ViewLayerFeature> layers = entry.getValue();
+      FeatureTuple selected = mergeOperation.apply(layers);
+      mergedRows.add(selected);
+      boolean hasWritableLayer = false;
+      for (ViewLayerFeature layer : layers) {
+        if (layer.getStoragePriority() == 0) {
+          hasWritableLayer = true;
+          break;
+        }
+      }
+      if (selected != null && !hasWritableLayer) inheritedFeatureIds.add(entry.getKey());
+    }
 
-    return new ViewSuccessResult(mergedRows, null);
+    return new ViewSuccessResult(mergedRows, null, inheritedFeatureIds);
   }
 
   private @NotNull Map<@NotNull String, List<ViewLayerFeature>> getMissingFeatures(

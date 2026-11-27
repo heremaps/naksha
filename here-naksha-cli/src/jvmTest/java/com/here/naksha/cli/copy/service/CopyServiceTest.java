@@ -840,16 +840,16 @@ class CopyServiceTest {
     }
 
     private void assertCreateMapWrite(Write write) {
-        assertEquals(Naksha.ADMIN_CATALOG_ID, write.getCatalogId());
-        assertEquals(Naksha.CATALOGS_COL_ID, write.getCollectionId());
+        assertEquals(Naksha.ADMIN_CATALOG_ID, write.getCatalogId().text());
+        assertEquals(Naksha.CATALOGS_COL_ID, write.getCollectionId().text());
         assertEquals(WriteOp.CREATE, write.getOp());
         assertNotNull(write.getFeature());
         assertEquals(targetCopyElement.getMapId(), write.getFeature().getId());
     }
 
     private void assertCreateCollectionWrite(Write write) {
-        assertEquals(targetCopyElement.getMapId(), write.getCatalogId());
-        assertEquals(Naksha.COLLECTIONS_COL_ID, write.getCollectionId());
+        assertEquals(targetCopyElement.getMapId(), write.getCatalogId().text());
+        assertEquals(Naksha.COLLECTIONS_COL_ID, write.getCollectionId().text());
         assertEquals(WriteOp.CREATE, write.getOp());
         assertNotNull(write.getFeature());
         assertEquals(targetCopyElement.getCollectionId(), write.getFeature().getId());

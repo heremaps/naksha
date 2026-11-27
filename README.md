@@ -1,345 +1,103 @@
-![Naksha (नक्शा) - XYZ-Hub](xyz.svg)
----
+# Naksha
 
-[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+![Naksha wordmark beside a Mercator world map with a blue pin over India](docs/images/naksha.svg)
 
-[Naksha](https://en.wikipedia.org/wiki/Naksha) [(नक्शा)](https://www.shabdkosh.com/search-dictionary?lc=hi&sl=en&tl=hi&e=%E0%A4%A8%E0%A4%95%E0%A5%8D%E0%A4%B6%E0%A4%BE) is the name of this fork of the [XYZ-Hub](https://github.com/heremaps/xyz-hub) (pronounced **nakshaa** or **nakśā**). It stays a web service for the access and management of geospatial data. This spin-off was done to independently realize needed new features, not planned to be supported in the original [XYZ-Hub](https://github.com/heremaps/xyz-hub) project. The architecture was modified to allow extensions and plug-ins.
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 
-The meaning of [Naksha](https://en.wikipedia.org/wiki/Naksha)-Hub is “Map-Hub”.
+**Naksha** (नक्शा) means “map.” It is a geospatial data service and library for storing, querying, and processing features. It exposes a GeoJSON REST API and a JVM API, supports transactional and versioned PostgreSQL storage, and provides extension points for custom storage, request handling, and data-change processing.
 
-Naksha service, has been designed to primarily offer:
-* GeoJson based REST API as service
-* GeoJson based Java API as library (interacting directly with database)
-* Support Postgres as default Storage system (with inbuilt transactional and history capabilities)
-* Support publishing Data Change events (with atleast-once messaging guarantee)
-* Additionally, Extension framework to provide ability:
-    * to integrate REST APIs with your own custom Storage mechanism
-    * to inject custom business logic as part of REST API request processing pipeline
-    * to inject custom business logic as part of Data change event processing pipeline (subscription based)
+## Build and run
 
-
-# Overview
-
-Naksha features are:
-* Organize geo datasets in _collections_.
-* Organize access to your data via _spaces_.
-* Listen to changes done to your data via _subscriptions_.
-* Store and manipulate individual geo features (points, line-strings, polygons).
-* Retrieve geo features as vector tiles, with or without clipped geometries.
-* Search for geo features spatially using a bounding box, radius, or any custom geometry.
-* Implement own customer data processing logic as embedded handler or external extension handler.
-* Explore geo features by filtering property values.
-* Connect with your own data sources.
-* Use default PostgresQL implementation with your own database.
-* Build a real-time geo-data pipeline with processors.
-
-Naksha uses [GeoJSON](https://www.rfc-editor.org/rfc/rfc7946.html) as the main geospatial data exchange format.
-
-# Prerequisites
-
-* Java 17+
-* Gradle 7.2+
-* Postgres 14+ with PostGIS 2.5+
-
-# Getting started
-
-Clone and install the project using:
+- Use **JDK 25** to build and test. Use the checked-in Gradle Wrapper (`./gradlew` or `gradlew.bat`); a separate Gradle installation is not needed. The wrapper currently pins **Gradle 9.6.1** and Gradle provisions Node for Kotlin/JS.
+- To run the service or database tests, use PostgreSQL with the required Naksha extensions, including PostGIS and PLV8. The maintained test image is `ghcr.io/naksha-oss/naksha-postgres:v18.6-rc1`. Docker is optional if you supply an appropriately configured PostgreSQL instance.
 
 ```bash
-git clone https://github.com/heremaps/naksha.git
+git clone --branch v3 https://github.com/heremaps/naksha.git
 cd naksha
-gradle clean build
+./gradlew assemble                  # Build without running tests
+./gradlew :here-naksha-app-service:shadowJar
 ```
 
-### Containerized Postgres & running with extensions
-
-Naksha relies strongly on Postgres - you need running instance if you want to run Naksha locally.
-Supported Postgres version is 14+ (the newer the better).
-Apart from bare Postgres, Naksha needs [PostGIS]() extension which is mandatory. Apart from that, optional, but highly recommended extensions that are supported include: `pg_hint_plan` and `pg_stat_statements`.
-
-You can use standalone instance installed directly on your host machine but there's also a docker image that hosts Postgres 16 with all the extensions mentioned above already installed. You can find its definition in [this Dockerfile](here-naksha-app-service/src/jvmTest/psql_container/Dockerfile).
-
-To use the containerized Postgres with your locally runnning Naksha:
-1) Pull docker image:
-    ```bash
-    docker pull ghcr.io/naksha-oss/naksha-postgres:v18.6
-    ```
-2) Run docker image with password set to default:
-    ```bash
-    docker run -p 5432:5432 -e PGPASSWORD=password ghcr.io/naksha-oss/naksha-postgres:v18.6
-    ```
-
-3) When the docker container is started for the first time, it will generate a random password so to simplify local development we can change it to default.
-Also if you want locally persist your db changes refer to detailed containerized Postgres build.
-For more detailed containerized Postgres build refer to [this README](deployment/docker/README.md).
-
-
-4) Now your database should be available on `localhost` with port `5432` - you can start Naksha the same way as described in [Run App](#run-app) section.
-
-5) \[optional extension run\] Now you can run naksha jar and include [example config with additional extensions enabled](here-naksha-app-service/src/main/resources/test-config-with-extensions.json) like so:
-```
-java -jar here-naksha-app-service/build/libs/naksha-app-service-*.jar test-config-with-extensions 'jdbc:postgresql://localhost:5432/postgres?user=postgres&password=pswd&schema=naksha&app=naksha_local&id=naksha_admin_db'
-```
-
-### Run App
-
-#### Running local fat jar
-
-The service could also be started directly from a fat jar. In this case Postgres and the other optional dependencies need to be started separately.
-
-To build the fat jar, at the root project directory, run one of the following:
+The runnable JAR is `here-naksha-app-service/build/libs/naksha-app-service-<version>.jar`. To try it locally, start the disposable PostgreSQL container shown in [Testing](#testing), set `NAKSHA_TEST_DB_URL` and `NAKSHA_TEST_MAINTENANCE_JOBS` as shown there, and run:
 
 ```bash
-# Using machine installed gradle (through apt, brew,... package managers)
-gradle shadowJar
-# Using gradle wrapper
-./gradlew shadowJar
+java -jar here-naksha-app-service/build/libs/naksha-app-service-*.jar test-config "$NAKSHA_TEST_DB_URL"
 ```
 
-The jar can be found under `build/libs/`.
+Open the [local Swagger UI](http://localhost:8080/hub/swagger/index.html) for the API, or see the [OpenAPI document](here-naksha-app-service/src/jvmMain/resources/swagger/openapi.yaml). For a containerized service or a persistent PostgreSQL setup, see [Docker deployment](deployment/docker/README.md).
 
-To ramp up Naksha with the jar, run:
+### Service configuration
+
+The command takes a configuration ID and an optional admin JDBC URL: `java -jar <jar> <config-id> [<jdbc-url>]`. For a custom configuration, place `<config-id>.json` in `NAKSHA_CONFIG_PATH` (the exact directory you specify) or `~/.config/naksha/`. The service looks in those locations before bundled resources. The [bundled test configuration](here-naksha-app-service/src/jvmMain/resources/test-config.json), [service defaults](here-naksha-lib-hub/src/jvmMain/resources/config/default-config.json), and [`NakshaHubConfig`](here-naksha-lib-hub/src/jvmMain/java/com/here/naksha/lib/hub/NakshaHubConfig.java) show the configuration format. Bundled JWT keys and the test configuration are for development; configure your own signing and verification keys for deployment.
+
+Naksha normally registers PostgreSQL maintenance jobs when installing or upgrading storage. Configure preloaded `pg_cron`, access to its control database, and the installer’s connection policy for such deployments, or explicitly configure `maintenanceJobs=false` when using external scheduling. The test-specific opt-out below does not disable synchronous partition upkeep.
+
+## Testing
+
+**Use a disposable PostgreSQL instance.** `cleanAndTest` takes the next number from `public.naksha_test_counter` in the control database and creates a fresh database such as `naksha_test_run_001`, then `naksha_test_run_002`. It skips existing names and prints the database it is using. The task leaves each run database in place, whether the tests pass or fail, so you can inspect the final state. The counter persists, but the task does not wipe the control database or remove existing schemas. You can rerun it without restarting PostgreSQL. Make sure HTTP port **8080** is free; the tests start and stop the app-service themselves.
+
+### Run the common JVM and Node checks
+
+The root `cleanAndTest` task compiles common metadata, builds JVM production and test code, builds the JS production artifacts and test code, and runs the JVM and Node tests. It cleans the selected test outputs so the tests run again; it does not purge the whole build or Gradle cache. Start PostgreSQL first and set `NAKSHA_TEST_DB_URL` to a database that the test role can connect to. The role needs `CREATEDB` for the isolated run database and `CREATE` on the control database's `public` schema to initialize the counter, or `USAGE` on an existing `public.naksha_test_counter` sequence. Numbers use at least three digits; `1000` and later are not truncated.
+
+Start a fresh local test database on host port **15432** (the password shown is for this local disposable container only):
 
 ```bash
-java -jar <jar-file> <config-id> <database-url>
-
-# Example 1 : Start service with test config against default Database URL (useful for local env)
-java -jar here-naksha-app-service/build/libs/naksha-app-service-*.jar test-config
-# Example 2 : Start service with given custom config (using NAKSHA_CONFIG_PATH) and custom database URL (useful for cloud env)
-java -jar here-naksha-app-service/build/libs/naksha-app-service-*.jar cloud-config 'jdbc:postgresql://localhost:5432/postgres?user=postgres&password=pswd&schema=naksha&app=naksha_local&id=naksha_admin_db'
-# Example 3 : Start service with given custom config (using NAKSHA_CONFIG_PATH) and default (local) database URL
-java -jar here-naksha-app-service/build/libs/naksha-app-service-*.jar custom-config
-
+docker run --rm -d --name naksha_test --shm-size=1g \
+  -p 127.0.0.1:15432:5432 \
+  -e PGDATABASE=naksha_test -e PGPASSWORD=naksha_test \
+  ghcr.io/naksha-oss/naksha-postgres:v18.6-rc1
 ```
 
-Then use a web browser to connect to `localhost:8080`, an OK message should be displayed if the service is up and running.
-
-#### Running Naksha in container
-
-To run Naksha in container, take a look at [these docs](docker/README.md)
-
-### OpenAPI specification
-
-Once application is UP, the OpenAPI specification is accessible at `http(s)://{host}:{port}/hub/swagger/index.html`, by default at [http://localhost:8080/hub/swagger/index.html](http://localhost:8080/hub/swagger/index.html)
-
-
-### Configuration
-
-The service persists out of modules with a bootstrap code to start the service. Service provides default configuration in [default-config.json](here-naksha-lib-hub/src/main/resources/config/default-config.json).
-
-The custom (external) configuration file can be supplied by modifying environment variable or by creating the `default-config.json` file in the corresponding configuration folder.
-The exact configuration folder is platform dependent, but generally follows the [XGD user configuration directory](https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html), standard, so on Linux being by default `~/.config/naksha/`. For Windows the files will reside in the [CSIDL_PROFILE](https://learn.microsoft.com/en-us/windows/win32/shell/csidl?redirectedfrom=MSDN) folder, by default `C:\Users\{username}\.config\naksha\`.
-
-Next to this, an explicit location can be specified via the environment variable `NAKSHA_CONFIG_PATH`, this path will not be extended by the `naksha/` folder, so you can directly specify where to keep the config files. This is important when you want to start multiple versions of the service: `NAKSHA_CONFIG_PATH=~/.config/naksha/ java -jar naksha.jar {arguments}`.
-
-In the custom config file, the name of the individual properties can be set as per source code here [NakshaHubConfig](here-naksha-lib-hub/src/main/java/com/here/naksha/lib/hub/NakshaHubConfig.java).
-All properties annotated with `@JsonProperty` can be set in custom config file.
-
-Config file is loaded using `{config-id}` supplied as CLI argument, as per following precedence on file location (first match wins):
-1. using env variable `NAKSHA_CONFIG_PATH` (full path will be `$NAKSHA_CONFIG_PATH/{config-id}.json`)
-2. as per user's home directory `user.home` (full path will be `{user-home}/.config/naksha/{config-id}.json` )
-3. as per config previously loaded in Naksha Admin Storage (PostgreSQL database)
-4. default config loaded from jar (`here-naksha-lib-hub/src/main/resources/config/default-config.json`)
+Wait for initialization to finish. On first startup the image briefly starts and stops PostgreSQL to initialize the database. After the final start, `docker exec naksha_test pg_isready -h 127.0.0.1 -U postgres -d naksha_test` should report that connections are accepted. Then run:
 
 ```bash
-# Example of env variable NAKSHA_CONFIG_PATH
-
-# First, copy default config to custom location
-export NAKSHA_CONFIG_PATH=/my-location/naksha
-cp here-naksha-lib-hub/src/main/resources/config/default-config.json $NAKSHA_CONFIG_PATH/
-
-# Modify config as per need
-vi $NAKSHA_CONFIG_PATH/default-config.json
-
-# Start application using above config
-java -jar naksha.jar default-config
+export NAKSHA_TEST_DB_URL='jdbc:postgresql://127.0.0.1:15432/naksha_test?user=postgres&password=naksha_test&ssl=false'
+export NAKSHA_TEST_MAINTENANCE_JOBS=false
+./gradlew cleanAndTest --continue --max-workers=2
 ```
-The config also accepts custom RSA256 Private key and multiple Public key files (in PEM format) to support JWT signing/verification operations.
 
-* If custom Private key not provided, default will be loaded from Jar bundled resource [here-naksha-app-service/src/main/resources/auth/jwt.key](here-naksha-app-service/src/main/resources/auth/jwt.key).
-* If custom Public key not provided, default will be loaded from Jar bundled resource [here-naksha-app-service/src/main/resources/auth/jwt.pub](here-naksha-app-service/src/main/resources/auth/jwt.pub).
+If you already created a disposable instance, set the same variables to use it instead. For `cleanAndTest`, keep the database URL overrides in the table below unset or exactly equal to `NAKSHA_TEST_DB_URL`, and leave the app-service test context unset or set it to `LOCAL_STANDALONE`. The task ignores app-service URL files so your personal fixture configuration cannot redirect the run. It rejects isolated-suite settings. Run databases accumulate until you remove them or discard the test container. When you no longer need to inspect any runs, `docker stop naksha_test` removes **this test container** because it was created with `--rm`.
 
-Sample commands to generate the custom key files:
+### Test environment variables
+
+| Setting | Meaning |
+| --- | --- |
+| `JAVA_HOME` | Path to JDK 25, if it is not already your default. On macOS: `export JAVA_HOME=$(/usr/libexec/java_home -v 25)`. |
+| `NAKSHA_TEST_DB_URL` | Shared test JDBC URL with a database name and `user`/`password` query parameters. `cleanAndTest` uses it as a control connection and supplies the per-run database URL to the test JVMs. For direct runs, it is a fallback for standalone app-service fixtures and PostgreSQL test storage with no configured master. |
+| `NAKSHA_TEST_PSQL_DB_URL` | Global JVM `PgStorage` master override; it also clears configured replicas. `cleanAndTest` points it at the same per-run database so explicitly configured fixture masters cannot use the control database. For focused runs without this variable, the test JVM system property `naksha.test.psql.db.url` can be used as an override. |
+| `NAKSHA_TEST_ADMIN_DB_URL`, `NAKSHA_TEST_DATA_DB_URL` | Override the app-service admin and data fixture URLs for direct test runs. In those runs a valid `test_admin_db.url` or `test_data_db.url` in the test working directory, `~/.config/naksha/`, or test resources takes precedence; the shared URL follows. |
+| `NAKSHA_APP_SERVICE_TEST_CONTEXT` | `LOCAL_STANDALONE` (default) uses configured PostgreSQL. `TEST_CONTAINERS` starts a fixture PostgreSQL container for direct app-service `jvmTest` runs; it is not a `cleanAndTest` mode. |
+| `TEST_NAKSHA_PSQL_PASS` | Password for the app-service fallback URL at `localhost:5432/postgres` only. It does not configure a Testcontainers password. |
+| `NAKSHA_TEST_STORAGE_ID`, `HUB_ADMIN_STORAGE_ID`, `HUB_ADMIN_MAP_ID` | Test storage defaults to `local_psql_test_storage`. Gradle defaults `HUB_ADMIN_STORAGE_ID` to the same value unless explicitly set. Tests sharing a database must agree on its installed storage identity. The Hub admin map defaults to `naksha-hub-admin`. |
+| `NAKSHA_TEST_MAINTENANCE_JOBS` | Exact `true` or `false`. Overrides cron registration independently of the JDBC override; unset preserves the storage configuration. Use `false` for ordinary disposable tests, not for the scheduler integration suite. |
+| `NAKSHA_SUPPRESS_PERF_TEST=true` | Skip performance tests marked with this switch, including the annotated CLI and PLV8 benchmarks. It does not disable ordinary functional or integration cases. |
+| `DISABLE_BIG_PAYLOAD_TESTS=true` | Skip the two large HTTP feature fixtures. |
+| `CICD=true` | Skip one annotated CLI copy test. Not set by the public GitHub workflow. |
+| `runConnectorIntegrationTests=true` | Opt into the HTTP connector integration tests; these need external fixtures configured with `dataHubSpace`, `dataHubToken`, and `nakshaSpace`. They are not part of the ordinary run. |
+
+The [advanced test guide](docs/testing.md#isolated-postgresql-suites) lists the separate `NAKSHA_TEST_<SUITE>_DB_URL` variables and exact setup commands. In particular, `NAKSHA_TEST_CRON_CONTROL_URL` enables real scheduler verification, `NAKSHA_TEST_CODEC_CPU=true` enables the database-free codec benchmark, `NAKSHA_TEST_THROUGHPUT_DB_URL` enables the write benchmark, and `NAKSHA_TEST_CPU_PROFILE_DIR` enables JFR for the benchmark runs. Run isolated suites individually against their own disposable database with a focused `jvmTest` command; do not enable them together in the shared run. Do not write real JDBC passwords, tokens, or profiles to Git or shared logs.
+
+For focused tests only, PostgreSQL library fixtures can start their own Testcontainers database when no master/URL is configured. Both managed fixtures use `v18.6-rc1`. The library fallback binds host port **15432**; app-service `TEST_CONTAINERS` binds **5432**. The aggregate command and GitHub workflow use neither fallback.
+
+### Node exclusions and reports
+
+Node runs in every module with a configured Node target. [`gradle/node-test-quarantine.txt`](gradle/node-test-quarantine.txt) lists the **specific currently failing Node cases**, not entire modules. They include Node/PLV8 fixture limitations and existing JavaScript number, hashing, and patching differences. JVM tests are unaffected. To reproduce the excluded failures explicitly:
 
 ```bash
-# Generate private key
-openssl genrsa -out ./custom_rsa256.key 2048
-
-# Generate public key (using above private key)
-openssl rsa -in ./custom_rsa256.key -pubout -outform PEM -out ./custom_rsa256.pub
+./gradlew jsNodeTest -PincludeKnownFailingNodeTests=true --rerun --continue
 ```
 
+- HTML: `<module>/build/reports/tests/jvmTest/` and `<module>/build/reports/tests/jsNodeTest/`.
+- JUnit XML: `<module>/build/test-results/jvmTest/` and `<module>/build/test-results/jsNodeTest/`.
+- JVM coverage: add `jacocoAggregatedTestReport` to the `cleanAndTest` command. The report is under `build/reports/jacoco/jacocoAggregatedTestReport/`.
 
-# Usage
+### GitHub pull requests
 
-Start using the service by creating a _space_:
+The [public workflow](.github/workflows/main-ci-only.yml) runs for PRs targeting a `v3*` branch when opened, reopened, or updated; it can also be started manually. GitHub starts PostgreSQL as a **job service container** with a dynamically mapped host port, 1 GiB of shared memory and a readiness check. It passes the resulting JDBC URL to `./gradlew cleanAndTest jacocoAggregatedTestReport`. The runner skips the annotated performance tests and the two large payload fixtures; export `NAKSHA_SUPPRESS_PERF_TEST=true` and `DISABLE_BIG_PAYLOAD_TESTS=true` to reproduce that profile locally. The workflow uploads JVM and Node reports and reports JVM coverage on eligible PRs. It does **not** publish release artifacts.
 
-```bash
-curl -H "content-type:application/json" \
--d '{"id": "test-space", "title": "my first space", "description": "my first geodata repo"}' \
-"http://localhost:8080/hub/spaces"
-```
+## Contributing and license
 
-The service will respond with the space definition including the space ID (should you not specify an own `id`):
+See the [contribution guidelines](CONTRIBUTING.md) and [dependency catalog](gradle/libs.versions.toml). The logo uses public-domain land outlines from [Natural Earth](https://www.naturalearthdata.com/).
 
-```json
-{
-    "id": "test-space",
-    "title": "my first space",
-    "description": "my first geodata repo",
-    "storage": {
-        "id": "psql",
-        "params": null
-    },
-    "owner": "ANONYMOUS",
-    "createdAt": 1576601166681,
-    "updatedAt": 1576601166681,
-    "contentUpdatedAt": 1576601166681,
-    "autoCacheProfile": {
-        "browserTTL": 0,
-        "cdnTTL": 0,
-        "serviceTTL": 0
-    }
-}
-```
-
-You can now add _features_ to your brand new space:
-```bash
-curl -H "content-type:application/geo+json" -d '{"type":"FeatureCollection","features":[{"type":"Feature","geometry":{"type":"Point","coordinates":[-2.960847,53.430828]},"properties":{"name":"Anfield","@ns:com:here:xyz":{"tags":["football","stadium"]},"amenity":"Football Stadium","capacity":54074,"description":"Home of Liverpool Football Club"}}]}' http://localhost:8080/hub/spaces/pvhQepar/features
-```
-
-The service will respond with the inserted geo features:
-```json
-{
-    "type": "FeatureCollection",
-    "etag": "b67016e5dcabbd5f76b0719d75c84424",
-    "features": [
-        {
-            "type": "Feature",
-            "id": "nf36KMsQAUYoM5kM",
-            "geometry": {
-                "type": "Point",
-                "coordinates": [ -2.960847, 53.430828 ]
-            },
-            "properties": {
-                "@ns:com:here:xyz": {
-                    "space": "pvhQepar",
-                    "createdAt": 1576602412218,
-                    "updatedAt": 1576602412218,
-                    "tags": [ "football", "stadium" ]
-                },
-                "amenity": "Football Stadium",
-                "name": "Anfield",
-                "description": "Home of Liverpool Football Club",
-                "capacity": 54074
-            }
-        }
-    ],
-    "inserted": [
-        "nf36KMsQAUYoM5kM"
-    ]
-}
-```
-
-# Testing locally
-
-Naksha tests can currently run in two modes:
-
-1. Against a Postgres database that you start yourself (for example the containerized Postgres described above).
-2. Against a Postgres container started automatically by the build via [Testcontainers](https://github.com/testcontainers).
-
-For a standalone Postgres instance, set `NAKSHA_TEST_DB_URL` to its JDBC URL. This shared URL is used by
-`here-naksha-lib-psql` tests and by both admin and data storage tests in `here-naksha-app-service`.
-The app-service test context defaults to standalone Postgres when `NAKSHA_APP_SERVICE_TEST_CONTEXT` is
-unset.
-
-### Option 1: Run tests against a local standalone Postgres
-
-```bash
-export NAKSHA_TEST_DB_URL="jdbc:postgresql://localhost:5432/postgres?user=postgres&password=password&ssl=false"
-./gradlew cleanAndTest
-```
-
-`NAKSHA_APP_SERVICE_TEST_CONTEXT=LOCAL_STANDALONE` is optional because standalone is the default.
-
-All test suites sharing one database must agree on the storage ID stored in the admin catalog. The test
-storage ID (`NAKSHA_TEST_STORAGE_ID`) defaults to `local_psql_test_storage`, and the Gradle test tasks set
-`HUB_ADMIN_STORAGE_ID` to the same value unless it is set explicitly, so neither needs to be exported.
-
-Use a dedicated test database: test setup may drop Naksha schemas. If tests need different databases,
-override the shared URL with one or more specific URLs. A specific URL takes precedence over
-`NAKSHA_TEST_DB_URL` for its test storage:
-
-```bash
-# For `here-naksha-lib-psql` tests.
-export NAKSHA_TEST_PSQL_DB_URL="jdbc:postgresql://localhost:5432/postgres?user=postgres&password=password"
-
-# For `here-naksha-app-service` admin storage tests.
-export NAKSHA_TEST_ADMIN_DB_URL="jdbc:postgresql://localhost:5432/postgres?user=postgres&password=password"
-
-# For `here-naksha-app-service` data storage tests.
-export NAKSHA_TEST_DATA_DB_URL="jdbc:postgresql://localhost:5432/other_db?user=postgres&password=password"
-```
-
-For app-service tests, a URL in `~/.config/naksha/test_admin_db.url` or
-`~/.config/naksha/test_data_db.url` takes precedence over the corresponding environment variables.
-
-### Option 2: Run tests with Testcontainers-managed Postgres
-
-The `here-naksha-lib-psql` tests start their own Postgres container when neither
-`NAKSHA_TEST_PSQL_DB_URL` nor `NAKSHA_TEST_DB_URL` is set. The app-service tests also need their
-context set to `TEST_CONTAINERS` to start their managed container.
-
-```bash
-export NAKSHA_APP_SERVICE_TEST_CONTEXT=TEST_CONTAINERS
-./gradlew cleanAndTest
-```
-
-Code coverage report is generated with use of [jacoco](https://www.jacoco.org/)
-
-To generate **subproject** level coverage, use Gradle task `jacocoTestReport`:
-
-```bash
-./gradlew :<module-name>:jacocoTestReport
-```
-
-Outputs for each subproject will be stored in `/[module]/build/reports/jacocoTestReport/html/index.html`
-
-To generate **root** level aggregated coverage, use Gradle task `jacocoAggregatedTestReport`:
-
-```bash
-./gradlew jacocoAggregatedTestReport
-```
-
-Outputs will be stored in `/build/reports/jacoco/jacocoAggregatedTestReport/html/index.html`
-
-To validate test coverage, run `jacocoAggreagetedTestCoverageVerification` Gradle task:
-```bash
-./gradlew jacocoAggreagetedTestCoverageVerification
-```
-
-You can also validate test coverage for **subproject**, use Gradle task `jacocoTestCoverageVerification`:
-
-```bash
-./gradlew :<module-name>:jacocoTestCoverageVerification
-```
-
-# Acknowledgements
-
-XYZ Hub uses:
-
-* [Vertx](http://vertx.io/)
-* [Geotools](https://github.com/geotools/geotools)
-* [JTS](https://github.com/locationtech/jts)
-* [Jackson](https://github.com/FasterXML/jackson)
-
-and [others](./pom.xml#L177-L479).
-
-# Contributing
-
-Your contributions are always welcome! Please have a look at the [contribution guidelines](CONTRIBUTING.md) first.
-
-# License
-Copyright (C) 2017-2022 HERE Europe B.V.
-
-This project is licensed under the Apache License, Version 2.0 - see the [LICENSE](./LICENSE) file for details.
+Copyright (C) 2017-2022 HERE Europe B.V. Naksha is licensed under the [Apache License, Version 2.0](LICENSE).

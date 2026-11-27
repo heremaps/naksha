@@ -6,12 +6,13 @@ import naksha.base.fn.Fx2
 import kotlin.js.JsExport
 import kotlin.js.JsName
 import kotlin.js.JsStatic
+import kotlin.jvm.JvmField
 import kotlin.jvm.JvmOverloads
 import kotlin.jvm.JvmStatic
 
 /**
  * An error class.
- * @since 3.0.0
+ * @since 3.0
  */
 @JsExport
 open class NakshaError() : AnyObject() {
@@ -20,11 +21,33 @@ open class NakshaError() : AnyObject() {
      * Create a new error from the given arguments.
      * @param code the error code.
      * @param msg a human-readable message.
+     * @param id the _optional_ identifier of the entity that caused the error, i.e. [FEATURE_NOT_FOUND], [COLLECTION_NOT_FOUND], [CATALOG_NOT_FOUND], ...
+     * @param collection the _optional_ identifier of the collection in which the entity is located.
+     * @param catalog the _optional_ identifier of the catalog in which the entity is located.
+     * @param database the _optional_ identifier of the database in which the entity is located.
+     * @since 3.0
+     */
+    @JsName("newNakshaError")
+    @JvmOverloads
+    constructor(code: String, msg: String, id: String? = null, collection: String? = null, catalog: String? = null, database: String? = null) : this() {
+        this.code = code
+        this.msg = msg
+        this.id = id
+        this.collection = collection
+        this.catalog = catalog
+        this.database = database
+    }
+
+    /**
+     * Create a new error from the given arguments.
+     * @param code the error code.
+     * @param msg a human-readable message.
      * @param cause the origin exception that caused this error; if any.
+     * @since 3.0
      */
     @JsName("of")
-    @JvmOverloads
-    constructor(code: String, msg: String, cause: Throwable? = null) : this() {
+    @Deprecated(message = "The cause is being removed from the error, it should be added to the carrier exception, being NakshaException!")
+    constructor(code: String, msg: String, cause: Throwable?) : this() {
         this.code = code
         this.msg = msg
         this.cause = cause
@@ -230,7 +253,15 @@ open class NakshaError() : AnyObject() {
          *
          * @since 3.0.0
          */
+        @Deprecated(message = "Replaced with CATALOG_NOT_FOUND", replaceWith = ReplaceWith("CATALOG_NOT_FOUND"))
         const val MAP_NOT_FOUND = "MapNotFound"
+
+        /**
+         * A catalog does not exist, but is expected to exist.
+         *
+         * @since 3.0.0
+         */
+        const val CATALOG_NOT_FOUND = "MapNotFound"
 
         /**
          * A [dictionary-manager][naksha.jbon.IDictManager] does not exist, but is expected to exist.
@@ -255,6 +286,9 @@ open class NakshaError() : AnyObject() {
 
         private val CODE_FIELD = NotNullProperty<NakshaError, String>(String::class) { _, _ -> EXCEPTION }
         private val MSG_FIELD = NotNullProperty<NakshaError, String>(String::class) { self, _ -> self.code }
+        private val STRING_FIELD = NullableProperty<NakshaError, String>(String::class)
+        private val VERSION_FIELD = NullableProperty<NakshaError, Long>(Long::class)
+        @Deprecated(message = "To be removed")
         private val THROWABLE_FIELD = NullableProperty<NakshaError, Throwable>(Throwable::class)
 
         /**
@@ -276,17 +310,82 @@ open class NakshaError() : AnyObject() {
 
     /**
      * The error code.
+     * @since 3.0
      */
-    var code by CODE_FIELD
+    var code: String by CODE_FIELD
 
     /**
      * A human-readable message.
+     * @since 3.0
      */
-    var msg by MSG_FIELD
+    var msg: String by MSG_FIELD
+
+    /**
+     * The _optional_ identifier of the entity that causes the error.
+     * @since 3.0
+     */
+    var id: String? by STRING_FIELD
+
+    /**
+     * The _optional_ identifier of the collection to which the entity with the given [id] belongs.
+     * @since 3.0
+     */
+    var collection: String? by STRING_FIELD
+
+    /**
+     * The _optional_ identifier of the catalog to which the entity with the given [id] belongs.
+     * @since 3.0
+     */
+    var catalog: String? by STRING_FIELD
+
+    /**
+     * The _optional_ identifier of the database to which the entity with the given [id] belongs.
+     * @since 3.0
+     */
+    var database: String? by STRING_FIELD
+
+    /**
+     * The expected state version, including action bits; `null` when no expectation was supplied.
+     * @since 3.0
+     */
+    var expectedVersion: Long? by VERSION_FIELD
+
+    /**
+     * The actual HEAD version, including action bits; `null` when no HEAD exists or is known.
+     * @since 3.0
+     */
+    var actualVersion: Long? by VERSION_FIELD
+
+    /**
+     * Reconstruct the expected state address, or return `null` when its version or identity is absent.
+     * Catalog and collection identities use their tuple-number widths; action bits are preserved.
+     * @since 3.0
+     */
+    fun getExpectedTupleNumber(): TupleNumber? {
+        val version = expectedVersion ?: return null
+        return TupleNumber(
+            Id(database ?: return null), Id(catalog ?: return null),
+            Id(collection ?: return null), Id(id ?: return null), version
+        )
+    }
+
+    /**
+     * Reconstruct the actual HEAD address, or return `null` when its version or identity is absent.
+     * Catalog and collection identities use their tuple-number widths; action bits are preserved.
+     * @since 3.0
+     */
+    fun getActualTupleNumber(): TupleNumber? {
+        val version = actualVersion ?: return null
+        return TupleNumber(
+            Id(database ?: return null), Id(catalog ?: return null),
+            Id(collection ?: return null), Id(id ?: return null), version
+        )
+    }
 
     /**
      * The origin exception that caused this error; if any.
      */
+    @Deprecated(message = "The cause is being removed from the error, it should be added to the carrier exception, being NakshaException!")
     var cause by THROWABLE_FIELD
 
     /**
@@ -313,7 +412,24 @@ open class NakshaError() : AnyObject() {
                 && cause == other.cause
     }
 
-    override fun toString(): String = "NakshaError(code=$code, msg=$msg)"
+    override fun toString(): String {
+        val database = this.database
+        val catalog = this.catalog
+        val collection = this.collection
+        val id = this.id
+        // Serialize into JSON.
+        return """{
+  \"@type\": \"naksha.base.NakshaError\",
+  \"code\":${code.toJson()},
+  \"msg\":${msg.toJson()},
+  \"database\":${database.toJson()},
+  \"catalog\":${catalog.toJson()},
+  \"collection\":${collection.toJson()},
+  \"id\":${id.toJson()},
+  \"expectedVersion\":${expectedVersion},
+  \"actualVersion\":${actualVersion}
+}"""
+    }
 
     /**
      * Send this error to the logger.
@@ -324,4 +440,3 @@ open class NakshaError() : AnyObject() {
         printer.get()?.call(this, logger)
     }
 }
-

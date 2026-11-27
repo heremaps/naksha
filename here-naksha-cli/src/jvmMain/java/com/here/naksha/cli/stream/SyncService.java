@@ -59,7 +59,7 @@ public final class SyncService {
             }
             // Closed from outside, for example by the Ctrl-C hook, which saves the state itself.
             if (stream.isClosed()) {
-                return new Aborted(new NakshaError(NakshaError.CLOSED, "Stream was closed before all chunks were copied", null), null);
+                return new Aborted(new NakshaError(NakshaError.CLOSED, "Stream was closed before all chunks were copied"), null);
             }
         } catch (Exception e) {
             StreamException se = streamException(e);
