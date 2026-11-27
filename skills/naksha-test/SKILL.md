@@ -6,7 +6,7 @@ description: Use ONLY when asked to run tests for the Naksha project. Do NOT use
 # General
 Database-backed tests need a separate disposable PostgreSQL instance or database. `./gradlew cleanAndTest` runs the shared JVM and Node checks and requires `NAKSHA_TEST_DB_URL`; see `README.md#testing` for the setup and `docs/testing.md` for isolated suites. Focused library or app-service tasks still support their own Testcontainers setup. When unclear, ask which database to use; do not clear existing schemas or restart the database server.
 
-For ticket-specific test notes and non-sensitive summaries, use the ticket folder from `CLAUDE.md`: prefer `../.ai/<ticket-id>/` if `../.ai/` exists, otherwise use `ai/<ticket-id>/` relative to the project checkout. Create the ticket subfolder as needed. Keep sensitive logs and profiles private.
+For ticket-specific test notes and non-sensitive summaries, follow `naksha-common`: use `ai/<ticket-id>/` relative to the code checkout. Create the ticket subfolder as needed. Keep sensitive logs and profiles private.
 
 # Mandatory verification order
 
