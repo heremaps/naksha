@@ -57,6 +57,23 @@ fun ensureSameMeaning(a: String?, b: String?) {
 }
 ```
 
+# Delegation
+If delegating properties, do always add the type, so human review is more simple, so do not:
+```kotlin
+var maintenanceJobs by BOOLEAN_TRUE
+var maintenanceSslMode by CRON_SSL_MODE
+var foo by INT_OR_NULL
+```
+
+but do:
+
+```kotlin
+var maintenanceJobs: Boolean by BOOLEAN_TRUE
+var maintenanceSslMode: String by CRON_SSL_MODE
+var foo: Int? by INT_OR_NULL
+```
+
+
 # Comments and Markdown
 Do not add line breaks within paragraphs of comments. For example:
 ```kotlin
