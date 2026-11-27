@@ -22,8 +22,10 @@ release.properties
 .DS_Store
 # To be added later
 /here-naksha-lib-log
-/vault/
-!/vault/README.md
+# Local links to the shared Naksha workspace (also ignore directory copies).
+/.claude
+/ai
+/vault
 /json_data/*
 !/json_data/
 !/json_data/README.md
